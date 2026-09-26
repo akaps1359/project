@@ -12,7 +12,7 @@
     rareChance: 0.05, // 소환 시 희귀 등급 기본 확률
     epicChance: 0.005,
     hpBase: 64, // 웨이브 레벨 0의 슬라임 체력 (첫 몇 레벨은 60%부터 완만하게)
-    hpGrowth: [0, 1.1025, 1.07, 1.058, 1.045], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
+    hpGrowth: [0, 1.1097, 1.077, 1.0649, 1.0518], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
     waveTime: 16, // 다음 웨이브까지 시간(초)
     prepTime: 5,
     spawnGap: 0.55,
@@ -23,7 +23,7 @@
     interestPer: 10, // 보유 골드 10당 이자 1
     interestCap: 5,
     clearGold: { combat: [0, 20, 30, 40], elite: [0, 35, 50, 65], boss: [0, 60, 80, 0] },
-    skipGold: [0, 15, 25, 35], // 증강 건너뛰기 골드
+    skipGold: [0, 25, 40, 55], // 증강 건너뛰기 골드
     upgradeBase: 30, // 강화 비용 = base + step × 레벨
     upgradeStep: 20,
     upgradePct: 0.15, // 강화 1레벨당 해당 클래스 피해 +15%
@@ -107,9 +107,9 @@
     captain: { name: '해골 선장', hp: 7, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 }, trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다' },
     dummy: { name: '낡은 허수아비', hp: 1, speed: 11, gold: 0, leak: 0, trait: '시간 안에 쓰러뜨려야 하는 시험 대상' },
     // 4막
-    spireShield: { name: '균열 방패병', hp: 9, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2, trait: '궁수·도적 피해 50%, 모든 물리 피해 20% 감소' },
-    spireSpear: { name: '균열 창병', hp: 7, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 }, trait: '빠르고 주변 적을 가속' },
-    riftHeart: { name: '균열의 심장', hp: 28, speed: 8, gold: 0, leak: 12, boss: true, dpsCap: 0.035, bossTimeAdd: 30, summon: { every: 6, type: 'imp', n: 2, hp: 0.5 }, trait: '1초에 최대 체력의 3.5%까지만 피해를 받는다. 임프를 부른다' },
+    spireShield: { name: '균열 방패병', hp: 7.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2, trait: '궁수·도적 피해 50%, 모든 물리 피해 20% 감소' },
+    spireSpear: { name: '균열 창병', hp: 6, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 }, trait: '빠르고 주변 적을 가속' },
+    riftHeart: { name: '균열의 심장', hp: 28, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30, summon: { every: 6, type: 'imp', n: 2, hp: 0.5 }, trait: '1초에 최대 체력의 3%까지만 피해를 받는다. 임프를 부른다' },
     riftLord: { name: '균열의 군주', hp: 10, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5, trait: '균열로 유닛을 기절시킨다. 체력 절반에서 가속' },
   };
 

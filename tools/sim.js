@@ -35,6 +35,8 @@ function loadRS() {
 function playRun(RS, seed, kind, opts) {
   opts = opts || {};
   const run = RS.newRun(seed, { commander: opts.commander, asc: opts.asc || 0 });
+  // 실험용: 시작할 때 증강·유물을 쥐여 주는 등 (밸런스 측정 도구에서 쓴다)
+  if (typeof opts.onStart === 'function') opts.onStart(run, RS);
   const bot = makeBot(RS, kind, new RS.Rng(seed ^ 0x9e3779b9), opts);
   const log = { battles: [], death: null, events: 0, ancients: [], nodes: [], shops: [], rests: [] };
   let open = null; // 추적 중인 칸 (가치 변화 측정)

@@ -328,7 +328,8 @@
 
   RS.upgradeCost = function (run, cls, M) {
     const base = RS.BAL.upgradeBase + RS.BAL.upgradeStep * run.classLv[cls];
-    return Math.max(1, Math.round(base * Math.max(0.4, 1 + M.upgradeCostPct)));
+    const asc = (run.asc || 0) >= 8 ? 1.2 : 1; // 승천 8: 강화 비용 +20%
+    return Math.max(1, Math.round(base * Math.max(0.4, 1 + M.upgradeCostPct) * asc));
   };
 
   // 소환 등급 굴림

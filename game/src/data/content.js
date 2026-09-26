@@ -26,8 +26,8 @@
     A('recruits', '신병 모집', 1, 'flag', '즉시 일반 유닛 3기 소환 (빈칸이 없으면 골드로 환급)', {}, {
       onPick(run) { RS.grantUnits(run, 0, 3); },
     }),
-    A('goldRush', '골드 러시', 1, 'bag', '즉시 골드 +40×막', {}, {
-      onPick(run) { RS.addGold(run, 40 * run.act); },
+    A('goldRush', '골드 러시', 1, 'bag', '즉시 골드 +70×막', {}, {
+      onPick(run) { RS.addGold(run, 70 * run.act); },
     }),
     A('smithDiscount', '대장간 할인', 1, 'anvil', '강화 비용 -20%', { upgradeCostPct: -0.2 }),
     A('firstStrike', '선제공격', 1, 'bolt', '각 적에게 가하는 첫 공격 피해 +150%', { firstStrike: 1.5 }, { unique: true }),
@@ -40,7 +40,7 @@
 
     // ── 골드 ──
     A('luckySummon', '행운의 소환', 2, 'clover', '소환 시 희귀 등급 확률 +10%', { rareChance: 0.1 }),
-    A('recycle', '재활용', 2, 'recycle', '합성할 때 30% 확률로 재료 1기 반환', { mergeRefund: 0.3 }, { unique: true }),
+    A('recycle', '재활용', 2, 'recycle', '합성할 때 20% 확률로 재료 1기 반환', { mergeRefund: 0.2 }, { unique: true }),
     A('diversity', '다양성', 2, 'rainbow', '보드에 다섯 클래스가 모두 있으면 피해 +35%', { diversity: 0.35 }, { unique: true }),
     A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +40%', { purity: 0.4 }, { unique: true }),
     A('eliteSquad', '정예주의', 2, 'medal', '보드 유닛이 12기 이하면 피해 +45%', { eliteSquad: 0.45 }, { unique: true }),
@@ -58,7 +58,7 @@
       cost: '최대 생명 -5',
       onPick(run) { RS.changeMaxLife(run, -5); },
     }),
-    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성할 때 25% 확률로 2단계 상승', { mergeDouble: 0.25, mergeFail: 0.12 }, {
+    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성할 때 18% 확률로 2단계 상승', { mergeDouble: 0.18, mergeFail: 0.15 }, {
       unique: true, cost: '12% 확률로 합성 실패(결과 소멸)',
     }),
     A('greed', '탐욕', 2, 'bag', '처치 골드 +60%', { killGoldPct: 0.6, enemyHpPct: 0.15 }, {
@@ -70,7 +70,7 @@
 
     // ── 프리즘 ──
     A('twinSummon', '쌍둥이 소환', 3, 'twin', '소환할 때 20% 확률로 같은 유닛 1기 추가', { twinChance: 0.2 }, { unique: true }),
-    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 15% 확률로 2단계 상승', { mergeDouble: 0.15 }, { unique: true }),
+    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 10% 확률로 2단계 상승', { mergeDouble: 0.1 }, { unique: true }),
     A('berserk', '광전사', 3, 'rage', '생명이 절반 이하면 피해 +60%, 공격 속도 +25%', { berserk: 1 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
     A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12%', { legendAura: 0.12 }, { unique: true }),
@@ -86,19 +86,19 @@
       onPick(run) { RS.changeMaxLife(run, -Math.floor(run.maxLife / 2)); },
     }),
     // ── 슬레이 더 스파이어의 '파워' 카드에서 착안 ──
-    A('demonForm', '악마의 형상', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +8% (누적)', { demonForm: 0.08 }, { unique: true }),
-    A('echoForm', '메아리 형상', 3, 'echo', '웨이브마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1 }, { unique: true }),
+    A('demonForm', '악마의 형상', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +12% (누적)', { demonForm: 0.12 }, { unique: true }),
+    A('echoForm', '메아리 형상', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1 }, { unique: true }),
     A('apotheosis', '신격화', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 된다', {}, {
       onPick(run) { RS.promoteTier(run, 0); },
     }),
-    A('wraithForm', '망령 형상', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +20%', { firstWaveNoLeak: 1, dmgPct: 0.2, lastWaveLeakMult: 1 }, {
-      unique: true, cost: '마지막 웨이브에는 잃는 생명 2배',
+    A('wraithForm', '망령 형상', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
+      unique: true, cost: '필드 상한 60 → 50',
     }),
-    A('corruption', '타락', 3, 'corrupt', '강화 비용 -50%', { upgradeCostPct: -0.5, summonCostPct: 0.3 }, {
-      unique: true, cost: '소환 비용 +30%',
+    A('corruption', '타락', 3, 'corrupt', '강화 비용 -45%', { upgradeCostPct: -0.45, summonCostPct: 0.2 }, {
+      unique: true, cost: '소환 비용 +20%',
     }),
-    A('creativeAI', '창조적 AI', 2, 'chip', '웨이브가 시작될 때 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 1 }, { unique: true }),
-    A('noxious', '유독 가스', 2, 'gas', '모든 적이 초당 최대 체력의 1.2% 피해 (보스는 0.4%)', { noxious: 0.012 }, { unique: true }),
+    A('creativeAI', '창조적 AI', 2, 'chip', '웨이브가 시작될 때 30% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.3 }, { unique: true }),
+    A('noxious', '유독 가스', 2, 'gas', '모든 적이 초당 최대 체력의 0.9% 피해 (보스는 0.3%)', { noxious: 0.009 }, { unique: true }),
     A('poisonBlade', '맹독 칼날', 2, 'vial', '도적 공격이 독을 건다 (피해의 50%를 3초간, 5번까지 중첩, 방어 무시)', { poison: 0.5 }, { unique: true }),
     A('offering', '제물', 2, 'altar', '즉시 희귀 유닛 3기 소환', {}, {
       cost: '최대 생명 -3',

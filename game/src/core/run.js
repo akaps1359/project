@@ -609,7 +609,12 @@
     }
     if (type === 'boss') reward.relics = RS.rollRelics(run, 3, [3], [1]);
     if (stage.type === 'eventFight' && stage.spec.relic) reward.relics = RS.rollRelics(run, stage.spec.relicChoices || 1, stage.spec.relic, stage.spec.relic.map(() => 1));
-    if (type === 'combat' && M.prayerWheel) RS.enqueue(run, { k: 'aug', w, title: '기도 바퀴' });
+    if (type === 'combat' && M.prayerWheel) {
+      // 기도 바퀴: 일반 전투 4번마다 증강 한 번 더
+      const st = (run.relicState.prayerWheel = run.relicState.prayerWheel || { n: 0 });
+      st.n = (st.n || 0) + 1;
+      if (st.n % 4 === 0) RS.enqueue(run, { k: 'aug', w, title: '기도 바퀴' });
+    }
     run.phase = 'reward';
     run.pending = { reward };
   };
@@ -888,7 +893,7 @@
   // ── 상점 ──
   RS.priceMul = function (run) {
     const M = RS.collectMods(run);
-    return [0, 1, 1.35, 1.7, 1.7][run.act] * (run.asc >= 2 ? 1.15 : 1) * Math.max(0.3, 1 - M.shopDiscount);
+    return [0, 1, 1.2, 1.4, 1.4][run.act] * (run.asc >= 2 ? 1.15 : 1) * Math.max(0.3, 1 - M.shopDiscount);
   };
   RS.removeCost = function (run) {
     const M = RS.collectMods(run);
@@ -896,7 +901,7 @@
     return Math.round((75 + 25 * run.removeCount) * (run.asc >= 2 ? 1.15 : 1));
   };
 
-  const relicEntry = (id) => ({ kind: 'relic', id, base: RS.REL[id].rarity === 2 ? 190 : 130 });
+  const relicEntry = (id) => ({ kind: 'relic', id, base: RS.REL[id].rarity === 2 ? 170 : 120 });
 
   RS.genShop = function (run) {
     const rng = run.rng;
@@ -1018,7 +1023,7 @@
       opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 +6% (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });
     }
     const candle = run.relicState.pumpkinCandle;
-    if (candle && candle.charges < 5) opts.push({ id: 'kindle', label: '불 붙이기', desc: `호박 양초를 다시 켠다 (남은 ${candle.charges}번 → 5번)` });
+    if (candle && candle.charges < 6) opts.push({ id: 'kindle', label: '불 붙이기', desc: `호박 양초를 다시 켠다 (남은 ${candle.charges}번 → 6번)` });
     if (run.quests && run.quests.egg) opts.push({ id: 'hatch', label: '부화', desc: '용의 알을 부화시킨다: 전설 유닛 1기 + 유물 [아기 용]' });
     const onRune = run.runes.some((r, i) => r === 'cloneR' && run.board[i]);
     if (onRune) {
@@ -1058,7 +1063,7 @@
         run.keys.ruby = true;
         break;
       case 'kindle':
-        run.relicState.pumpkinCandle.charges = 5;
+        run.relicState.pumpkinCandle.charges = 6;
         break;
       case 'hatch':
         run.quests.egg = false;

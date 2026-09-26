@@ -21,14 +21,14 @@
     R('whetstone', '숫돌', 1, 'whetstone', '일반·희귀 유닛 피해 +30%', { tierDmg: [0.3, 0.3, 0, 0] }),
     R('pocketWatch', '회중시계', 1, 'watch', '웨이브 시작 후 4초간 공격 속도 +60%', { pocketWatch: 1 }),
     R('banner', '전쟁 깃발', 1, 'flag', '네 모서리 칸 유닛 피해 +40%', { cornerDmg: 0.4 }),
-    R('lens', '확대경', 1, 'lens', '안쪽 6칸 유닛 사거리 +10, 피해 +15%', { innerRange: 10, innerDmg: 0.15 }),
+    R('lens', '확대경', 1, 'lens', '안쪽 6칸 유닛 사거리 +8, 피해 +12%', { innerRange: 8, innerDmg: 0.12 }),
     R('anvil', '대장장이 모루', 1, 'anvil', '휴식처에서 수련하면 강화 +1 추가', { restTrainBonus: 1 }),
     R('coinPurse', '동전 지갑', 1, 'bag', '전투 보상 골드 +50%', { combatGoldPct: 0.5 }),
     R('vampFang', '흡혈 송곳니', 1, 'fang', '엘리트·보스를 처치하면 최대 생명 +1', { eliteKillMaxLife: 1 }),
     R('rerollDice', '운명의 주사위', 1, 'dice', '증강을 고를 때 새로고침 1회', { augRerolls: 1 }),
     R('ancientCoin', '고대 주화', 1, 'coin', '이자 한도 +4', { interestCap: 4 }),
-    R('anchor', '닻', 1, 'anchor', '첫 웨이브 동안에는 적이 한 바퀴를 돌아도 생명을 잃지 않는다', { firstWaveNoLeak: 1 }),
-    R('bagPrep', '준비 가방', 1, 'pack', '전투를 시작할 때 무료 소환 2회', { startSummons: 2 }),
+    R('anchor', '닻', 1, 'anchor', '적이 한 바퀴를 돌 때 잃는 생명 -1 (최소 1)', { leakReduce: 1 }),
+    R('bagPrep', '준비 가방', 1, 'pack', '전투를 시작할 때 무료 소환 1회', { startSummons: 1 }),
     R('lantern', '등불', 1, 'lantern', '전투를 시작할 때 골드 +15×막', { battleStartGold: 15 }),
     R('strawberry', '딸기', 1, 'berry', '최대 생명 +4', {}, {
       onPick(run) { RS.changeMaxLife(run, 4); RS.heal(run, 4); },
@@ -51,13 +51,13 @@
     R('sageStone', '현인의 보석', 2, 'gem', '전설 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5] }),
     R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 25%)', { burn: 0.25 }),
     R('crystalBall', '수정 구슬', 2, 'orb', '증강 선택지 +1', { augChoices: 1 }),
-    R('mirror', '거울', 2, 'mirror', '합성할 때 12% 확률로 결과 유닛 2기', { mergeMirror: 0.12 }),
+    R('mirror', '거울', 2, 'mirror', '합성할 때 8% 확률로 결과 유닛 2기', { mergeMirror: 0.08 }),
     R('mango', '망고', 2, 'mango', '최대 생명 +8', {}, {
       onPick(run) { RS.changeMaxLife(run, 8); RS.heal(run, 8); },
     }),
     R('slingCourage', '용기의 새총', 2, 'sling', '엘리트전에서 모든 유닛 피해 +25%', { eliteBattleDmg: 0.25 }),
     R('preservedInsect', '보존된 곤충', 2, 'insect', '엘리트 체력 -25%', { eliteHpPct: -0.25 }),
-    R('prayerWheel', '기도 바퀴', 2, 'wheel', '일반 전투에서 이기면 증강을 한 번 더 고른다', { prayerWheel: 1 }),
+    R('prayerWheel', '기도 바퀴', 2, 'wheel', '일반 전투에서 4번 이길 때마다 증강을 한 번 더 고른다', { prayerWheel: 1 }, { state: { n: 0 } }),
     R('singingBowl', '노래하는 그릇', 2, 'bowl', '증강을 건너뛰면 최대 생명 +2 (골드도 받는다)', { singingBowl: 1 }),
     R('dreamCatcher', '드림캐처', 2, 'dream', '휴식처에서 휴식하면 증강 하나를 고른다', { dreamCatcher: 1 }),
     R('peacePipe', '평화의 파이프', 2, 'pipe', '휴식처에서 [명상]: 증강이나 저주 하나를 없앤다', { peacePipe: 1 }),
@@ -83,14 +83,15 @@
     R('stimulant', '각성제', 3, 'cup', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, noRestHeal: 1 }, {
       cost: '휴식처에서 휴식할 수 없다',
     }),
-    R('fusionHammer', '융합 망치', 3, 'hammer', '합성할 때 20% 확률로 2단계 상승', { mergeDouble: 0.2, noSmith: 1 }, {
+    R('fusionHammer', '융합 망치', 3, 'hammer', '합성할 때 15% 확률로 2단계 상승', { mergeDouble: 0.15, noSmith: 1 }, {
       cost: '휴식처에서 수련·연마를 할 수 없다',
     }),
-    R('sealedGourd', '봉인된 호리병', 3, 'gourd', '강화 비용 -50%', { upgradeCostPct: -0.5, noItems: 1 }, {
+    R('sealedGourd', '봉인된 호리병', 3, 'gourd', '강화 비용 -50%, 얻을 때 모든 클래스 강화 +2', { upgradeCostPct: -0.5, noItems: 1 }, {
+      onPick(run) { for (const c of RS.CLASSES) run.classLv[c] += 2; },
       cost: '소모품을 더 얻을 수 없다',
     }),
-    R('brokenCrown', '깨진 왕관', 3, 'crown2', '전투를 시작할 때 희귀 유닛 1기 소환', { startRare: 1, augChoices: -2 }, {
-      cost: '증강 선택지 -2',
+    R('brokenCrown', '깨진 왕관', 3, 'crown2', '전투를 시작할 때 50% 확률로 희귀 유닛 1기 소환', { startRare: 0.5, augChoices: -1 }, {
+      cost: '증강 선택지 -1',
     }),
     R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +35%', { dmgPct: 0.35, blindfold: 1 }, {
       cost: '적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
@@ -98,8 +99,8 @@
     R('philStone', '현자의 돌', 3, 'redgem', '소환 비용 -35%', { summonCostPct: -0.35, enemyHpPct: 0.15 }, {
       cost: '모든 적 체력 +15%',
     }),
-    R('velvetChoker', '벨벳 초커', 3, 'choker', '소환 비용 -40%', { summonCostPct: -0.4, summonCap: 6 }, {
-      cost: '웨이브마다 6번까지만 소환할 수 있다',
+    R('velvetChoker', '벨벳 초커', 3, 'choker', '소환 비용 -40%', { summonCostPct: -0.4, upgradeCostPct: 0.5 }, {
+      cost: '강화 비용 +50%',
     }),
     R('snakeEye', '뱀의 눈', 3, 'snake', '소환 시 희귀 확률 +25%, 영웅 확률 +3%', { rareChance: 0.25, epicChance: 0.03, snakeEye: 1 }, {
       cost: '소환 비용이 매번 50~200% 사이에서 무작위',
@@ -107,7 +108,7 @@
     R('cursedKey', '저주받은 열쇠', 3, 'key', '웨이브 시작 골드 2배', { waveGoldPct: 1, cursedKey: 1 }, {
       cost: '보물 상자를 열 때마다 저주를 받는다',
     }),
-    R('markPain', '고통의 낙인', 3, 'brand', '모든 유닛 공격 속도 +40%', { aspdPct: 0.4, capAdd: -15 }, {
+    R('markPain', '고통의 낙인', 3, 'brand', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, capAdd: -15 }, {
       cost: '필드 상한 60 → 45',
     }),
     R('slaverCollar', '노예의 목걸이', 3, 'collar', '엘리트·보스전에서 모든 유닛 피해 +60%', { bigBattleDmg: 0.6 }),
@@ -146,7 +147,7 @@
     // ── 시작 유물 (지휘관) ──
     R('mercContract', '용병 계약서', 5, 'scroll', '전투에서 이기면 골드 +15×막', { winGold: 15 }),
     R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +30%', { cls: { knight: { dmg: 0.3 }, rogue: { dmg: 0.3 } } }),
-    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +30%, 범위 +2 (서리술사는 영웅 등급부터)', { cls: { mage: { dmg: 0.3, splash: 2 }, frost: { dmg: 0.3, splash: 2 } } }),
+    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +40%, 범위 +2 (서리술사는 영웅 등급부터)', { cls: { mage: { dmg: 0.4, splash: 2 }, frost: { dmg: 0.4, splash: 2 } } }),
     R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +8, 공격 속도 +15%', { cls: { archer: { range: 8, aspd: 0.15 } } }),
     R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +1, 전투 후 소모품이 나올 확률 +20%', { itemSlots: 1, itemDropBonus: 0.2 }),
     R('soulJar', '영혼 항아리', 5, 'vial', '적을 40마리 처치할 때마다 유닛 1기가 무료로 일어난다 (소환 비용이 오르지 않는다)', { souls: 40 }),

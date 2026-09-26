@@ -16,14 +16,17 @@
     R('bloodPactCup', '혈맹의 잔', 'chalice', '최대 생명 +10, 전투에서 이기면 생명 +4', { winHeal: 4 }, {
       onPick(run) { RS.changeMaxLife(run, 10); RS.heal(run, 10); },
     }),
-    R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +30%', { dmgPct: 0.3, battleStartLifeLoss: 2 }, { cost: '전투를 시작할 때 생명 -2' }),
-    R('twinStar', '쌍둥이 별', 'twin', '합성할 때 25% 확률로 결과 유닛 2기', { mergeMirror: 0.25 }),
-    R('luckyStar', '행운의 별', 'star', '소환 시 희귀 확률 +15%, 영웅 확률 +3%', { rareChance: 0.15, epicChance: 0.03 }),
-    R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 3을 내고 무료 소환 1회', { sealSummon: 3 }, { cost: '웨이브마다 골드 -3' }),
-    R('pumpkinCandle', '호박 양초', 'lantern', '다음 5번의 전투 동안 모든 유닛 피해 +40%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 5 } }),
+    R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +35%', { dmgPct: 0.35 }, {
+      cost: '최대 생명 -6',
+      onPick(run) { RS.changeMaxLife(run, -6); },
+    }),
+    R('twinStar', '쌍둥이 별', 'twin', '합성할 때 10% 확률로 결과 유닛 2기', { mergeMirror: 0.1 }),
+    R('luckyStar', '행운의 별', 'star', '소환 시 희귀 확률 +10%, 영웅 확률 +2%', { rareChance: 0.1, epicChance: 0.02 }),
+    R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 20을 내고 무료 소환 1회 (소환 비용이 오르지 않는다)', { sealSummon: 20 }, { cost: '웨이브마다 골드 -20' }),
+    R('pumpkinCandle', '호박 양초', 'lantern', '다음 6번의 전투 동안 모든 유닛 피해 +50%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 6 } }),
     R('waxToys', '밀랍 장난감 상자', 'box', '모든 유닛 공격 속도 +30%. 전투 3번마다 녹아 10%p씩 줄어든다', {}, { state: { fights: 0 } }),
     R('lordParasol', '영주의 양산', 'crown2', '상점에서 첫 번째로 사는 물건은 공짜', { freeFirstBuy: 1 }),
-    R('whisperEarring', '속삭이는 귀걸이', 'charm', '모든 유닛 공격 속도 +45%', { aspdPct: 0.45, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
+    R('whisperEarring', '속삭이는 귀걸이', 'charm', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
     R('spikedGauntlet', '가시 건틀릿', 'fist', '모든 유닛 피해 +45%', { dmgPct: 0.45, upgradeCostPct: 0.5 }, { cost: '강화 비용 +50%' }),
     R('warHammerA', '전쟁 망치', 'hammer', '엘리트를 처치하면 무작위 증강 2개 연마', { eliteUpgrade: 2 }),
     R('loomingFruit', '어렴풋한 열매', 'mango', '최대 생명 +12', {}, {

@@ -65,7 +65,7 @@
     }
     // 벨벳 초커·메아리 형상: 준비 시간은 첫 웨이브와 같은 웨이브로 친다
     this.waveSummons = 0;
-    this.echoUsed = false;
+    this.echoLeft = M.echoForm || 0; // 메아리 형상: 전투마다 남은 메아리 수
     this.mergeOpts = {}; // 고대 두루마리 합성 후보 ('클래스:등급' → [후보 둘])
     this.costMul = 1; // 뱀의 눈
     this.rollCost();
@@ -78,7 +78,7 @@
     if (M.battleStartLifeLoss) run.life = Math.max(1, run.life - M.battleStartLifeLoss);
     if (M.pantograph && this.kind === 'boss') RS.heal(run, M.pantograph);
     for (let k = 0; k < (M.startSummons || 0); k++) this.freeSummon(0);
-    if (M.startRare) this.freeSummon(1);
+    if (M.startRare && (M.startRare >= 1 || this.rng.chance(M.startRare))) this.freeSummon(1);
     if (M.doubt) {
       for (let k = 0; k < M.doubt; k++) this.slotStun[this.rng.int(F.SIZE)] = 999; // 첫 웨이브가 끝나면 풀린다
     }
@@ -190,10 +190,7 @@
     this.waveT = RS.BAL.waveTime * (1 - M.waveIntervalPct);
     this.nextWaveDelay = -1;
     // 준비 시간과 첫 웨이브는 소환 제한·메아리를 함께 쓴다
-    if (k > 0) {
-      this.waveSummons = 0;
-      this.echoUsed = false;
-    }
+    if (k > 0) this.waveSummons = 0;
     if (k === 1 && M.doubt) {
       for (let i = 0; i < F.SIZE; i++) if (this.slotStun[i] > 100) this.slotStun[i] = 0;
     }
@@ -202,7 +199,8 @@
       this.demon += M.demonForm;
       this.dynT = 0;
     }
-    let free = M.waveFreeSummon || 0;
+    const wf = M.waveFreeSummon || 0;
+    let free = Math.floor(wf) + (wf % 1 > 0 && this.rng.chance(wf % 1) ? 1 : 0);
     if (M.happyFlower) {
       const st = (run.relicState.happyFlower = run.relicState.happyFlower || { n: 0 });
       st.n++;
@@ -239,8 +237,8 @@
     const M = this.M;
     const asc = this.run.asc || 0;
     let hp = RS.levelHp(L) * def.hp * (1 + M.enemyHpPct) * (hpMul || 1);
-    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 8 ? 1.15 : 1);
-    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 7 ? 1.15 : 1);
+    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.15 : 1);
+    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.15 : 1);
     else if (asc >= 6) hp *= 1.1;
     const e = {
       id: this.nextId++, type, def, L,
@@ -875,8 +873,8 @@
       RS.addGold(run, cost);
       res.clover = true;
     }
-    const echo = M.echoForm && !this.echoUsed;
-    if (echo) this.echoUsed = true;
+    const echo = this.echoLeft > 0;
+    if (echo) this.echoLeft--;
     if (echo || (M.twinChance && this.rng.chance(M.twinChance))) {
       // 따라온 유닛은 낸 비용을 나눠 갖는다 (둘 다 팔아도 낸 골드보다 적다)
       const s2 = RS.addUnit(run.board, cls, tier, -1, 0);
