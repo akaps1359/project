@@ -124,7 +124,7 @@
     R('pandoraBox', '판도라의 상자', 3, 'pandora', '보드의 일반 유닛을 모두 같은 수의 무작위 희귀 유닛으로 바꾼다', {}, {
       onPick(run) { RS.transformTier(run, 0, 1); },
     }),
-    R('tinyHouse', '작은 집', 3, 'house', '골드 +50, 최대 생명 +5, 소모품 1개, 희귀 유닛 1기, 무작위 실버 증강 1개', {}, {
+    R('tinyHouse', '작은 집', 3, 'house', '골드 +50, 최대 생명 +5, 소모품 1개, 희귀 유닛 1기, 무작위 은빛 증강 1개', {}, {
       onPick(run) {
         RS.addGold(run, 50);
         RS.changeMaxLife(run, 5);

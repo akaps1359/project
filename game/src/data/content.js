@@ -6,9 +6,9 @@
   const A = (id, name, rarity, icon, desc, mods, extra) =>
     Object.assign({ id, name, rarity, icon, desc, mods: mods || {} }, extra || {});
 
-  // rarity: 1 실버 / 2 골드 / 3 프리즘. unique 가 아니면 여러 번 고를 수 있다.
+  // rarity: 1 은빛 / 2 황금 / 3 프리즘. unique 가 아니면 여러 번 고를 수 있다.
   RS.AUGMENTS = [
-    // ── 실버 ──
+    // ── 은빛 ──
     A('sharp', '날카로운 무기', 1, 'sword', '모든 유닛 피해 +12%', { dmgPct: 0.12 }),
     A('quick', '빠른 손놀림', 1, 'wing', '모든 유닛 공격 속도 +10%', { aspdPct: 0.1 }),
     A('eagle', '매의 눈', 1, 'eye', '모든 유닛 사거리 +6', { rangeAdd: 6 }),
@@ -144,7 +144,7 @@
   RS.ITEM = index(RS.ITEMS);
   RS.CURSE = index(RS.CURSES);
 
-  RS.RARITY_NAME = { aug: ['', '실버', '골드', '프리즘'], relic: ['', '일반', '희귀', '보스', '고대', '시작', '이벤트'] };
+  RS.RARITY_NAME = { aug: ['', '은빛', '황금', '프리즘'], relic: ['', '일반', '희귀', '보스', '고대', '시작', '이벤트'] };
 
   RS.randomItemId = function (rng) {
     return rng.pick(RS.ITEMS).id;

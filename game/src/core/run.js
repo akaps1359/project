@@ -113,12 +113,13 @@
     return rng.weighted(RS.CLASSES, (c) => w[c]);
   };
   // 보드에 자리가 없으면 판매 가격만큼 골드로 돌려준다. { placed, gold } 를 돌려준다
-  RS.grantUnits = function (run, tier, n) {
+  // worth: 이 유닛에 들인 골드 (상점 용병). 생략하면 무료 유닛
+  RS.grantUnits = function (run, tier, n, worth) {
     const M = RS.collectMods(run);
     const out = { placed: 0, gold: 0 };
     for (let k = 0; k < n; k++) {
       const cls = RS.pickClass(run, run.rng);
-      if (RS.addUnit(run.board, cls, tier) < 0) {
+      if (RS.addUnit(run.board, cls, tier, undefined, worth) < 0) {
         const g = typeof RS.sellValue === 'function' ? RS.sellValue(run, tier, M) || 0 : 0;
         RS.addGold(run, g);
         out.gold += g;
@@ -152,7 +153,7 @@
   };
   RS.hasRelic = (run, id) => run.relics.indexOf(id) >= 0;
 
-  // ── 증강 (강화된 증강은 id 뒤에 + 가 붙는다) ──
+  // ── 증강 (연마된 증강은 id 뒤에 + 가 붙는다) ──
   RS.augDef = (id) => RS.AUG[id.charAt(id.length - 1) === '+' ? id.slice(0, -1) : id];
   RS.isUpgraded = (id) => id.charAt(id.length - 1) === '+';
   RS.pickAugment = function (run, id) {
@@ -251,6 +252,8 @@
     RS.attachRng(run);
     RS.registerCustomAugs(run);
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
+    // 이전 버전 저장의 유닛에 판매 가치를 매긴다
+    if (Array.isArray(run.board) && typeof RS.migrateBoard === 'function') RS.migrateBoard(run);
     return run;
   };
 
@@ -787,7 +790,7 @@
       item.refundLife = 0;
       item.undoCurse = null;
       item.undoCharm = 0;
-      // 한 번에 산 묶음(제거 + 강화 등)의 나머지도 함께 취소
+      // 한 번에 산 묶음(제거 + 연마 등)의 나머지도 함께 취소
       if (item.group) run.queue = run.queue.filter((x) => x === item || x.group !== item.group);
     } else if ((item.k === 'aug' || item.k === 'augList') && item.ids && item.ids.length) {
       const life = RS.skipAugBonus(run);
@@ -942,7 +945,7 @@
     if (it.kind === 'relic') RS.addRelic(run, it.id);
     else if (it.kind === 'item') RS.addItem(run, it.id);
     else if (it.kind === 'aug') RS.pickAugment(run, it.id);
-    else if (it.kind === 'unit') RS.grantUnits(run, it.tier, 1);
+    else if (it.kind === 'unit') RS.grantUnits(run, it.tier, 1, it.price);
     else if (it.kind === 'rune') RS.enqueue(run, { k: 'rune', rune: it.id, title: '룬 새기기', undo });
     else if (it.kind === 'remove') {
       run.removeCount++;
@@ -1007,7 +1010,7 @@
     });
     opts.push({ id: 'train', label: '수련', desc: `클래스 하나 강화 +${RS.restTrainAmount(run)}`, off: M.noSmith ? '융합 망치 때문에 할 수 없다' : null });
     const up = run.augments.some((id) => RS.canUpgradeAug(id));
-    opts.push({ id: 'smith', label: '연마', desc: '증강 하나를 강화 (효과 ×1.5)', off: M.noSmith ? '융합 망치 때문에 할 수 없다' : !up ? '강화할 수 있는 증강이 없다' : null });
+    opts.push({ id: 'smith', label: '연마', desc: '증강 하나를 연마 (효과 ×1.5)', off: M.noSmith ? '융합 망치 때문에 할 수 없다' : !up ? '연마할 수 있는 증강이 없다' : null });
     if (M.peacePipe) opts.push({ id: 'toke', label: '명상', desc: '증강이나 저주 하나를 없앤다', off: RS.removableCount(run) ? null : '없앨 것이 없다' });
     if (M.shovel) opts.push({ id: 'dig', label: '발굴', desc: '유물 하나를 얻는다' });
     if (M.girya) {
@@ -1156,8 +1159,8 @@
       } else if (tier === 2) {
         const n = Math.min(2, run.augments.filter((id) => RS.canUpgradeAug(id)).length);
         for (let k = 0; k < n; k++) RS.enqueue(run, { k: 'upgrade', title: '허수아비 시험' });
-        if (n) reward.trial.text = `증강 ${n}개 강화`;
-        else fallback(60 * a, '강화할 증강이 없어');
+        if (n) reward.trial.text = `증강 ${n}개 연마`;
+        else fallback(60 * a, '연마할 증강이 없어');
       } else {
         const ids = RS.rollRelics(run, 1, [2], [1]);
         if (ids.length) {
@@ -1176,8 +1179,7 @@
     const s = run.board[i];
     if (!s) return '';
     const tier = s.tier;
-    s.n--;
-    if (s.n <= 0) run.board[i] = null;
+    RS.takeUnit(run.board, i);
     const bloom = !RS.canHeal(run);
     if (tier === 0) return '정령들이 시큰둥하다. 아무 일도 없었다.';
     if (tier === 1) {

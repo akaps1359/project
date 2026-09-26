@@ -58,14 +58,14 @@ const AUG_SCORE = {
   eagle: 4, archmage: 6, drillKnight: 4, drillArcher: 4, drillMage: 4, drillRogue: 4, drillFrost: 3,
   wall: 3, firstStrike: 4, hastyWaves: 4, rich: 4, eliteSquad: 2, purity: 2, gamble: 4,
   vampRite: 3, smithDiscount: 3,
-  demonForm: 8, echoForm: 6, apotheosis: 6, wraithForm: 6, corruption: 7, creativeAI: 5,
+  demonForm: 8, echoForm: 6, apotheosis: 6, wraithForm: 6, corruption: 5, creativeAI: 5,
   noxious: 6, poisonBlade: 4, offering: 5, limitBreak: 5,
 };
 const ANC_SCORE = {
   bloodCrown: 8, spikedGauntlet: 8, whisperEarring: 7, twinStar: 7, luckyStar: 7, legend: 7, epic2: 7,
   prism2: 6, trainAll2: 6, dragonScale: 6, stoppedClock: 6, pumpkinCandle: 6, waxToys: 6, bossRelic: 6,
   rewindSand: 5, forgottenShelf: 5, forbiddenIndex: 5, upgrade2: 5, runes2: 5, gold400: 5, goldenEgg: 5,
-  sealOfGold: 5, warHammerA: 5, bloodPactCup: 5, lordParasol: 4, loomingFruit: 4, maxLife15: 4, cleanse: 3,
+  sealOfGold: 5, warHammerA: 5, bloodPactCup: 5, lordParasol: 4, loomingFruit: 4, maxLife15: 4, cleanse: 3, relicPair: 5,
 };
 
 function makeBasicBot(RS, kind, rng, opts) {

@@ -8,7 +8,7 @@
   // 고대 유물 (보스 유물처럼 강력하고, 대가가 있는 것이 많다)
   const ANCIENT_RELICS = [
     R('forgottenShelf', '망각의 서가', 'scroll', '증강 선택지 +1, 증강을 건너뛸 때 골드 2배', { augChoices: 1, skipGoldMul: 1 }),
-    R('forbiddenIndex', '금단의 색인', 'lens', '앞으로 얻는 증강이 30% 확률로 강화된 채 들어온다', { augUpChance: 0.3 }),
+    R('forbiddenIndex', '금단의 색인', 'lens', '앞으로 얻는 증강이 30% 확률로 연마된 채 들어온다', { augUpChance: 0.3 }),
     R('stoppedClock', '멈춘 시계', 'watch', '모든 적 이동 속도 -12%, 보스 제한 시간 +20초', { enemySpeedPct: 0.12, bossTimeAdd: 20 }),
     R('rewindSand', '되감기 모래', 'hourglass', '전투마다 처음 세 번은 한 바퀴를 돈 적에게 생명을 잃지 않는다', { leakShield: 3 }),
     R('dragonScale', '용비늘 금화', 'coins', '웨이브 시작 골드 +100%, 이자 한도 +5', { waveGoldPct: 1, interestCap: 5 }),
@@ -25,7 +25,7 @@
     R('lordParasol', '영주의 양산', 'crown2', '상점에서 첫 번째로 사는 물건은 공짜', { freeFirstBuy: 1 }),
     R('whisperEarring', '속삭이는 귀걸이', 'charm', '모든 유닛 공격 속도 +45%', { aspdPct: 0.45, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
     R('spikedGauntlet', '가시 건틀릿', 'fist', '모든 유닛 피해 +45%', { dmgPct: 0.45, upgradeCostPct: 0.5 }, { cost: '강화 비용 +50%' }),
-    R('warHammerA', '전쟁 망치', 'hammer', '엘리트를 처치하면 무작위 증강 2개 강화', { eliteUpgrade: 2 }),
+    R('warHammerA', '전쟁 망치', 'hammer', '엘리트를 처치하면 무작위 증강 2개 연마', { eliteUpgrade: 2 }),
     R('loomingFruit', '어렴풋한 열매', 'mango', '최대 생명 +12', {}, {
       onPick(run) { RS.changeMaxLife(run, 12); RS.heal(run, 12); },
     }),

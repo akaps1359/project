@@ -1,7 +1,7 @@
 // 이벤트(? 칸). 슬레이 더 스파이어 1·2의 이벤트 구조를 이 게임에 맞게 옮겼다.
 // apply 결과: 문장 또는 { text, augRarity, fight, next(다음 단계), again(같은 단계 반복) }
-// 선택이 필요한 효과(증강 강화·칸 고르기 등)는 RS.enqueue 로 대기열에 넣는다.
-// 규칙: 해낼 수 없는 선택지(없앨 것·강화할 것이 없음, 가방·보드가 가득 참, 회복 불가, 골드 부족,
+// 선택이 필요한 효과(증강 연마·칸 고르기 등)는 RS.enqueue 로 대기열에 넣는다.
+// 규칙: 해낼 수 없는 선택지(없앨 것·연마할 것이 없음, 가방·보드가 가득 참, 회복 불가, 골드 부족,
 //       생명이 대가보다 적음)는 cond 로 막고, 단계마다 조건 없는 선택지를 하나 이상 둔다.
 //       골드·생명을 먼저 치르고 대기열로 고르는 서비스는 refund/refundLife 를 붙여 그만두면 돌려준다.
 (function (RS) {
@@ -76,7 +76,7 @@
           },
         },
         {
-          label: '교관을 고용한다', desc: (run) => `골드 -${50 * act(run)} · 보드에 가장 많은 클래스 강화 +3`,
+          label: '교관을 고용한다', desc: (run) => `골드 -${50 * act(run)} · 보드에서 가장 강한 클래스 강화 +3`,
           cond: (run) => run.gold >= 50 * act(run) && hasUnit(run),
           apply(run) {
             RS.addGold(run, -50 * act(run));
@@ -293,7 +293,7 @@
       text: '눈부신 빛이 쏟아지는 틈. 들어가면 뜨겁겠지만 무언가 달라질 것 같다.',
       options: [
         {
-          label: '빛 속으로', desc: '생명 -20%(최대 기준) · 무작위 증강 2개 강화', cond: (run) => hasUpgradable(run) && run.life > Math.ceil(run.maxLife * 0.2),
+          label: '빛 속으로', desc: '생명 -20%(최대 기준) · 무작위 증강 2개 연마', cond: (run) => hasUpgradable(run) && run.life > Math.ceil(run.maxLife * 0.2),
           apply(run, rng) {
             const d = RS.damageLife(run, Math.ceil(run.maxLife * 0.2));
             const idxs = run.augments.map((id, i) => i).filter((i) => RS.canUpgradeAug(run.augments[i]));
@@ -302,7 +302,7 @@
               RS.upgradeAug(run, i);
               return RS.augDef(run.augments[i]).name;
             });
-            return `생명 -${d}. [${names.join('], [')}] 강화!`;
+            return `생명 -${d}. [${names.join('], [')}] 연마!`;
           },
         },
         leave(),
@@ -507,7 +507,7 @@
       text: '"시간 안에 나를 쓰러뜨려 봐라!" 허수아비가 말한다. 튼튼할수록 상이 크다.',
       options: [
         { label: '짚 허수아비', desc: '쉬움 · 30초 안에 쓰러뜨리면 소모품 1개', cond: bagSpace, apply() { return { text: '허수아비가 몸을 푼다.', fight: { as: 'combat', trial: 1, timeLimit: 30 } }; } },
-        { label: '나무 허수아비', desc: '보통 · 30초 안에 쓰러뜨리면 증강 2개 강화', cond: hasUpgradable, apply() { return { text: '허수아비가 몸을 푼다.', fight: { as: 'combat', trial: 2, timeLimit: 30 } }; } },
+        { label: '나무 허수아비', desc: '보통 · 30초 안에 쓰러뜨리면 증강 2개 연마', cond: hasUpgradable, apply() { return { text: '허수아비가 몸을 푼다.', fight: { as: 'combat', trial: 2, timeLimit: 30 } }; } },
         { label: '강철 허수아비', desc: '어려움 · 30초 안에 쓰러뜨리면 희귀 유물', cond: (run) => relicLeft(run, [2]), apply() { return { text: '허수아비가 몸을 푼다.', fight: { as: 'combat', trial: 3, timeLimit: 30 } }; } },
         leave('지나친다'),
       ],
@@ -550,13 +550,13 @@
           },
         },
         {
-          label: '그냥 나간다', desc: '강화된 증강 하나가 원래대로 돌아간다',
+          label: '그냥 나간다', desc: '연마된 증강 하나가 원래대로 돌아간다',
           apply(run, rng) {
             const up = run.augments.map((id, i) => i).filter((i) => RS.isUpgraded(run.augments[i]));
             if (!up.length) return '웡고가 투덜거린다.';
             const i = rng.pick(up);
             run.augments[i] = run.augments[i].slice(0, -1);
-            return `웡고가 투덜거리며 [${RS.augDef(run.augments[i]).name}]의 강화를 떼어 갔다.`;
+            return `웡고가 투덜거리며 [${RS.augDef(run.augments[i]).name}]의 연마를 떼어 갔다.`;
           },
         },
       ],
@@ -584,7 +584,7 @@
             const n = Math.min(2, upgradableCount(run));
             for (let k = 0; k < n; k++) q(run, { k: 'upgrade', title: '재판' });
             const head = got ? '판결 보류. 저주 [죄책감](전투 5번 뒤 사라짐).' : '판결 보류. 부적이 저주를 막았다.';
-            return `${head} ${n ? `증강 ${n}개를 강화할 수 있다.` : '강화할 증강은 없었다.'}`;
+            return `${head} ${n ? `증강 ${n}개를 연마할 수 있다.` : '연마할 증강은 없었다.'}`;
           },
         },
         {
@@ -706,7 +706,7 @@
       id: 'cheese', title: '치즈가 가득한 방', art: 'berry',
       text: '방 안이 치즈로 가득하다. 쥐들이 무언가를 지키고 있다.',
       options: [
-        { label: '치즈를 고른다', desc: '실버 증강 6개 중 2개를 고른다', apply(run) { q(run, { k: 'augList', ids: RS.rollAugments(run, 6, [0, 1, 0, 0]), left: 2, title: '치즈가 가득한 방' }); return '냄새가 지독하지만 쓸 만한 것들이 보인다.'; } },
+        { label: '치즈를 고른다', desc: '은빛 증강 6개 중 2개를 고른다', apply(run) { q(run, { k: 'augList', ids: RS.rollAugments(run, 6, [0, 1, 0, 0]), left: 2, title: '치즈가 가득한 방' }); return '냄새가 지독하지만 쓸 만한 것들이 보인다.'; } },
         {
           label: '쥐들을 쫓아낸다', desc: '생명 -5 · 유물 [치즈 조각] (전투에서 이기면 최대 생명 +1)', cond: (run) => run.life > 5 && !RS.hasRelic(run, 'cheese'),
           apply(run) {
@@ -776,7 +776,7 @@
       text: '"이 보드, 조금만 손보면 훨씬 좋아지겠는데?" 설계자가 줄자를 꺼낸다.',
       options: [
         {
-          label: '조정', desc: (run) => `골드 -${40 * act(run)} · 증강 하나 강화`,
+          label: '조정', desc: (run) => `골드 -${40 * act(run)} · 증강 하나 연마`,
           cond: (run) => run.gold >= 40 * act(run) && hasUpgradable(run),
           apply(run) {
             const g = 40 * act(run);
@@ -786,12 +786,12 @@
           },
         },
         {
-          label: '전면 수리', desc: (run) => `골드 -${75 * act(run)} · 증강·저주 하나 제거 + 증강 하나 강화`,
+          label: '전면 수리', desc: (run) => `골드 -${75 * act(run)} · 증강·저주 하나 제거 + 증강 하나 연마`,
           cond: (run) => run.gold >= 75 * act(run) && hasRemovable(run),
           apply(run) {
             const g = 75 * act(run);
             RS.addGold(run, -g);
-            // 제거를 그만두면 골드를 돌려받고 강화도 취소된다
+            // 제거를 그만두면 골드를 돌려받고 연마도 취소된다
             q(run, { k: 'remove', title: '균열 설계자', refund: g, group: 'designer' });
             if (hasUpgradable(run)) q(run, { k: 'upgrade', title: '균열 설계자', group: 'designer' });
             return '설계자가 소매를 걷어붙인다.';
@@ -892,12 +892,12 @@
           },
         },
         {
-          label: '나는 깨어났다', desc: '모든 증강 강화 · 저주 [피어남의 표식] (생명 회복 불가, 없앨 수 없다)', cond: hasUpgradable,
+          label: '나는 깨어났다', desc: '모든 증강 연마 · 저주 [피어남의 표식] (생명 회복 불가, 없앨 수 없다)', cond: hasUpgradable,
           apply(run) {
             let n = 0;
             for (let i = 0; i < run.augments.length; i++) if (RS.upgradeAug(run, i)) n++;
             if (run.curses.indexOf('bloomMark') < 0) run.curses.push('bloomMark');
-            return `세상이 선명해진다. 증강 ${n}개 강화. 대신 상처가 더는 아물지 않는다.`;
+            return `세상이 선명해진다. 증강 ${n}개 연마. 대신 상처가 더는 아물지 않는다.`;
           },
         },
         {

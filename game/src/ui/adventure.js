@@ -316,7 +316,8 @@
       case 'aug':
       case 'augList': {
         if (!item.ids) {
-          item.ids = RS.rollAugments(run, item.n || RS.augChoiceCount(run), item.w);
+          if (typeof RS.choiceAugIds === 'function') RS.choiceAugIds(run, item);
+          else item.ids = RS.rollAugments(run, item.n || RS.augChoiceCount(run), item.w);
           G.save();
         }
         const ok = item.ids.indexOf(sel) >= 0 ? sel : null;
@@ -324,6 +325,15 @@
         const has = item.ids.length > 0;
         body = h('div', null, h('h2', null, left > 1 ? `증강을 고르세요 (${left}개 더)` : '증강을 하나 고르세요'), h('div', { class: 'cards' }, item.ids.map((id) => UI.augCard(id, ok === id, () => pickSel(id)))));
         footer = [cancelBtn(left > 1 ? '그만 고르기' : '건너뛰기', has)];
+        // 운명의 주사위: 대기열 증강 선택도 새로고침할 수 있다
+        if (has && item.rerolls > 0 && typeof RS.choiceReroll === 'function') {
+          footer.push(btn(`새로고침 ${item.rerolls}`, () => {
+            RS.choiceReroll(run, item);
+            UI.choiceSel = null;
+            G.save();
+            UI.showChoice();
+          }, 'sm'));
+        }
         if (has) {
           footer.push(confirmBtn(ok ? `${short(RS.augDef(ok).name, 12)} 선택` : '카드를 누르세요', () => {
             RS.pickAugment(run, ok);
@@ -499,7 +509,7 @@
     let footer;
     if (r.trial) {
       const T = ['', '소모품', '증강 2개 연마', '희귀 유물'];
-      body.appendChild(h('p', { class: 'event-result' }, r.trial.ok ? `시험 통과! 보상: ${T[r.trial.tier]}` : '시간 안에 쓰러뜨리지 못했다. 허수아비가 비웃는 것 같다.'));
+      body.appendChild(h('p', { class: 'event-result' }, r.trial.ok ? `시험 통과! 보상: ${r.trial.text || T[r.trial.tier]}` : '시간 안에 쓰러뜨리지 못했다. 허수아비가 비웃는 것 같다.'));
     }
     if (RS.rewardComplete(run)) {
       footer = [btn('계속', (e) => {
@@ -632,7 +642,7 @@
       btn(it ? `${short(UI.shopItemName(it), 10)} 구매 · ${it.price}G` : '물건을 누르세요', (e) => {
         if (sel == null) return;
         const r = RS.shopBuy(run, sel);
-        const MSG = { gold: '골드가 부족해요', full: '소모품을 더 가질 수 없어요', board: '보드에 빈칸이 없어요', none: '없앨 것이 없어요' };
+        const MSG = { gold: '골드가 부족해요', full: '소모품을 더 가질 수 없어요', board: '보드에 빈칸이 없어요', none: '없앨 것이 없어요', noslot: '룬을 새길 칸이 없어요' };
         if (r.err && MSG[r.err]) {
           RS.sfx('error');
           UI.toast(MSG[r.err], 'warn');
@@ -737,9 +747,10 @@
           UI.lockAll(box);
           RS.sfx('upgrade');
           const snap = UI.snapGains(run);
-          RS.restDo(run, o.id);
+          const said = RS.restDo(run, o.id);
           const gains = SHOW_GAINS[o.id] ? UI.diffGains(snap, run) : null;
           if (o.id === 'recall') UI.toast('루비 열쇠를 얻었다!', 'good');
+          else if (typeof said === 'string' && said) UI.toast(said, 'good');
           G.leaveNode();
           if (gains && gains.length) UI.showGains(SHOW_GAINS[o.id], gains);
         },

@@ -77,7 +77,7 @@
     { id: 'lament', text: '문지기의 탄식: 다음 3번의 전투에서 첫 웨이브 적의 체력이 1', apply(run) { run.lament = 3; } },
   ];
   const MID = [
-    { id: 'aug', text: '증강 하나 선택 (골드 등급 위주)', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 20, 70, 10], title: '문지기의 축복' }); } },
+    { id: 'aug', text: '증강 하나 선택 (황금 등급 위주)', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 20, 70, 10], title: '문지기의 축복' }); } },
     { id: 'rareUnits', text: '희귀 유닛 2기', apply(run) { RS.grantUnits(run, 1, 2); } },
     { id: 'relic', text: '무작위 일반 유물', apply(run) { RS.grantRandomRelic(run, [1]); } },
     { id: 'train', text: '모든 클래스 강화 +1', apply(run) { for (const c of RS.CLASSES) run.classLv[c]++; } },
