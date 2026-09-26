@@ -58,6 +58,7 @@
     this.drag = null;
     this.hoverSlot = -1;
     this.flashRift = [];
+    this.noReach = new Uint8Array(F.SIZE);
   }
   const P = Renderer.prototype;
 
@@ -115,6 +116,22 @@
       x.fillStyle = th.slotHi;
       x.fillRect(cx + 2, cy + 2, F.SLOT - 4, 1);
       x.fillRect(cx + 2, cy + 2, 1, F.SLOT - 4);
+    }
+    // 안쪽 칸 2×3 둘레 점선 (원거리 유닛 자리)
+    {
+      const x0 = F.GX + F.SLOT - 1;
+      const x1 = F.GX + 3 * F.SLOT;
+      const y0 = F.GY + F.SLOT - 1;
+      const y1 = F.GY + 4 * F.SLOT;
+      x.fillStyle = th.slotHi;
+      for (let px = x0; px <= x1; px += 2) {
+        x.fillRect(px, y0, 1, 1);
+        x.fillRect(px, y1, 1, 1);
+      }
+      for (let py = y0; py <= y1; py += 2) {
+        x.fillRect(x0, py, 1, 1);
+        x.fillRect(x1, py, 1, 1);
+      }
     }
     // 균열 문 (적이 나오고, 한 바퀴를 돌면 들어가는 곳)
     const pr = 7;
@@ -238,6 +255,7 @@
     this.drawShots(ctx, dt);
     this.drawFx(ctx, dt);
     this.drawNums(ctx, dt);
+    if (b) this.drawDrag(ctx, b);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
@@ -301,9 +319,16 @@
       if (runes && runes[i]) this.drawRune(ctx, RS.RUNE[runes[i]], x, y);
       if (this.lunge[i] > 0) this.lunge[i] -= dt;
       if (this.pop[i] > 0) this.pop[i] -= dt;
-      if (this.drag && this.drag.over === i && this.drag.from !== i) {
-        ctx.fillStyle = 'rgba(255,228,107,0.25)';
+      const dr = this.drag;
+      if (dr && dr.moved && dr.over === i && dr.from !== i) {
+        const bad = dr.overReach === false;
+        ctx.fillStyle = bad ? 'rgba(239,97,102,0.35)' : 'rgba(255,228,107,0.25)';
         ctx.fillRect(x + 1, y + 1, F.SLOT - 2, F.SLOT - 2);
+        ctx.fillStyle = bad ? '#ef6166' : '#ffe46b';
+        ctx.fillRect(x, y, F.SLOT, 1);
+        ctx.fillRect(x, y + F.SLOT - 1, F.SLOT, 1);
+        ctx.fillRect(x, y, 1, F.SLOT);
+        ctx.fillRect(x + F.SLOT - 1, y, 1, F.SLOT);
       }
       if (!s) continue;
       const T = RS.TIER[s.tier];
@@ -323,12 +348,23 @@
         oy += this.lungeDir[i].y;
       }
       if (this.pop[i] > 0) oy -= Math.round(this.pop[i] * 8);
-      if (this.drag && this.drag.from === i && this.drag.moved) {
-        ctx.globalAlpha = 0.35;
+      let draggedAway = false;
+      if (dr && dr.moved) {
+        if (dr.from === i) {
+          ctx.globalAlpha = 0.35;
+          draggedAway = true;
+        } else if (dr.over === i) ctx.globalAlpha = 0.35; // 자리를 내줄 유닛
       }
       const stunned = b.slotStun[i] > 0;
       ctx.drawImage(spr, x + 4 + ox, y + 2 + oy);
       ctx.globalAlpha = 1;
+      if (draggedAway && dr.over >= 0 && dr.over !== i && board[dr.over]) {
+        // 자리 바꿈 미리보기: 목표 칸의 유닛이 이 칸으로 온다
+        const o = board[dr.over];
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(RS.SPR[o.cls + o.tier], x + 4, y + 2);
+        ctx.globalAlpha = 1;
+      }
       if (stunned) {
         ctx.fillStyle = 'rgba(160,97,232,0.45)';
         ctx.fillRect(x + 2, y + 2, F.SLOT - 4, F.SLOT - 4);
@@ -342,6 +378,19 @@
       }
       if (s.n >= 3 && s.tier < 3 && Math.floor(t * 3) % 2 === 0) {
         ctx.drawImage(RS.SPR.i_up, x + 1, y + 1, 7, 7);
+      }
+      // 사거리가 길에 닿지 않는 칸: 오른쪽 위에 빨간 x (2Hz)
+      if (this.noReach && this.noReach[i] && Math.floor(t * 4) % 2 === 0) {
+        const qx = x + F.SLOT - 6;
+        const qy = y + 2;
+        ctx.fillStyle = '#1d1428';
+        ctx.fillRect(qx - 1, qy - 1, 5, 5);
+        ctx.fillStyle = '#ef6166';
+        ctx.fillRect(qx, qy, 1, 1);
+        ctx.fillRect(qx + 2, qy, 1, 1);
+        ctx.fillRect(qx + 1, qy + 1, 1, 1);
+        ctx.fillRect(qx, qy + 2, 1, 1);
+        ctx.fillRect(qx + 2, qy + 2, 1, 1);
       }
     }
     // 선택 표시 + 사거리
@@ -367,6 +416,16 @@
         }
       }
     }
+  };
+
+  // 끌고 있는 유닛은 손가락보다 조금 위에 그린다
+  P.drawDrag = function (ctx, b) {
+    const dr = this.drag;
+    if (!dr || !dr.moved) return;
+    const s = b.run.board[dr.from];
+    if (!s) return;
+    const spr = RS.SPR[s.cls + s.tier];
+    ctx.drawImage(spr, Math.round(dr.x - spr.width / 2), Math.round(dr.y - 26));
   };
 
   P.drawStars = function (ctx, x, y) {
@@ -437,15 +496,28 @@
         ctx.drawImage(fl, x - 2, y - 2 - k);
         ctx.drawImage(fl, x + w - fl.width + 2, y - 3 + k);
       }
-      // 체력바 (눈가리개를 하면 보이지 않는다)
-      if (!blind && !e.boss && e.hp < e.maxHp) {
-        const bw = Math.max(8, w - 4);
-        const bx = Math.round(e.x - bw / 2);
-        const by = y - 3;
+    }
+    // 체력바는 모든 적을 그린 뒤에 (눈가리개를 하면 보이지 않는다)
+    if (blind) return;
+    for (const e of list) {
+      if (e.boss || e.subT > 0 || e.hp >= e.maxHp) continue;
+      const spr = RS.SPR[e.type];
+      const w = spr.width;
+      const top = Math.round(e.y - spr.height + 5 + (e.boss ? 0 : Math.round(Math.sin(t * 8 + e.phase))));
+      const bw = Math.max(8, w - 4);
+      const bx = Math.round(e.x - bw / 2);
+      const by = top - 3;
+      const fill = Math.max(1, Math.round((bw * Math.max(0, e.hp)) / e.maxHp));
+      if (e.elite) {
         ctx.fillStyle = '#1d1428';
         ctx.fillRect(bx - 1, by - 1, bw + 2, 3);
-        ctx.fillStyle = e.elite ? '#f5c44a' : '#e04a52';
-        ctx.fillRect(bx, by, Math.max(1, Math.round((bw * Math.max(0, e.hp)) / e.maxHp)), 1);
+        ctx.fillStyle = '#f5c44a';
+        ctx.fillRect(bx, by, fill, 1);
+      } else {
+        ctx.fillStyle = '#3a1d2c';
+        ctx.fillRect(bx + fill, by, bw - fill, 1);
+        ctx.fillStyle = '#e04a52';
+        ctx.fillRect(bx, by, fill, 1);
       }
     }
   };
@@ -570,7 +642,7 @@
       n.t -= dt;
       if (n.t <= 0) continue;
       this.nums[w++] = n;
-      n.y -= dt * 14;
+      n.y = Math.max(6, n.y - dt * 14);
       RS.drawNum(ctx, n.s, n.x, n.y, n.c);
     }
     this.nums.length = w;
@@ -583,6 +655,7 @@
     this.sel = -1;
     this.drag = null;
     this.shake = 0;
+    if (this.noReach) this.noReach.fill(0);
   };
 
   RS.Renderer = Renderer;

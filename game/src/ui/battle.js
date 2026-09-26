@@ -1,4 +1,4 @@
-// 전투 화면: HUD, 유닛 패널, 소모품, 전장 입력
+// 전투 화면: HUD, 유닛 패널, 소모품, 전장 입력, 첫 전투 코치
 (function (RS) {
   'use strict';
 
@@ -6,12 +6,64 @@
   const UI = RS.UI;
   const { h, append, $, btn, icon, unitImg, fmt, fmtK, pct } = UI;
 
+  // 슬롯 중심에서 적이 도는 길(사각 루프)까지의 거리. 바깥 칸 26, 안쪽 칸 52
+  const PATH_D = [];
+  for (let i = 0; i < F.SIZE; i++) {
+    const c = RS.slotCenter(i);
+    PATH_D.push(Math.min(c.x - F.L, F.R - c.x, c.y - F.T, F.B - c.y));
+  }
+  UI.pathDist = (i) => PATH_D[i];
+  UI.reaches = (st, i) => !!st && st.range >= PATH_D[i];
+
+  // 길에 닿는 칸만 더한 전체 DPS
+  UI.effDps = function (b) {
+    if (b.statsDirty) b.computeSlotStats();
+    let dps = 0;
+    const board = b.run.board;
+    for (let i = 0; i < F.SIZE; i++) {
+      const s = board[i];
+      const st = b.slotStats[i];
+      if (s && st && UI.reaches(st, i)) dps += st.dps * s.n;
+    }
+    return dps;
+  };
+
+  UI.sellValueAt = function (b, i) {
+    const run = b.run;
+    const s = run.board[i];
+    if (!s) return 0;
+    if (typeof RS.sellValueAt === 'function') return RS.sellValueAt(run, i, b.M);
+    return RS.sellValue(run, s.tier, b.M);
+  };
+
+  UI.starMax = (b) => (typeof b.starMax === 'number' && b.starMax > 0 ? b.starMax : 3);
+
+  // 고대 두루마리: 합성 후보는 칸의 스택이 바뀔 때까지 고정
+  UI.mergeOptsFor = function (b, i) {
+    if (typeof b.mergeOptions !== 'function') return null;
+    if (b.mergeOptions.length >= 1) return b.mergeOptions(i); // 코어가 칸별로 기억한다
+    // 예전 코어: 부를 때마다 새로 굴리므로 여기서 기억한다
+    const s = b.run.board[i];
+    if (!s) return null;
+    const cache = b.uiMergeOpts || (b.uiMergeOpts = {});
+    const key = i + ':' + s.cls + ':' + s.tier;
+    return cache[key] || (cache[key] = b.mergeOptions(i));
+  };
+  function forgetMergeOpts(b, i) {
+    if (!b.uiMergeOpts) return;
+    for (const k of Object.keys(b.uiMergeOpts)) if (k.split(':')[0] === String(i)) delete b.uiMergeOpts[k];
+  }
+
   UI.initBattle = function () {
     for (const img of document.querySelectorAll('img[data-icon]')) img.src = RS.iconURL(img.dataset.icon, 3);
     $('#b-summon').addEventListener('click', () => UI.doSummon());
     $('#b-upg').addEventListener('click', () => {
       RS.sfx('click');
-      UI.setPanel(UI.panelMode === 'upgrade' ? 'idle' : 'upgrade');
+      if (UI.panelMode === 'upgrade') UI.closePanel();
+      else {
+        UI.setPanel('upgrade');
+        UI.tutDone('upgrade');
+      }
     });
     $('#b-arrange').addEventListener('click', () => {
       const G = UI.G;
@@ -27,11 +79,48 @@
     });
     $('#b-pause').addEventListener('click', () => {
       RS.sfx('click');
-      UI.openPause();
+      UI.openMenu();
+    });
+    // HUD 항목을 누르면 설명
+    const hudTip = (id, fn) => $(id).addEventListener('click', (e) => {
+      const G = UI.G;
+      if (!G.battle) return;
+      const t = fn(G.battle, G.run);
+      UI.tip(e.currentTarget, t[0], t[1], t[2] || null);
+    });
+    hudTip('#h-life', () => ['생명', '적이 길을 한 바퀴 돌아 균열로 들어갈 때마다 줄어요. 0이 되면 모험이 끝나요.']);
+    hudTip('#h-gold', (b) => ['골드', `처치·웨이브마다 들어와요. 웨이브 시작 때 보유 10G당 1G 이자 (최대 ${RS.interestCap(b.M)}).`]);
+    hudTip('#h-foe', (b) => ['적', `지금 필드에 있는 적 수. ${b.cap}마리가 되면 즉시 패배.`]);
+    hudTip('#h-wave', (b) => ['웨이브', '준비: 첫 웨이브까지 남은 시간 · n/3: 현재 웨이브와 다음 웨이브까지 남은 시간', trialLimit(b) ? `허수아비 시험: ${trialLimit(b)}초 안에 쓰러뜨려야 해요` : null]);
+    $('#bossbar').addEventListener('click', (e) => {
+      const G = UI.G;
+      const b = G.battle;
+      if (!b) return;
+      const id = b.boss ? b.boss.type : bossIdOf(b);
+      const def = id && RS.ENEMY[id];
+      if (!def) return;
+      const t = RS.BAL.bossTime + (b.M.bossTimeAdd || 0) + (def.bossTimeAdd || 0);
+      UI.tip(e.currentTarget, `${def.name} · 보스`, def.trait || '', `제한 시간 ${t}초 · 지나면 폭주: 속도 ×1.8, 잃는 생명 ×2`);
     });
     bindField();
     window.addEventListener('resize', () => UI.fitCanvas());
+    if (window.ResizeObserver) new ResizeObserver(() => UI.fitCanvas()).observe($('#field'));
   };
+
+  function trialLimit(b) {
+    return (b.stage.spec && b.stage.spec.timeLimit) || 0;
+  }
+  function trialLeft(b) {
+    if (typeof b.trialLeft === 'function') return b.trialLeft();
+    const lim = trialLimit(b);
+    return lim ? Math.max(0, lim - (b.trialT || 0)) : null;
+  }
+  function bossIdOf(b) {
+    const st = b.stage;
+    if (st.spec && st.spec.boss) return st.spec.boss;
+    if (b.kind === 'boss') return RS.actDef(UI.G.run).boss;
+    return null;
+  }
 
   UI.fitCanvas = function () {
     const box = $('#field');
@@ -42,34 +131,78 @@
     let scale = avail;
     const phys = Math.floor(avail * dpr);
     if (phys >= 3) scale = phys / dpr; // 물리 픽셀 정수배로 맞춰 도트가 고르게
-    cv.style.width = Math.floor(F.W * scale) + 'px';
-    cv.style.height = Math.floor(F.H * scale) + 'px';
+    const w = Math.floor(F.W * scale) + 'px';
+    const hh = Math.floor(F.H * scale) + 'px';
+    if (cv.style.width !== w) cv.style.width = w;
+    if (cv.style.height !== hh) cv.style.height = hh;
   };
 
   UI.showBattle = function () {
     const G = UI.G;
+    const b = G.battle;
+    const st = b.stage;
     UI.show('scr-battle');
-    UI.fitCanvas();
+    $('#toasts').innerHTML = '';
     UI.select(-1);
+    UI.dropWarned = UI.dropWarned || 0;
+    // 보스전은 처음부터 보스 바 자리를 잡아 둔다 (캔버스 크기가 전투 중 바뀌지 않게)
+    const bb = $('#bossbar');
+    const bossId = bossIdOf(b);
+    UI.bossReserved = !!bossId;
+    bb.classList.remove('enraged');
+    if (bossId) {
+      bb.hidden = false;
+      bb.classList.add('wait');
+      $('#boss-name').textContent = RS.ENEMY[bossId].name;
+      $('#boss-hp').style.width = '100%';
+      $('#boss-t').textContent = '마지막 웨이브';
+    } else {
+      bb.hidden = true;
+    }
     UI.setPanel('idle');
     UI.renderItems();
     UI.hudCache = {};
+    UI.fitCanvas();
     UI.updateHud(true);
-    const b = G.battle;
-    const st = b.stage;
-    if (G.run.stats.battles === 0) {
-      UI.toast('소환 버튼으로 유닛을 부르세요!');
-      setTimeout(() => UI.toast('같은 유닛 3기가 모이면 합성할 수 있어요'), 1800);
-    } else if (b.kind === 'boss') {
-      const boss = st.spec && st.spec.boss ? st.spec.boss : RS.actDef(G.run).boss;
-      UI.toast(`보스전 · 마지막 웨이브에 ${RS.ENEMY[boss].name} 등장`, 'warn');
+    const run = G.run;
+    if (trialLimit(b)) {
+      UI.toast(`${trialLimit(b)}초 안에 허수아비를 쓰러뜨리세요`, 'warn');
+    } else if (b.kind === 'boss' && bossId) {
+      UI.toast(`보스전 · 마지막 웨이브에 ${RS.ENEMY[bossId].name} 등장`, 'warn');
     } else if (b.kind === 'elite') {
       const BUFF = { hp: '체력 +40%', fast: '속도 +30%', regen: '재생', armor: '받는 피해 -25%' };
-      UI.toast(G.run.burning ? `불타는 엘리트(${BUFF[st.spec.burnBuff] || '강화'}) · 이기면 에메랄드 열쇠` : '엘리트전 · 마지막 웨이브에 강적 등장', 'warn');
+      UI.toast(run.burning ? `불타는 엘리트(${BUFF[st.spec && st.spec.burnBuff] || '강화'}) · 이기면 에메랄드 열쇠` : '엘리트전 · 마지막 웨이브에 강적 등장', 'warn');
     }
-    if (G.run.lament > 0) setTimeout(() => UI.toast('문지기의 탄식: 첫 웨이브 적 체력 1', 'good'), 900);
-    if (G.run.tax > 0) setTimeout(() => UI.toast(`문지기의 세금: 웨이브 골드 없음 (${G.run.tax}번 남음)`, 'warn'), 1400);
+    if (run.lament > 0) setTimeout(() => UI.toast('문지기의 탄식: 첫 웨이브 적 체력 1', 'good'), 900);
+    if (run.tax > 0) setTimeout(() => UI.toast(`문지기의 세금: 웨이브 골드 없음 (${run.tax}번 남음)`, 'warn'), 1400);
   };
+
+  // 전장에서 탭한 자리에 가장 가까운 적
+  function enemyAt(b, p) {
+    let best = null;
+    let bd = 12 * 12;
+    for (const e of b.enemies) {
+      if (e.dead || e.subT > 0) continue;
+      const dx = e.x - p.x;
+      const dy = e.y - 4 - p.y;
+      const d = dx * dx + dy * dy;
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+  function enemyTip(b, e, cx, cy) {
+    const def = e.def;
+    const M = b.M;
+    let leak = (def.leak + (M.leakAdd || 0)) * (M.leakMult || 1);
+    if ((e.elite || e.boss) && b.run.asc >= 5) leak += 1;
+    if (e.boss && b.enraged) leak *= 2;
+    if (M.leakReduce) leak = Math.max(1, leak - M.leakReduce);
+    const hp = M.blindfold ? '?' : Math.max(1, Math.ceil((100 * Math.max(0, e.hp)) / e.maxHp));
+    UI.tipAt(cx, cy, def.name + (e.boss ? ' · 보스' : e.elite ? ' · 엘리트' : ''), `체력 ${hp}${hp === '?' ? '' : '%'} · 한 바퀴당 생명 -${Math.round(leak * 10) / 10}`, def.trait || null);
+  }
 
   function bindField() {
     const cv = $('#cv');
@@ -78,6 +211,14 @@
       return { x: ((e.clientX - r.left) / r.width) * F.W, y: ((e.clientY - r.top) / r.height) * F.H };
     };
     let drag = null;
+    const tmpSt = {};
+    const reachAt = (s, i) => {
+      const G = UI.G;
+      const b = G.battle;
+      if (!b || i < 0 || !s) return true;
+      const st = RS.unitStats(G.run, b.M, b.dyn, s.cls, s.tier, i, tmpSt);
+      return st.range >= PATH_D[i];
+    };
     cv.addEventListener('pointerdown', (e) => {
       const G = UI.G;
       if (!G.battle) return;
@@ -86,19 +227,23 @@
       const i = RS.slotAt(p.x, p.y);
       const board = G.run.board;
       if (i < 0) {
-        UI.select(-1);
+        const foe = enemyAt(G.battle, p);
+        if (foe) enemyTip(G.battle, foe, e.clientX, e.clientY);
+        else UI.select(-1);
         return;
       }
       if (!board[i]) {
         // 선택된 유닛이 있으면 빈칸으로 이동
         if (UI.sel >= 0 && board[UI.sel]) {
+          const s = board[UI.sel];
           G.battle.swap(UI.sel, i);
           RS.sfx('click');
           UI.select(i);
+          if (!reachAt(s, i)) warnDrop();
         } else UI.select(-1);
         return;
       }
-      drag = { from: i, over: i, moved: false, x0: p.x, y0: p.y, id: e.pointerId };
+      drag = { from: i, over: i, moved: false, x0: p.x, y0: p.y, x: p.x, y: p.y, id: e.pointerId, overReach: true, lastOver: i };
       G.renderer.drag = drag;
       try {
         cv.setPointerCapture(e.pointerId);
@@ -109,8 +254,15 @@
     cv.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
       const p = toLogical(e);
+      drag.x = p.x;
+      drag.y = p.y;
       if (!drag.moved && Math.hypot(p.x - drag.x0, p.y - drag.y0) > 5) drag.moved = true;
       drag.over = RS.slotAt(p.x, p.y);
+      if (drag.over !== drag.lastOver) {
+        drag.lastOver = drag.over;
+        const G = UI.G;
+        drag.overReach = drag.over < 0 || drag.over === drag.from ? true : reachAt(G.run.board[drag.from], drag.over);
+      }
     });
     const end = (e) => {
       const G = UI.G;
@@ -119,14 +271,18 @@
       drag = null;
       G.renderer.drag = null;
       if (!G.battle) return;
+      const board = G.run.board;
       if (d.moved) {
         if (d.over >= 0 && d.over !== d.from) {
           G.battle.swap(d.from, d.over);
           RS.sfx('click');
           UI.select(d.over);
+          if (!d.overReach) warnDrop();
         }
       } else {
-        UI.select(UI.sel === d.from ? -1 : d.from);
+        // 합성할 수 있는 선택된 칸을 다시 누르면 선택을 풀지 않는다
+        if (UI.sel === d.from && !RS.canMerge(board, d.from)) UI.select(-1);
+        else UI.select(d.from);
         RS.sfx('click');
       }
     };
@@ -139,13 +295,87 @@
     });
   }
 
+  function warnDrop() {
+    if ((UI.dropWarned = (UI.dropWarned || 0) + 1) <= 3) UI.toast('이 칸에선 적에게 닿지 않아요', 'warn');
+  }
+
   UI.sel = -1;
   UI.select = function (i) {
     const G = UI.G;
     UI.sel = i;
     if (G.renderer) G.renderer.sel = i;
     if (i >= 0 && G.run && G.run.board[i]) UI.setPanel('unit');
-    else if (UI.panelMode === 'unit') UI.setPanel('idle');
+    else if (UI.panelMode === 'unit' || UI.panelMode === 'mergeChoose') UI.setPanel('idle');
+  };
+
+  // 강화·소모품·두루마리 패널을 닫으면 선택한 유닛이 있을 때 그 정보로 돌아간다
+  UI.closePanel = function () {
+    const G = UI.G;
+    if (UI.sel >= 0 && G.run && G.run.board[UI.sel]) UI.setPanel('unit');
+    else {
+      UI.sel = -1;
+      if (G.renderer) G.renderer.sel = -1;
+      UI.setPanel('idle');
+    }
+  };
+
+  // ── 첫 전투 코치 (메타 기록에 진행 상황 저장) ──
+  function tut() {
+    const meta = UI.G.meta;
+    if (!meta.tut || typeof meta.tut !== 'object') meta.tut = {};
+    return meta.tut;
+  }
+  UI.tutDone = function (k) {
+    const t = tut();
+    if (t.off || t[k]) return;
+    t[k] = true;
+    if (t.summon && t.merge && t.upgrade && t.leak && t.cap) t.off = true;
+    UI.G.saveMeta();
+  };
+  UI.coach = function (b, mergeable) {
+    const G = UI.G;
+    const t = tut();
+    let text = null;
+    let pulse = null;
+    if (!t.off && (G.meta.runs || 0) > 2) {
+      t.off = true;
+      G.saveMeta();
+    }
+    if (!t.off) {
+      const run = G.run;
+      if (!t.summon) {
+        text = '① 금색 [소환]을 눌러 유닛을 부르세요 (부를수록 1G씩 비싸져요)';
+        pulse = 'summon';
+      } else if (!t.merge && mergeable > 0) {
+        text = '② 반짝이는 칸을 누르고 [합성] → 다음 등급 무작위 유닛';
+      } else if (!t.upgrade && b.waveIdx >= 2) {
+        let min = Infinity;
+        for (const c of RS.CLASSES) min = Math.min(min, b.upgradeCost(c));
+        if (run.gold >= min) {
+          text = '③ [강화]: 골드로 한 클래스의 피해를 레벨당 +15%';
+          pulse = 'upg';
+        }
+      }
+      if (!t.cap && b.enemies.length >= b.cap * 0.5) {
+        UI.toast(`적이 ${b.cap}마리 쌓이면 패배! 화력을 늘리세요`, 'warn');
+        UI.tutDone('cap');
+      }
+    }
+    const c = UI.hudCache;
+    if (c.pulse !== pulse) {
+      c.pulse = pulse;
+      $('#b-summon').classList.toggle('pulse', pulse === 'summon');
+      $('#b-upg').classList.toggle('pulse', pulse === 'upg');
+    }
+    const refs = UI.panelRefs || {};
+    if (UI.panelMode === 'idle' && refs.hint) {
+      setText(refs.hint, 'coach', text || '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기');
+      if (c.coachOn !== !!text) {
+        c.coachOn = !!text;
+        refs.hint.classList.toggle('coach', !!text);
+        if (refs.hint.parentElement) refs.hint.parentElement.classList.toggle('coaching', !!text);
+      }
+    }
   };
 
   UI.doSummon = function () {
@@ -166,13 +396,16 @@
     } else if (res.err === 'locked') {
       RS.sfx('error');
       UI.toast('속삭이는 귀걸이: 준비 시간에는 소환할 수 없어요', 'warn');
+    } else if (res.err) {
+      RS.sfx('error');
     } else {
       RS.sfx(res.tier > 0 ? 'rare' : 'summon');
+      UI.tutDone('summon');
       if (res.tier > 0) UI.toast(`${RS.TIER[res.tier].name} ${RS.CLASS[res.cls].name} 소환!`, 't' + res.tier);
       if (res.clover) UI.toast('네잎클로버! 비용 반환', 'good');
       if (res.twin != null) UI.toast('한 기가 더 따라왔다!', 'good');
       const s = G.run.board[res.slot];
-      if (s && s.n === 3 && s.tier < 3 && (UI.mergeHints = (UI.mergeHints || 0) + 1) <= 2) {
+      if (s && s.n === 3 && s.tier < 3 && (tut().off || tut().merge || UI.panelMode !== 'idle') && (UI.mergeHints = (UI.mergeHints || 0) + 1) <= 2) {
         UI.toast('합성 가능! 반짝이는 칸을 누르세요', 'good');
       }
     }
@@ -184,12 +417,32 @@
     const b = G.battle;
     if (!b) return;
     if (b.M.mergeChoose && !pick) {
-      UI.setPanel('mergeChoose', { slot: i, opts: b.mergeOptions() });
-      return;
+      const opts = UI.mergeOptsFor(b, i);
+      if (opts && opts.length) {
+        UI.sel = i;
+        if (G.renderer) G.renderer.sel = i;
+        UI.setPanel('mergeChoose', { slot: i, opts });
+        return;
+      }
     }
     const tierFrom = G.run.board[i] ? G.run.board[i].tier : 0;
     const res = b.merge(i, pick);
-    if (!res) return;
+    if (!res) {
+      // 고른 후보가 코어의 후보와 다르면(스택이 바뀐 사이 등) 후보를 다시 받아 패널을 연다
+      forgetMergeOpts(b, i);
+      if (pick && b.M.mergeChoose && RS.canMerge(G.run.board, i)) {
+        const opts = UI.mergeOptsFor(b, i);
+        if (opts && opts.length) {
+          UI.setPanel('mergeChoose', { slot: i, opts });
+          return;
+        }
+      }
+      UI.select(G.run.board[i] ? i : -1);
+      UI.updateHud(true);
+      return;
+    }
+    forgetMergeOpts(b, i);
+    UI.tutDone('merge');
     if (res.fail) {
       RS.sfx('error');
       UI.toast('합성 실패…', 'warn');
@@ -208,30 +461,61 @@
     const G = UI.G;
     const b = G.battle;
     if (!b) return;
+    if (RS.firstMergeable(G.run.board) < 0) {
+      RS.sfx('error');
+      UI.toast('합성할 칸이 없어요 (같은 칸에 같은 유닛 3기)', 'warn');
+      return;
+    }
+    // 고대 두루마리: 칸마다 결과를 골라야 하므로 첫 칸의 선택 패널을 연다
+    if (b.M.mergeChoose) {
+      const i = RS.firstMergeable(G.run.board);
+      UI.doMerge(i);
+      return;
+    }
     let count = 0;
     let i;
     let guard = 0;
     while ((i = RS.firstMergeable(G.run.board)) >= 0 && guard++ < 30) {
       const res = b.merge(i);
       if (res) count++;
+      else break;
     }
     if (count) {
       RS.sfx('merge');
+      UI.tutDone('merge');
       UI.toast(`${count}번 합성했어요`);
     }
     UI.select(-1);
     UI.updateHud(true);
   };
 
+  function doSell(i) {
+    const G = UI.G;
+    const b = G.battle;
+    if (!b) return;
+    const v = b.sell(i);
+    if (v) {
+      RS.sfx('coin');
+      UI.toast(`+${v}G`);
+    }
+    UI.select(G.run.board[i] ? i : -1);
+    UI.updateHud(true);
+  }
+
   UI.panelMode = 'idle';
   UI.setPanel = function (mode, data) {
     const G = UI.G;
     UI.panelMode = mode;
     UI.panelData = data || null;
+    UI.panelSig = null;
     const p = $('#panel');
     p.innerHTML = '';
     p.className = 'panel-' + mode;
     UI.panelRefs = {};
+    if (UI.hudCache) {
+      UI.hudCache.coach = null;
+      UI.hudCache.coachOn = null;
+    }
     const b = G.battle;
     const run = G.run;
     if (!b) return;
@@ -241,7 +525,7 @@
         h('div', { class: 'pstat' }, h('span', null, '전체 DPS'), (refs.dps = h('b', null, '0'))),
         h('div', { class: 'pstat' }, h('span', null, '유닛'), (refs.units = h('b', null, '0'))),
         h('div', { class: 'pstat' }, h('span', null, b.M.summonCap ? '남은 소환' : '다음 이자'), (refs.int = h('b', null, '0'))),
-        h('p', { class: 'phint' }, '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기'),
+        (refs.hint = h('p', { class: 'phint' }, '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기')),
       ));
     } else if (mode === 'unit') {
       const i = UI.sel;
@@ -251,27 +535,24 @@
       const T = RS.TIER[s.tier];
       const refs = UI.panelRefs;
       const canMerge = RS.canMerge(run.board, i);
-      const rune = run.runes[i] ? RS.RUNE[run.runes[i]] : null;
+      UI.panelSig = unitSig(run, i);
+      const sv = UI.sellValueAt(b, i);
+      const sellBtn = s.tier >= 2
+        ? UI.btn2(`판매 +${sv}`, `한 번 더: 판매 +${sv}`, () => doSell(i))
+        : btn(`판매 +${sv}`, () => doSell(i));
       append(p, h('div', { class: 'punit' },
         unitImg(s.cls, s.tier, 'big'),
         h('div', { class: 'pinfo' },
           h('div', { class: 'pname' }, h('b', { class: 'tier' + s.tier }, `${T.name} ${C.name}`), ` ×${s.n}`, (refs.dps = h('span', { class: 'pdps' }))),
           (refs.stats = h('div', { class: 'pstats' })),
-          h('p', { class: 'pdesc' }, rune ? `${rune.name}: ${rune.desc}` : `${C.role} · ${C.desc}`),
+          (refs.desc = h('p', { class: 'pdesc' })),
         ),
         h('div', { class: 'pbtns' },
           btn(s.tier >= 3 ? '최고 등급' : canMerge ? '합성' : `합성 ${s.n}/3`, () => UI.doMerge(i), canMerge ? 'gold' : '', !canMerge),
-          (refs.sell = btn(`판매 +${RS.sellValue(run, s.tier, b.M)}`, () => {
-            const v = b.sell(i);
-            if (v) {
-              RS.sfx('coin');
-              UI.toast(`+${v}G`);
-            }
-            UI.select(G.run.board[i] ? i : -1);
-            UI.updateHud(true);
-          })),
+          (refs.sell = sellBtn),
         ),
       ));
+      refs.baseDesc = run.runes[i] && RS.RUNE[run.runes[i]] ? `${RS.RUNE[run.runes[i]].name}: ${RS.RUNE[run.runes[i]].desc}` : `${C.role} · ${C.desc}`;
       UI.refreshUnitStats();
     } else if (mode === 'upgrade') {
       const refs = (UI.panelRefs = { rows: {} });
@@ -279,21 +560,23 @@
       for (const c of RS.CLASSES) {
         const el = h('button', {
           class: 'upg',
+          'aria-label': `${RS.CLASS[c].name} 강화`,
+          title: `${RS.CLASS[c].name} 강화`,
           onclick() {
             const r = b.upgrade(c);
             if (r.err) {
               RS.sfx('error');
-              UI.toast(r.err === 'locked' ? '속삭이는 귀걸이: 준비 시간에는 강화할 수 없어요' : '골드가 부족해요', 'warn');
+              UI.toast(r.err === 'locked' ? '속삭이는 귀걸이: 준비 시간에는 강화할 수 없어요' : r.err === 'gold' ? '골드가 부족해요' : '지금은 강화할 수 없어요', 'warn');
             } else {
               RS.sfx('upgrade');
             }
             UI.updateHud(true);
           },
-        }, unitImg(c, 0), h('span', { class: 'un' }, RS.CLASS[c].name), h('b', { class: 'lv' }), h('span', { class: 'cost' }));
+        }, unitImg(c, 0), h('b', { class: 'lv' }), h('span', { class: 'cost' }));
         refs.rows[c] = el;
         grid.appendChild(el);
       }
-      append(p, h('div', { class: 'pupg' }, h('p', { class: 'phint' }, `클래스 강화 · 레벨당 피해 +15%${b.M.upgradeDouble ? ' · 한계 돌파: 한 번에 +2' : ''}`), grid));
+      append(p, h('div', { class: 'pupg' }, grid));
     } else if (mode === 'item') {
       const idx = data.idx;
       const it = RS.ITEM[run.items[idx]];
@@ -304,32 +587,42 @@
         h('div', { class: 'pbtns' },
           btn('사용', () => {
             const r = b.useItem(idx);
-            if (r.err === 'full') {
+            if (r.err) {
               RS.sfx('error');
-              UI.toast('빈자리가 없어요', 'warn');
+              UI.toast(r.err === 'full' ? '빈자리가 없어요' : '쓸 수 없어요', 'warn');
               return;
             }
             RS.sfx(it.id === 'bomb' ? 'bomb' : it.id === 'freeze' ? 'freeze' : 'upgrade');
             UI.toast(`${it.name} 사용!`, 'good');
             UI.renderItems();
-            UI.setPanel('idle');
+            UI.closePanel();
             UI.updateHud(true);
           }, 'gold'),
-          btn('닫기', () => UI.setPanel('idle')),
+          btn('닫기', () => UI.closePanel()),
         ),
       ));
     } else if (mode === 'mergeChoose') {
+      const tier = Math.min(3, (run.board[data.slot] ? run.board[data.slot].tier : 0) + 1);
       append(p, h('div', { class: 'pchoose' },
         h('p', { class: 'phint' }, '고대 두루마리: 합성 결과를 고르세요'),
-        h('div', { class: 'row2' }, data.opts.map((c) => h('button', {
-          class: 'btn choose',
-          onclick() {
-            UI.doMerge(data.slot, c);
-          },
-        }, unitImg(c, Math.min(3, (run.board[data.slot] ? run.board[data.slot].tier : 0) + 1)), RS.CLASS[c].name))),
+        h('div', { class: 'row2' },
+          data.opts.map((c) => h('button', {
+            class: 'btn choose',
+            onclick() {
+              RS.sfx('click');
+              UI.doMerge(data.slot, c);
+            },
+          }, unitImg(c, tier), RS.CLASS[c].name)),
+          btn('닫기', () => UI.closePanel(), 'sm'),
+        ),
       ));
     }
   };
+
+  function unitSig(run, i) {
+    const s = run.board[i];
+    return s ? `${i}/${s.cls}/${s.tier}/${s.n}/${RS.canMerge(run.board, i)}/${run.runes[i] || ''}` : '';
+  }
 
   UI.refreshUnitStats = function () {
     const G = UI.G;
@@ -342,6 +635,7 @@
     if (b.statsDirty) b.computeSlotStats();
     const st = b.slotStats[i];
     if (!st) return;
+    const reach = UI.reaches(st, i);
     const parts = [`피해 ${fmtK(st.dmg)}`, `${(1 / st.interval).toFixed(1)}회/초`, `사거리 ${Math.round(st.range)}`];
     if (st.crit > 0) parts.push(`치명 ${pct(Math.min(1, st.crit))}`);
     if (st.splash) parts.push(`범위 ${st.splash}`);
@@ -349,10 +643,16 @@
     if (st.shots > 1) parts.push(`${st.shots}발`);
     const text = parts.join(' · ');
     if (refs.stats.textContent !== text) refs.stats.textContent = text;
-    const dps = `DPS ${fmtK(st.dps * s.n)}`;
+    const dps = reach ? `DPS ${fmtK(st.dps * s.n)}` : 'DPS 0';
     if (refs.dps && refs.dps.textContent !== dps) refs.dps.textContent = dps;
-    if (refs.sell) {
-      const t = `판매 +${RS.sellValue(G.run, s.tier, b.M)}`;
+    if (refs.dps && refs.reach !== reach) {
+      refs.reach = reach;
+      refs.dps.classList.toggle('bad', !reach);
+      refs.desc.classList.toggle('bad', !reach);
+      refs.desc.textContent = reach ? refs.baseDesc : '사거리가 길에 닿지 않아요 · 바깥 칸으로 옮기거나 [정리]';
+    }
+    if (refs.sell && !refs.sell.classList.contains('arm')) {
+      const t = `판매 +${UI.sellValueAt(b, i)}`;
       if (refs.sell.textContent !== t) refs.sell.textContent = t;
     }
   };
@@ -362,7 +662,11 @@
     const bar = $('#itembar');
     bar.innerHTML = '';
     const run = G.run;
+    const b = G.battle;
     const slots = RS.itemSlots(run);
+    // 칸이 많으면(물약 벨트·연금 솥·별) 칸과 버튼을 조금 줄인다
+    UI.itemTight = slots + (b && b.M.stars ? 2 : 0) >= 6;
+    bar.classList.toggle('tight', UI.itemTight);
     for (let k = 0; k < slots; k++) {
       const id = run.items[k];
       if (id) {
@@ -376,28 +680,38 @@
           },
         }, icon(it.icon, '', 3)));
       } else {
-        bar.appendChild(h('div', { class: 'islot empty' }));
+        bar.appendChild(h('button', {
+          class: 'islot empty',
+          'aria-label': '빈 소모품 칸',
+          onclick(e) {
+            UI.tip(e.currentTarget, '소모품 칸', '상점·보상에서 얻은 소모품(폭탄·얼음 등)을 전투 중에 눌러 씁니다.');
+          },
+        }));
       }
     }
     bar.appendChild(h('div', { class: 'spacer' }));
     UI.starBtn = null;
-    const b = G.battle;
     if (b && b.M.stars) {
-      // 별의 섭정: 별 3개로 별똥별
-      UI.starBtn = btn('별 0', () => {
-        if (!G.battle || !G.battle.starfall()) {
+      // 별의 섭정: 별을 모아 별똥별
+      UI.starBtn = btn('★ 0/3', () => {
+        const bb = G.battle;
+        if (!bb || !bb.starfall()) {
           RS.sfx('error');
-          UI.toast('별이 3개 모여야 해요 (웨이브마다 1개)', 'warn');
+          UI.toast(`별이 ${bb ? UI.starMax(bb) : 3}개 모여야 해요 (웨이브마다 1개)`, 'warn');
           return;
         }
         RS.sfx('bomb');
         UI.toast('별똥별!', 'good');
         UI.updateHud(true);
       }, 'sm star');
+      UI.starBtn.setAttribute('aria-label', '별똥별');
       bar.appendChild(UI.starBtn);
     }
-    bar.appendChild(btn('모두 합성', () => UI.doMergeAll(), 'sm', false));
-    bar.appendChild(btn('빌드', () => UI.openBuild(), 'sm'));
+    UI.mergeAllBtn = btn(UI.itemTight ? '합성' : '모두 합성', () => UI.doMergeAll(), 'sm mall off');
+    UI.mergeAllBtn.setAttribute('aria-label', '모두 합성');
+    bar.appendChild(UI.mergeAllBtn);
+    // 칸이 많으면 '빌드'는 뺀다 (일시정지 메뉴에 있다)
+    if (slots <= 3 && !(b && b.M.stars)) bar.appendChild(btn('빌드', () => UI.openBuild(), 'sm'));
   };
 
   const setText = (el, key, v) => {
@@ -406,106 +720,138 @@
       el.textContent = v;
     }
   };
+  const setCls = (el, key, cls, on) => {
+    if (UI.hudCache[key] !== on) {
+      UI.hudCache[key] = on;
+      el.classList.toggle(cls, on);
+    }
+  };
 
   UI.updateHud = function (force) {
     const G = UI.G;
     const b = G.battle;
     const run = G.run;
     if (!b || !run) return;
-    if (force) UI.hudCache = {};
+    if (force || !UI.hudCache) UI.hudCache = {};
     const c = UI.hudCache;
     const blind = !!b.M.blindfold;
     setText($('#h-life-v'), 'life', `${Math.ceil(run.life)}/${run.maxLife}`);
-    setText($('#h-gold-v'), 'gold', fmt(run.gold));
+    // 좁은 화면(360px 이하)에서는 네 자리부터 줄여 쓴다
+    setText($('#h-gold-v'), 'gold', run.gold >= (window.innerWidth <= 360 ? 1000 : 10000) ? fmtK(run.gold) : fmt(run.gold));
     const cap = RS.interestCap(b.M);
     const inter = Math.min(cap, Math.floor(run.gold / RS.BAL.interestPer));
-    setText($('#h-int'), 'int', inter > 0 ? `+${inter + (b.M.interestBonus || 0)}` : '');
     setText($('#h-foe-v'), 'foe', `${b.enemies.length}/${b.cap}`);
-    const danger = b.enemies.length >= b.cap * 0.7;
-    if (c.danger !== danger) {
-      c.danger = danger;
-      $('#h-foe').classList.toggle('danger', danger);
-    }
-    const lowLife = run.life <= run.maxLife * 0.3;
-    if (c.low !== lowLife) {
-      c.low = lowLife;
-      $('#h-life').classList.toggle('danger', lowLife);
-    }
+    setCls($('#h-foe'), 'danger', 'danger', b.enemies.length >= b.cap * 0.7);
+    setCls($('#h-life'), 'low', 'danger', run.life <= run.maxLife * 0.3);
     const nW = b.stage.waves.length;
+    const tl = b.prep > 0 ? null : trialLeft(b);
     if (b.prep > 0) {
       setText($('#h-wave-v'), 'wv', '준비');
       setText($('#h-wave-t'), 'wt', blind ? '?' : `${Math.ceil(b.prep)}초`);
+    } else if (tl != null) {
+      setText($('#h-wave-v'), 'wv', '시험');
+      setText($('#h-wave-t'), 'wt', `${Math.max(0, Math.ceil(tl))}초`);
     } else {
       setText($('#h-wave-v'), 'wv', `${b.waveIdx}/${nW}`);
       setText($('#h-wave-t'), 'wt', b.waveIdx < nW ? (blind ? '?' : `${Math.max(0, Math.ceil(b.waveT))}초`) : '마지막');
     }
+    setCls($('#h-wave'), 'urgent', 'urgent', tl != null && tl <= 10);
     const cost = b.summonCost();
     setText($('#summon-cost'), 'cost', b.summonLimit() <= 0 ? '제한' : `${cost}G`);
-    const canSummon = run.gold >= cost && b.summonLimit() > 0;
-    if (c.canS !== canSummon) {
-      c.canS = canSummon;
-      $('#b-summon').classList.toggle('off', !canSummon);
-    }
+    setCls($('#b-summon'), 'canS', 'off', !(run.gold >= cost && b.summonLimit() > 0));
     setText($('#b-speed'), 'spd', `x${G.speed}`);
     if (UI.starBtn) {
-      setText(UI.starBtn, 'star', `별똥별 ${b.stars}/3`);
-      const on = b.canStarfall();
-      if (c.star !== on) {
-        c.star = on;
-        UI.starBtn.classList.toggle('off', !on);
+      setText(UI.starBtn, 'star', `★ ${b.stars}/${UI.starMax(b)}`);
+      setCls(UI.starBtn, 'starOn', 'off', !b.canStarfall());
+    }
+    // 합성 가능한 칸 수 + 길에 닿지 않는 칸 (0.1초마다 20칸)
+    let mergeable = 0;
+    if (b.statsDirty) b.computeSlotStats();
+    const R = G.renderer;
+    const noReach = R && (R.noReach || (R.noReach = new Uint8Array(F.SIZE)));
+    for (let i = 0; i < F.SIZE; i++) {
+      const s = run.board[i];
+      if (s && s.n >= 3 && s.tier < 3) mergeable++;
+      if (noReach) noReach[i] = s && b.slotStats[i] && !UI.reaches(b.slotStats[i], i) ? 1 : 0;
+    }
+    if (UI.mergeAllBtn) {
+      setText(UI.mergeAllBtn, 'mall', `${UI.itemTight ? '합성' : '모두 합성'}${mergeable ? ' ' + mergeable : ''}`);
+      if (c.mallOn !== mergeable > 0) {
+        c.mallOn = mergeable > 0;
+        UI.mergeAllBtn.classList.toggle('gold', mergeable > 0);
+        UI.mergeAllBtn.classList.toggle('off', !mergeable);
       }
     }
     // 보스
+    updateBossBar(b, c, blind);
+    // 패널
+    const refs = UI.panelRefs || {};
+    if (UI.panelMode === 'idle' && refs.dps) {
+      setText(refs.dps, 'pdps', fmtK(UI.effDps(b)));
+      setText(refs.units, 'punits', `${RS.boardUnitCount(run.board)}/60`);
+      if (b.M.summonCap) setText(refs.int, 'pint', `${b.summonLimit()}회`);
+      else setText(refs.int, 'pint', inter > 0 ? `+${inter + (b.M.interestBonus || 0)}G` : '10G당 1');
+    } else if (UI.panelMode === 'unit') {
+      if (!run.board[UI.sel]) UI.select(-1);
+      else if (unitSig(run, UI.sel) !== UI.panelSig) UI.setPanel('unit');
+      else UI.refreshUnitStats();
+    } else if (UI.panelMode === 'mergeChoose') {
+      if (!UI.panelData || !RS.canMerge(run.board, UI.panelData.slot)) UI.closePanel();
+    } else if (UI.panelMode === 'upgrade' && refs.rows) {
+      const step = b.M.upgradeDouble ? 2 : 1;
+      for (const cl of RS.CLASSES) {
+        const el = refs.rows[cl];
+        const lv = run.classLv[cl];
+        const cst = b.upgradeCost(cl);
+        setText(el.querySelector('.lv'), 'lv' + cl, `Lv ${lv}→${lv + step}`);
+        setText(el.querySelector('.cost'), 'uc' + cl, cst ? `${cst}G` : '무료');
+        setCls(el, 'uo' + cl, 'off', run.gold < cst);
+      }
+    }
+    UI.coach(b, mergeable);
+  };
+
+  function updateBossBar(b, c, blind) {
     const bb = $('#bossbar');
     if (b.boss) {
-      if (bb.hidden) {
-        bb.hidden = false;
-        $('#boss-name').textContent = b.boss.def.name + (b.bosses.length > 1 ? ` 외 ${b.bosses.filter((x) => !x.dead).length - 1}` : '');
+      if (bb.hidden || c.bwait !== false) {
+        c.bwait = false;
+        bb.classList.remove('wait');
+        if (bb.hidden) {
+          bb.hidden = false;
+          UI.bossReserved = true;
+          UI.fitCanvas();
+        }
       }
+      const alive = b.bosses.filter((x) => !x.dead).length;
+      setText($('#boss-name'), 'bname', b.boss.def.name + (alive > 1 ? ` 외 ${alive - 1}` : ''));
       const w = blind ? '100%' : Math.max(0, (b.boss.hp / b.boss.maxHp) * 100).toFixed(1) + '%';
       if (c.bhp !== w) {
         c.bhp = w;
         $('#boss-hp').style.width = w;
       }
       setText($('#boss-t'), 'bt', b.enraged ? '폭주!' : blind ? '??' : `${Math.ceil(b.bossTimer)}초`);
-      if (c.enr !== b.enraged) {
-        c.enr = b.enraged;
-        bb.classList.toggle('enraged', b.enraged);
+      setCls(bb, 'enr', 'enraged', !!b.enraged);
+    } else if (!bb.hidden && b.bosses && b.bosses.length) {
+      // 보스를 쓰러뜨렸다: 바는 그대로 두어 캔버스 크기가 바뀌지 않게 한다
+      setText($('#boss-t'), 'bt', '처치!');
+      if (c.bhp !== '0%') {
+        c.bhp = '0%';
+        $('#boss-hp').style.width = '0%';
       }
-    } else if (!bb.hidden) bb.hidden = true;
-    // 패널
-    const refs = UI.panelRefs || {};
-    if (UI.panelMode === 'idle' && refs.dps) {
-      setText(refs.dps, 'pdps', fmtK(b.totalDps()));
-      setText(refs.units, 'punits', `${RS.boardUnitCount(run.board)}/60`);
-      if (b.M.summonCap) setText(refs.int, 'pint', `${b.summonLimit()}회`);
-      else setText(refs.int, 'pint', inter > 0 ? `+${inter + (b.M.interestBonus || 0)}G` : '10G당 1');
-    } else if (UI.panelMode === 'unit') {
-      if (!run.board[UI.sel]) UI.select(-1);
-      else UI.refreshUnitStats();
-    } else if (UI.panelMode === 'upgrade' && refs.rows) {
-      for (const cl of RS.CLASSES) {
-        const el = refs.rows[cl];
-        const lv = run.classLv[cl];
-        const cst = b.upgradeCost(cl);
-        setText(el.querySelector('.lv'), 'lv' + cl, `Lv ${lv}`);
-        setText(el.querySelector('.cost'), 'uc' + cl, cst ? `${cst}G` : '무료');
-        const ok = run.gold >= cst;
-        if (c['uo' + cl] !== ok) {
-          c['uo' + cl] = ok;
-          el.classList.toggle('off', !ok);
-        }
-      }
+      setCls(bb, 'enr', 'enraged', false);
     }
-  };
+  }
 
   // 전투 이벤트 → 소리·토스트
   UI.onFx = function (ev) {
     switch (ev.k) {
-      case 'wave':
+      case 'wave': {
         RS.sfx('wave');
-        UI.toast(`웨이브 ${ev.n}/${ev.total} · +${ev.gold}G${ev.interest ? ` · 이자 +${ev.interest}` : ''}`);
+        const g = (ev.gold || 0) + (ev.interest || 0);
+        if (g > 0) UI.hudFloat($('#h-gold'), `+${g}G`, 'good');
         break;
+      }
       case 'boss':
         RS.sfx('boss');
         UI.toast(`${ev.name} 등장!`, 'warn');
@@ -522,6 +868,20 @@
         break;
       case 'leak':
         RS.sfx('leak');
+        if (ev.v > 0) {
+          const el = $('#h-life');
+          el.classList.remove('hit');
+          void el.offsetWidth;
+          el.classList.add('hit');
+          clearTimeout(UI.hitTimer);
+          UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
+          UI.hudFloat(el, '-' + Math.round(ev.v * 10) / 10, 'bad');
+          const t = tut();
+          if (!t.off && !t.leak) {
+            UI.toast('적이 한 바퀴 돌아 균열로 들어가면 생명이 줄어요', 'warn');
+            UI.tutDone('leak');
+          }
+        }
         break;
       case 'summon':
         if (ev.free) RS.sfx('summon');
