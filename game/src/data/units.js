@@ -31,7 +31,11 @@
     restHealPct: 0.3,
     trainLevels: 2,
     actHealPct: 0.25, // 막을 넘어갈 때 회복
-    sellRate: 0.4, // 판매가 = 현재 소환 비용 × 0.4 × 3^등급
+    // 판매가 = 그 유닛에 들인 골드 × 0.5 (미다스 등으로 올라도 최대 0.8). 합성하면 재료에 들인 골드가 결과로 옮겨 간다.
+    // 돈을 내지 않고 얻은 유닛(보상·무료 소환)은 freeWorth × 3^등급 만큼 들인 것으로 친다.
+    sellRate: 0.5,
+    sellRateMax: 0.8,
+    freeWorth: 6,
   };
 
   RS.CLASSES = ['knight', 'archer', 'mage', 'rogue', 'frost'];

@@ -74,8 +74,8 @@
     A('berserk', '광전사', 3, 'rage', '생명이 절반 이하면 피해 +60%, 공격 속도 +25%', { berserk: 1 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
     A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12%', { legendAura: 0.12 }, { unique: true }),
-    A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +100%', { killGoldPct: 0.5, sellPct: 1 }, { unique: true }),
-    A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +60%, 범위 +5', {
+    A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +50%', { killGoldPct: 0.5, sellPct: 0.5 }, { unique: true }),
+    A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +60%, 범위 +5 (서리술사는 영웅 등급부터)', {
       cls: { mage: { dmg: 0.6, splash: 5 }, frost: { dmg: 0.6, splash: 5 } },
     }, { unique: true }),
     A('glassCannon', '유리 대포', 3, 'cannon', '모든 유닛 피해 +80%', { dmgPct: 0.8, leakMult: 2 }, {
@@ -94,8 +94,8 @@
     A('wraithForm', '망령 형상', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +20%', { firstWaveNoLeak: 1, dmgPct: 0.2, lastWaveLeakMult: 1 }, {
       unique: true, cost: '마지막 웨이브에는 잃는 생명 2배',
     }),
-    A('corruption', '타락', 3, 'corrupt', '강화 비용 0', { upgradeFree: 1, summonCostPct: 0.6 }, {
-      unique: true, cost: '소환 비용 +60%',
+    A('corruption', '타락', 3, 'corrupt', '강화 비용 -50%', { upgradeCostPct: -0.5, summonCostPct: 0.3 }, {
+      unique: true, cost: '소환 비용 +30%',
     }),
     A('creativeAI', '창조적 AI', 2, 'chip', '웨이브가 시작될 때 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 1 }, { unique: true }),
     A('noxious', '유독 가스', 2, 'gas', '모든 적이 초당 최대 체력의 1.2% 피해 (보스는 0.4%)', { noxious: 0.012 }, { unique: true }),
@@ -113,8 +113,8 @@
     { id: 'bomb', name: '폭탄', icon: 'bomb', desc: '모든 적에게 큰 피해 (보스는 1/4)' },
     { id: 'freeze', name: '서리 주문서', icon: 'snow', desc: '모든 적 4초 정지 (보스 1.5초)' },
     { id: 'goldScroll', name: '황금 주문서', icon: 'coins', desc: '골드 +50×막' },
-    { id: 'summonScroll', name: '소환 주문서', icon: 'star', desc: '희귀 유닛 1기 소환' },
-    { id: 'anvilScroll', name: '강화 주문서', icon: 'anvil', desc: '보드에 가장 많은 클래스 강화 +2' },
+    { id: 'summonScroll', name: '소환 주문서', icon: 'star', desc: '희귀 유닛 1기 소환 (빈칸이 있어야 한다)' },
+    { id: 'anvilScroll', name: '강화 주문서', icon: 'anvil', desc: '보드에서 가장 강한 클래스 강화 +2 (높은 등급일수록 크게 친다)' },
     { id: 'potion', name: '회복 물약', icon: 'potion', desc: '생명 +6' },
     { id: 'rage', name: '광란의 북', icon: 'drum', desc: '10초간 공격 속도 +60%' },
     { id: 'ghostly', name: '유령 망토', icon: 'ghost', desc: '8초 동안 한 바퀴를 돈 적에게 생명을 잃지 않는다' },

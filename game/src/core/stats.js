@@ -40,12 +40,15 @@
   }
 
   // 증강 강화(연마): 이로운 수치만 1.5배. 이로운 수치가 없으면 null (강화 불가)
+  // 판매 가격(sellPct)은 소환 → 판매로 골드가 불어나지 않도록 강화하지 않는다
   const GOOD_UP = [
     'dmgPct', 'aspdPct', 'rangeAdd', 'critChance', 'critMult', 'killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus',
-    'rareChance', 'twinChance', 'mergeRefund', 'mergeDouble', 'mergeMirror', 'sellPct', 'enemySpeedPct', 'eliteDmgPct',
+    'rareChance', 'twinChance', 'mergeRefund', 'mergeDouble', 'mergeMirror', 'enemySpeedPct', 'eliteDmgPct',
     'firstStrike', 'shrapnel', 'freezeChance', 'diversity', 'purity', 'eliteSquad', 'rich', 'legendAura', 'demonForm',
     'noxious', 'poison', 'eliteKillHeal',
   ];
+  // 정수여야 하는 수치 (생명·골드·사거리)
+  const INT_KEYS = { interestCap: true, interestBonus: true, rangeAdd: true, eliteKillHeal: true };
   const GOOD_DOWN = ['summonCostPct', 'upgradeCostPct'];
   RS.upgradeScale = function (mods, f) {
     const out = {};
@@ -62,7 +65,7 @@
           }
         }
       } else if (GOOD_UP.indexOf(k) >= 0 && v > 0) {
-        out[k] = k === 'interestCap' || k === 'interestBonus' || k === 'rangeAdd' ? Math.round(v * f) : v * f;
+        out[k] = INT_KEYS[k] ? Math.round(v * f) : v * f;
         any = true;
       } else if (GOOD_DOWN.indexOf(k) >= 0 && v < 0) {
         out[k] = Math.max(-0.9, v * f);

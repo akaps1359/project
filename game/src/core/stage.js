@@ -77,6 +77,8 @@
         second = buildGroup(other, c2, L);
       }
       let list = interleave(buildGroup(main, cnt, L), second);
+      // 일반 전투 성격의 이벤트 전투(버섯 군락 등)는 spec.hpMul 을 모든 적에게. 엘리트·보스전은 아래에서 엘리트·보스에게만
+      if (kind === 'combat' && spec.hpMul) list = list.map((sp) => Object.assign({}, sp, { hpMul: (sp.hpMul || 1) * spec.hpMul }));
       if (eliteWave) {
         const n = spec.elites || (act >= 2 ? 2 : 1);
         if (spec.burning && !spec.burnBuff) spec.burnBuff = rng.pick(['hp', 'fast', 'regen', 'armor']);

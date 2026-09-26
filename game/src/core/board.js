@@ -93,12 +93,61 @@
     return -1;
   };
 
-  RS.addUnit = function (board, cls, tier, prefer) {
+  // ── 유닛 가치 ──
+  // 칸마다 v = 그 칸 유닛들에 들인 골드의 합. 판매는 한 기 몫(v / n)의 일부만 돌려주므로
+  // 소환 → 판매·합성을 어떻게 반복해도 골드가 늘지 않는다.
+  RS.freeWorth = (tier) => RS.BAL.freeWorth * Math.pow(3, tier);
+  const validV = (s) => typeof s.v === 'number' && isFinite(s.v) && s.v >= 0;
+  // v 가 없는 칸(이전 버전 저장): 문맥이 없으면 무료 유닛으로 본다
+  function worthOf(s) {
+    if (!validV(s)) s.v = s.n * RS.freeWorth(s.tier);
+    return s.v;
+  }
+  // 이전 버전 저장의 유닛: 예전 판매가(현재 소환 비용 × 0.4 × 3^등급)와 같아지도록 한 번만 값을 매긴다
+  RS.legacyWorth = function (run, tier, M) {
+    return RS.summonCost(run, M || RS.baseMods()) * 0.8 * Math.pow(3, tier);
+  };
+  RS.migrateBoard = function (run, M) {
+    for (const s of run.board) if (s && !validV(s)) s.v = s.n * RS.legacyWorth(run, s.tier, M);
+  };
+  RS.stackWorth = function (run, s, M) {
+    if (!validV(s)) s.v = s.n * (run ? RS.legacyWorth(run, s.tier, M) : RS.freeWorth(s.tier));
+    return s.v;
+  };
+
+  // v: 이 유닛에 들인 골드. 생략하면 돈을 내지 않은 유닛(RS.freeWorth)
+  RS.addUnit = function (board, cls, tier, prefer, v) {
     const i = RS.findSlotFor(board, cls, tier, prefer);
     if (i < 0) return -1;
-    if (board[i]) board[i].n++;
-    else board[i] = { cls, tier, n: 1 };
+    const w = v == null || !(v >= 0) ? RS.freeWorth(tier) : v;
+    const s = board[i];
+    if (s) {
+      worthOf(s);
+      s.n++;
+      s.v += w;
+    } else board[i] = { cls, tier, n: 1, v: w };
     return i;
+  };
+
+  // 한 기를 보드에서 빼고 그 몫의 가치를 돌려준다 (판매·제물 등)
+  RS.takeUnit = function (board, i) {
+    const s = board[i];
+    if (!s) return 0;
+    const share = worthOf(s) / s.n;
+    s.n--;
+    if (s.n <= 0) board[i] = null;
+    else s.v = Math.max(0, s.v - share);
+    return share;
+  };
+
+  // 두 칸 사이에서 가치를 옮긴다 (쌍둥이 소환이 다른 칸에 떨어졌을 때)
+  RS.moveWorth = function (board, from, to, amount) {
+    const a = board[from];
+    const b = board[to];
+    if (!a || !b || a === b) return;
+    const m = Math.min(worthOf(a), amount);
+    a.v -= m;
+    b.v = worthOf(b) + m;
   };
 
   RS.hasRoomFor = function (board, cls, tier) {
@@ -122,15 +171,19 @@
     for (const s of board) {
       if (!s) continue;
       const key = s.cls + ':' + s.tier;
-      groups[key] = (groups[key] || 0) + s.n;
+      const g = groups[key] || (groups[key] = { n: 0, v: 0 });
+      g.n += s.n;
+      g.v += worthOf(s);
     }
+    // 같은 유닛끼리 모으면 들인 골드도 한 기당 평균으로 나눠 갖는다
     const stacks = [];
     for (const key in groups) {
       const parts = key.split(':');
-      let n = groups[key];
+      const g = groups[key];
+      let n = g.n;
       while (n > 0) {
         const take = Math.min(3, n);
-        stacks.push({ cls: parts[0], tier: +parts[1], n: take });
+        stacks.push({ cls: parts[0], tier: +parts[1], n: take, v: (g.v * take) / g.n });
         n -= take;
       }
     }
@@ -190,7 +243,7 @@
     return -1;
   };
 
-  // 두 개의 서로 다른 클래스 후보 (고대 두루마리)
+  // 두 개의 서로 다른 클래스 후보 (고대 두루마리). 전투에서는 Battle.mergeOptions(i) 가 칸마다 기억해 둔다
   RS.mergeOptions = function (rng, run) {
     const a = RS.pickClass(run, rng);
     let b = a;
@@ -198,20 +251,26 @@
     return [a, b];
   };
 
-  // 합성: 같은 유닛 3기 → 다음 등급 무작위 클래스 1기
+  // 합성: 같은 유닛 3기 → 다음 등급 무작위 클래스 1기. 재료 3기에 들인 골드가 결과로 옮겨 간다
   RS.mergeSlot = function (run, i, rng, M, pickCls) {
     const board = run.board;
     const s = board[i];
     if (!RS.canMerge(board, i)) return null;
     const res = { from: s.tier, results: [], fail: false, refund: false, double: false, gold: 0 };
+    const share = RS.stackWorth(run, s, M) / s.n;
+    let used = 3;
     s.n -= 3;
+    // 재활용: 돌아온 재료 1기는 제 몫을 그대로 갖고, 결과는 나머지 2기 몫을 받는다
     if (M.mergeRefund && rng.chance(M.mergeRefund)) {
       s.n += 1;
+      used = 2;
       res.refund = true;
     }
+    const moved = share * used;
     if (s.n <= 0) board[i] = null;
+    else s.v = Math.max(0, s.v - moved);
     if (M.mergeFail && rng.chance(M.mergeFail)) {
-      res.fail = true;
+      res.fail = true; // 재료에 들인 골드도 함께 사라진다
       return res;
     }
     let tier = s.tier + 1;
@@ -220,29 +279,46 @@
       res.double = true;
     }
     const count = M.mergeMirror && rng.chance(M.mergeMirror) ? 2 : 1;
+    const each = moved / count;
     for (let k = 0; k < count; k++) {
       const cls = pickCls || RS.pickClass(run, rng);
-      const slot = RS.addUnit(board, cls, tier, i);
+      const slot = RS.addUnit(board, cls, tier, i, each);
       if (slot >= 0) res.results.push({ cls, tier, slot });
-      else res.gold += RS.sellValue(run, tier, M);
+      else res.gold += RS.worthToGold(each, M); // 놓을 자리가 없으면 판매한 것처럼 골드로
     }
     if (res.gold) RS.addGold(run, res.gold);
     run.stats.merges++;
     return res;
   };
 
+  // 판매 비율: 기본 50%, 미다스 등으로 올라도 80%를 넘지 않는다
+  RS.sellRate = function (M) {
+    return Math.max(0, Math.min(RS.BAL.sellRateMax, RS.BAL.sellRate * (1 + ((M && M.sellPct) || 0))));
+  };
+  RS.worthToGold = function (worth, M) {
+    return Math.max(0, Math.floor(worth * RS.sellRate(M) + 1e-9));
+  };
+
+  // i 칸의 유닛 1기를 팔 때 받는 골드 (유닛 패널 표시와 실제 판매가 같은 값을 쓴다)
+  RS.sellValueAt = function (run, i, M) {
+    const s = run.board[i];
+    if (!s) return 0;
+    return RS.worthToGold(RS.stackWorth(run, s, M) / s.n, M);
+  };
+
+  // 돈을 내지 않고 얻은 tier 등급 유닛 1기의 판매가. 보상 유닛을 놓을 자리가 없을 때 대신 주는 골드이기도 하다
+  // (놓고 곧바로 판 것과 같아서, 가득 찬 보드로 보상을 골드로 바꿔도 이득이 없다)
   RS.sellValue = function (run, tier, M) {
-    return Math.round(RS.summonCost(run, M) * RS.BAL.sellRate * Math.pow(3, tier) * (1 + M.sellPct));
+    return RS.worthToGold(RS.freeWorth(tier), M);
   };
 
   RS.sellOne = function (run, i, M) {
     const s = run.board[i];
     if (!s) return 0;
-    const v = RS.sellValue(run, s.tier, M);
-    s.n--;
-    if (s.n <= 0) run.board[i] = null;
-    RS.addGold(run, v);
-    return v;
+    const g = RS.sellValueAt(run, i, M);
+    RS.takeUnit(run.board, i);
+    RS.addGold(run, g);
+    return g;
   };
 
   RS.summonCost = function (run, M) {

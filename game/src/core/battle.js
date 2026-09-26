@@ -4,6 +4,8 @@
 
   const F = RS.FIELD;
   const MAX_NUMS = 40;
+  const STAR_MAX = 5; // 별의 왕홀: 전투가 끝나도 남는 별의 최대 개수
+  const STAR_COST = 3;
 
   function Battle(run, stage, opts) {
     opts = opts || {};
@@ -53,14 +55,24 @@
     this.attackCount = 0; // 펜촉
     this.helixUsed = false;
     this.leakShield = M.leakShield || 0; // 되감기 모래
-    this.stars = 0; // 별의 섭정
-    this.waveSummons = 0; // 벨벳 초커
+    // 별의 왕홀: 별은 run.relicState.starScepter 에 쌓여 다음 전투로 이어진다 (최대 STAR_MAX)
+    this.starMax = M.stars ? STAR_MAX : 0;
+    this.starCost = STAR_COST;
+    this.stars = 0;
+    if (M.stars) {
+      const st = run.relicState.starScepter || (run.relicState.starScepter = { n: 0 });
+      this.stars = Math.max(0, Math.min(this.starMax, Math.floor(st.n) || 0));
+    }
+    // 벨벳 초커·메아리 형상: 준비 시간은 첫 웨이브와 같은 웨이브로 친다
+    this.waveSummons = 0;
     this.echoUsed = false;
+    this.mergeOpts = {}; // 고대 두루마리 합성 후보 ('클래스:등급' → [후보 둘])
     this.costMul = 1; // 뱀의 눈
     this.rollCost();
     const clsDmg = {};
     for (const c of RS.CLASSES) clsDmg[c] = 0;
     this.stats = { kills: 0, dmg: 0, leaks: 0, clsDmg, goldEarned: 0, lifeStart: run.life };
+    RS.migrateBoard(run, M); // 이전 버전 저장의 유닛에 들인 골드(v)를 매긴다
 
     if (M.battleStartGold) RS.addGold(run, M.battleStartGold * Math.min(3, run.act));
     if (M.battleStartLifeLoss) run.life = Math.max(1, run.life - M.battleStartLifeLoss);
@@ -117,7 +129,7 @@
       if (this.dragonT >= 8) {
         this.dragonT = 0;
         let best = null;
-        for (const e of this.enemies) if (!e.dead && !(e.subT > 0) && (!best || e.d > best.d)) best = e;
+        for (const e of this.enemies) if (!e.dead && !(e.subT > 0) && (!best || e.d - e.nextLap > best.d - best.nextLap)) best = e;
         if (best) {
           const dmg = RS.levelHp(this.curL) * 2;
           this.damage(best, best.boss ? dmg * 0.35 : dmg, null, true, false);
@@ -177,8 +189,11 @@
     this.waveIdx = k + 1;
     this.waveT = RS.BAL.waveTime * (1 - M.waveIntervalPct);
     this.nextWaveDelay = -1;
-    this.waveSummons = 0;
-    this.echoUsed = false;
+    // 준비 시간과 첫 웨이브는 소환 제한·메아리를 함께 쓴다
+    if (k > 0) {
+      this.waveSummons = 0;
+      this.echoUsed = false;
+    }
     if (k === 1 && M.doubt) {
       for (let i = 0; i < F.SIZE; i++) if (this.slotStun[i] > 100) this.slotStun[i] = 0;
     }
@@ -197,12 +212,10 @@
       }
     }
     for (let i = 0; i < free; i++) this.freeSummon(0);
-    if (M.sealSummon && run.gold >= M.sealSummon) {
-      RS.addGold(run, -M.sealSummon);
-      this.freeSummon(0);
-    }
+    // 황금 인장: 소환이 된 때만 골드를 낸다
+    if (M.sealSummon && run.gold >= M.sealSummon && this.freeSummon(0, M.sealSummon, true) >= 0) RS.addGold(run, -M.sealSummon);
     if (M.debt) RS.addGold(run, -M.debt);
-    if (M.stars) this.stars = Math.min(5, this.stars + 1);
+    if (M.stars) this.setStars(this.stars + 1);
     this.emit({ k: 'wave', n: k + 1, total: this.stage.waves.length, gold: Math.round(wg), interest });
   };
 
@@ -309,7 +322,10 @@
       if (e.poisonT > 0) {
         e.poisonT -= dt;
         this.damage(e, e.poison * e.poisonN * dt, null, false, true);
-        if (e.poisonT <= 0) e.poisonN = 0;
+        if (e.poisonT <= 0) {
+          e.poisonN = 0;
+          e.poison = 0;
+        }
         if (e.dead) continue;
       }
       if (e.burning === 'regen' && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.015 * dt);
@@ -318,7 +334,8 @@
         if (e.dead) continue;
       }
       const def = e.def;
-      if (def.heal || def.haste || def.summon || def.rift || def.hop || def.submerge || def.anchor) this.enemySkill(e, def, dt);
+      // 기절·빙결 중에는 기술 타이머도 멈춘다
+      if (e.stunT <= 0 && (def.heal || def.haste || def.summon || def.rift || def.hop || def.submerge || def.anchor)) this.enemySkill(e, def, dt);
       if (e.subT > 0) e.subT -= dt;
       if (e.stunT > 0) continue;
       let sp = e.speed * globalSpeed * (1 - e.slow) * (1 + e.hasteP);
@@ -554,12 +571,13 @@
       const dx = e.x - x;
       const dy = e.y - y;
       if (dx * dx + dy * dy > r2) continue;
-      // 가장 멀리 간 적(누수 직전)부터
+      // 다음 누수에 가장 가까운 적부터. e.d 는 바퀴를 돌수록 쌓이므로 e.d - e.nextLap (클수록 가깝다)으로 비교한다
+      const key = e.d - e.nextLap;
       let j = out.length;
       if (j < n) out.push(e);
-      else if (e.d <= out[n - 1].d) continue;
+      else if (key <= out[n - 1].d - out[n - 1].nextLap) continue;
       else j = n - 1;
-      while (j > 0 && out[j - 1].d < e.d) {
+      while (j > 0 && out[j - 1].d - out[j - 1].nextLap < key) {
         out[j] = out[j - 1];
         j--;
       }
@@ -610,7 +628,7 @@
         if (st.frostSplash) {
           const r2 = st.frostSplash * st.frostSplash;
           for (const o of this.enemies) {
-            if (o.dead || o === e) continue;
+            if (o.dead || o === e || o.subT > 0) continue;
             const dx = o.x - ex;
             const dy = o.y - ey;
             if (dx * dx + dy * dy <= r2) {
@@ -624,8 +642,12 @@
       case 'rogue':
         this.damage(e, dmg, cls, crit);
         if (M.poison && !e.dead) {
-          e.poison = Math.max(e.poison, (dmg * M.poison) / 3);
-          e.poisonN = Math.min(5, e.poisonN + 1);
+          // 중첩 하나 = 그 공격 피해의 50%를 3초에 걸쳐. 세기는 중첩들의 평균이라 치명타 한 번이 모든 중첩을 키우지 않는다
+          const p = (dmg * M.poison) / 3;
+          if (e.poisonN < 5) {
+            e.poison = (e.poison * e.poisonN + p) / (e.poisonN + 1);
+            e.poisonN++;
+          } else e.poison = (e.poison * 4 + p) / 5;
           e.poisonT = 3;
         }
         break;
@@ -731,16 +753,19 @@
     const run = this.run;
     const M = this.M;
     let g = M.noKillGold ? 0 : def.gold * RS.BAL.killGoldMul[Math.min(3, run.act)] * (1 + M.killGoldPct);
-    if (e.runeGold) g += e.runeGold;
+    if (e.runeGold && !M.noKillGold) g += e.runeGold; // 엑토 심장이면 황금 룬 골드도 없다
     RS.addGold(run, g);
     this.stats.goldEarned += g;
     this.stats.kills++;
     if (M.souls) {
-      run.souls = (run.souls || 0) + 1;
+      run.souls = Math.min(M.souls, (run.souls || 0) + 1);
       if (run.souls >= M.souls) {
-        run.souls = 0;
         const tier = M.soulTier || 0;
-        if (this.freeSummon(tier) >= 0) this.emit({ k: 'msg', text: `영혼이 모여 ${RS.TIER[tier].name} 유닛이 일어났다!` });
+        // 자리가 없으면 영혼을 모아 둔 채로 다음 처치 때 다시 일으킨다
+        if (this.freeSummon(tier, undefined, true) >= 0) {
+          run.souls = 0;
+          this.emit({ k: 'msg', text: `영혼이 모여 ${RS.TIER[tier].name} 유닛이 일어났다!` });
+        }
       }
     }
     if (e.elite || e.boss) {
@@ -803,12 +828,23 @@
     return this.M.summonCap ? Math.max(0, this.M.summonCap - this.waveSummons) : Infinity;
   };
 
-  // 비용·횟수 없이 소환 (유물·증강 효과)
-  P.freeSummon = function (tier) {
+  // 비용·횟수 없이 소환 (유물·증강 효과). worth: 이 유닛에 들인 골드 (생략하면 무료 유닛)
+  // 자리가 없으면 그 유닛의 판매가만큼 골드로 돌려준다. keep 이면 돌려주지 않고 -1 만 알린다 (다시 시도하는 효과)
+  P.freeSummon = function (tier, worth, keep) {
     const run = this.run;
     const cls = RS.pickClass(run, this.rng);
-    const slot = RS.addUnit(run.board, cls, tier);
-    if (slot < 0) return -1;
+    const slot = RS.addUnit(run.board, cls, tier, -1, worth);
+    if (slot < 0) {
+      if (!keep) {
+        const g = RS.worthToGold(worth == null ? RS.freeWorth(tier) : worth, this.M);
+        if (g > 0) {
+          RS.addGold(run, g);
+          this.stats.goldEarned += g;
+          this.emit({ k: 'msg', text: `빈자리가 없어 무료 소환 대신 골드 +${g}` });
+        }
+      }
+      return -1;
+    }
     this.resetCd(slot);
     this.statsDirty = true;
     this.emit({ k: 'summon', slot, cls, tier, free: true });
@@ -821,10 +857,12 @@
     const cost = this.summonCost();
     if (M.prepLocked && this.prep > 0) return { err: 'locked' };
     if (this.summonLimit() <= 0) return { err: 'cap' };
+    // 빈칸이 없으면 굴리기 전에 멈춘다 (가득 찬 보드에서 원하는 유닛이 나올 때까지 공짜로 다시 굴리지 못하게)
+    if (!RS.hasEmptySlot(run.board)) return { err: 'full' };
     if (run.gold < cost) return { err: 'gold' };
     const cls = RS.pickClass(run, this.rng);
     const tier = RS.rollSummonTier(this.rng, M);
-    const slot = RS.addUnit(run.board, cls, tier);
+    const slot = RS.addUnit(run.board, cls, tier, -1, cost);
     if (slot < 0) return { err: 'full' };
     RS.addGold(run, -cost);
     run.summons++;
@@ -840,9 +878,11 @@
     const echo = M.echoForm && !this.echoUsed;
     if (echo) this.echoUsed = true;
     if (echo || (M.twinChance && this.rng.chance(M.twinChance))) {
-      const s2 = RS.addUnit(run.board, cls, tier);
+      // 따라온 유닛은 낸 비용을 나눠 갖는다 (둘 다 팔아도 낸 골드보다 적다)
+      const s2 = RS.addUnit(run.board, cls, tier, -1, 0);
       if (s2 >= 0) {
         res.twin = s2;
+        RS.moveWorth(run.board, slot, s2, cost / 2);
         this.resetCd(s2);
       }
     }
@@ -856,12 +896,29 @@
     for (let u = 0; u < 3; u++) if (cds[u] < 0.05) cds[u] = 0.05 + this.rng.next() * 0.3;
   };
 
-  P.mergeOptions = function () {
-    return RS.mergeOptions(this.rng, this.run);
+  // 고대 두루마리: i 칸 유닛의 합성 후보 둘. '클래스:등급'마다 한 번만 굴려 두고 실제로 합성할 때까지 유지하므로
+  // 패널을 다시 열거나 자리를 바꾸거나 정렬해도 후보가 바뀌지 않는다. i 를 생략하면 첫 번째로 합성할 수 있는 칸
+  P.mergeOptions = function (i) {
+    const board = this.run.board;
+    if (i == null || i < 0) i = RS.firstMergeable(board);
+    const s = board[i];
+    if (!s) return [];
+    const key = s.cls + ':' + s.tier;
+    return this.mergeOpts[key] || (this.mergeOpts[key] = RS.mergeOptions(this.rng, this.run));
   };
 
+  // pickCls: 고대 두루마리가 있을 때 mergeOptions(i) 중 하나 (생략하면 첫 번째 후보). 후보가 아니면 합성하지 않는다
   P.merge = function (i, pickCls) {
-    const res = RS.mergeSlot(this.run, i, this.rng, this.M, pickCls);
+    const board = this.run.board;
+    if (!RS.canMerge(board, i)) return null;
+    let pick;
+    if (this.M.mergeChoose) {
+      const opts = this.mergeOptions(i);
+      if (pickCls != null && opts.indexOf(pickCls) < 0) return null;
+      pick = pickCls != null ? pickCls : opts[0];
+      delete this.mergeOpts[board[i].cls + ':' + board[i].tier];
+    }
+    const res = RS.mergeSlot(this.run, i, this.rng, this.M, pick);
     if (!res) return null;
     for (const r of res.results) this.resetCd(r.slot);
     this.statsDirty = true;
@@ -869,12 +926,12 @@
     return res;
   };
 
+  // 한 기 판매. 받는 골드는 RS.sellValueAt(run, i, M) 과 같다
   P.sell = function (i) {
+    if (!this.run.board[i]) return 0;
     const v = RS.sellOne(this.run, i, this.M);
-    if (v) {
-      this.statsDirty = true;
-      this.emit({ k: 'sell', slot: i, v });
-    }
+    this.statsDirty = true;
+    this.emit({ k: 'sell', slot: i, v });
     return v;
   };
 
@@ -894,7 +951,7 @@
   };
 
   P.upgradeCost = function (cls) {
-    return this.M.upgradeFree ? 0 : RS.upgradeCost(this.run, cls, this.M);
+    return Math.max(1, RS.upgradeCost(this.run, cls, this.M));
   };
 
   P.upgrade = function (cls) {
@@ -931,16 +988,18 @@
         RS.addGold(run, 50 * Math.min(3, run.act) * pot);
         break;
       case 'summonScroll': {
-        let ok = false;
+        // 빈칸이 없으면 굴리기 전에 멈춘다 (소환처럼 공짜로 다시 굴리지 못하게)
+        if (!RS.hasEmptySlot(run.board)) return { err: 'full' };
         for (let k = 0; k < pot; k++) {
           const cls = RS.pickClass(run, this.rng);
           const slot = RS.addUnit(run.board, cls, 1);
-          if (slot < 0) break;
-          ok = true;
+          if (slot < 0) {
+            RS.addGold(run, RS.worthToGold(RS.freeWorth(1), this.M)); // 두 번째 유닛을 놓을 자리가 없으면 골드로
+            continue;
+          }
           this.resetCd(slot);
           this.emit({ k: 'summon', slot, cls, tier: 1 });
         }
-        if (!ok) return { err: 'full' };
         this.statsDirty = true;
         break;
       }
@@ -967,18 +1026,30 @@
     return { id };
   };
 
-  // 별의 섭정: 별 3개로 별똥별 (모든 적에게 큰 피해)
+  // 별의 섭정: 웨이브마다 별 +1 (전투가 끝나도 남고 최대 starMax). 별 3개로 별똥별 (모든 적에게 큰 피해)
+  P.setStars = function (n) {
+    this.stars = Math.max(0, Math.min(this.starMax, n));
+    const st = this.run.relicState.starScepter;
+    if (st) st.n = this.stars;
+  };
   P.canStarfall = function () {
-    return !!this.M.stars && this.stars >= 3;
+    return !!this.M.stars && this.stars >= this.starCost && this.status === 'running';
   };
   P.starfall = function () {
     if (!this.canStarfall()) return false;
-    this.stars -= 3;
+    this.setStars(this.stars - this.starCost);
     const dmg = RS.levelHp(this.curL) * 1.5;
     for (const e of this.enemies) if (!e.dead) this.damage(e, e.boss ? dmg * 0.35 : dmg, null, false, true);
     this.reap();
     this.emit({ k: 'bomb' });
     return true;
+  };
+
+  // 허수아비 시험처럼 제한 시간이 있는 전투의 남은 시간(초). 제한이 없으면 null
+  P.trialLeft = function () {
+    const lim = this.stage.spec && this.stage.spec.timeLimit;
+    if (!lim) return null;
+    return Math.max(0, lim - (this.trialT || 0));
   };
 
   // 화면 표시용 요약
