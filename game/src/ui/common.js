@@ -69,7 +69,10 @@
       class: 'btn ' + (cls || ''),
       disabled: !!disabled,
       onclick(e) {
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
         if (el.classList.contains('arm')) {
+          // 빠른 두 번 탭(실수)은 확인으로 치지 않는다
+          if (now - (el._armedAt || 0) < 400) return;
           clearTimeout(timer);
           el.classList.remove('arm');
           RS.sfx('click');
@@ -77,6 +80,7 @@
           return;
         }
         RS.sfx('click');
+        el._armedAt = now;
         el.classList.add('arm');
         el.dataset.label = el.textContent;
         el.textContent = armedLabel;

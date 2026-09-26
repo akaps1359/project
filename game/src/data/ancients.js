@@ -17,15 +17,15 @@
       onPick(run) { RS.changeMaxLife(run, 10); RS.heal(run, 10); },
     }),
     R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +35%', { dmgPct: 0.35 }, {
-      cost: '최대 생명 -6',
-      onPick(run) { RS.changeMaxLife(run, -6); },
+      cost: '최대 생명 -3',
+      onPick(run) { RS.changeMaxLife(run, -3); },
     }),
     R('twinStar', '쌍둥이 별', 'twin', '합성할 때 10% 확률로 결과 유닛 2기', { mergeMirror: 0.1 }),
     R('luckyStar', '행운의 별', 'star', '소환 시 희귀 확률 +10%, 영웅 확률 +2%', { rareChance: 0.1, epicChance: 0.02 }),
     R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 20을 내고 무료 소환 1회 (소환 비용이 오르지 않는다)', { sealSummon: 20 }, { cost: '웨이브마다 골드 -20' }),
-    R('pumpkinCandle', '호박 양초', 'lantern', '다음 6번의 전투 동안 모든 유닛 피해 +50%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 6 } }),
-    R('waxToys', '밀랍 장난감 상자', 'box', '모든 유닛 공격 속도 +30%. 전투 3번마다 녹아 10%p씩 줄어든다', {}, { state: { fights: 0 } }),
-    R('lordParasol', '영주의 양산', 'crown2', '상점에서 첫 번째로 사는 물건은 공짜', { freeFirstBuy: 1 }),
+    R('pumpkinCandle', '호박 양초', 'lantern', '다음 8번의 전투 동안 모든 유닛 피해 +50%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 8 } }),
+    R('waxToys', '밀랍 장난감 상자', 'box', '모든 유닛 공격 속도 +40%. 전투 4번마다 녹아 10%p씩 줄어든다', {}, { state: { fights: 0 } }),
+    R('lordParasol', '영주의 양산', 'crown2', '상점마다 첫 번째로 사는 물건은 공짜', { freeFirstBuy: 1 }),
     R('whisperEarring', '속삭이는 귀걸이', 'charm', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
     R('spikedGauntlet', '가시 건틀릿', 'fist', '모든 유닛 피해 +45%', { dmgPct: 0.45, upgradeCostPct: 0.5 }, { cost: '강화 비용 +50%' }),
     R('warHammerA', '전쟁 망치', 'hammer', '엘리트를 처치하면 무작위 증강 2개 연마', { eliteUpgrade: 2 }),
@@ -38,7 +38,7 @@
 
   // 즉시 효과형 축복
   const BOONS = {
-    upgrade2: { name: '연마의 손길', desc: '증강 2개를 골라 강화', apply(run) { RS.enqueue(run, { k: 'upgrade', title: '고대의 손길' }); RS.enqueue(run, { k: 'upgrade', title: '고대의 손길' }); } },
+    upgrade2: { name: '연마의 손길', desc: '증강 2개를 골라 연마', apply(run) { RS.enqueue(run, { k: 'upgrade', title: '고대의 손길' }); RS.enqueue(run, { k: 'upgrade', title: '고대의 손길' }); } },
     cleanse: { name: '정화', desc: '저주를 모두 없애고 생명을 모두 회복', apply(run) { run.curses = run.curses.filter((id) => RS.CURSE[id].permanent); RS.heal(run, run.maxLife); } },
     legend: { name: '전설의 부름', desc: '무작위 전설 유닛 1기', apply(run) { RS.grantUnits(run, 3, 1); } },
     gold400: { name: '황금 비', desc: '골드 +400', apply(run) { RS.addGold(run, 400); } },
@@ -48,7 +48,7 @@
     runes2: { name: '룬 각인', desc: '룬 두 개를 골라 보드에 새긴다', apply(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'runeChoice', runes: pick2(run), title: '룬 각인' }); } },
     trainAll2: { name: '고대 수련', desc: '모든 클래스 강화 +2', apply(run) { for (const c of RS.CLASSES) run.classLv[c] += 2; } },
     bossRelic: { name: '보물 더미', desc: '보스 유물 2개 중 하나를 고른다', apply(run) { const ids = RS.rollRelics(run, 2, [3], [1]); if (ids.length) RS.enqueue(run, { k: 'relicList', ids, title: '보물 더미' }); } },
-    relicPair: { name: '도전자의 배낭', desc: '무작위 희귀 유물 1개와 일반 유물 1개', apply(run) { RS.grantRandomRelic(run, [2]); RS.grantRandomRelic(run, [1]); } },
+    relicPair: { name: '도전자의 배낭', desc: '무작위 희귀 유물 2개', apply(run) { RS.grantRandomRelic(run, [2]); RS.grantRandomRelic(run, [2]); } },
   };
   function pick2(run) {
     const a = RS.randomRune(run.rng);
@@ -103,7 +103,8 @@
     const owned = {};
     for (const id of run.relics) owned[id] = true;
     const boons = [];
-    const fresh = (b) => !owned[b] && boons.indexOf(b) < 0;
+    // 전설 유닛은 2막에서 너무 결정적이라 3막에서만 나온다
+    const fresh = (b) => !owned[b] && boons.indexOf(b) < 0 && !(b === 'legend' && run.act < 3);
     for (const p of A.pools) {
       let opts = p.filter(fresh);
       // 풀이 다 떨어졌으면 다른 풀에서 아직 안 나온 것을 고른다 (같은 선택지가 두 번 나오지 않게)

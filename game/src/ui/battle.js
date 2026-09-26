@@ -223,6 +223,8 @@
       const G = UI.G;
       if (!G.battle) return;
       e.preventDefault();
+      // 모달을 닫은 탭이 그대로 전장에 들어가 유닛을 옮기지 않게
+      if (G.modalOpen || (UI.inputLocked && UI.inputLocked())) return;
       const p = toLogical(e);
       const i = RS.slotAt(p.x, p.y);
       const board = G.run.board;
@@ -505,6 +507,8 @@
   UI.panelMode = 'idle';
   UI.setPanel = function (mode, data) {
     const G = UI.G;
+    // 사용·닫기 버튼 자리에 합성·판매 버튼이 바로 그려지므로 연타가 새 버튼을 누르지 않게 잠깐 막는다
+    if (UI.panelMode !== mode && (UI.panelMode === 'item' || UI.panelMode === 'mergeChoose' || UI.panelMode === 'upgrade') && UI.lockInput) UI.lockInput(250);
     UI.panelMode = mode;
     UI.panelData = data || null;
     UI.panelSig = null;
@@ -697,7 +701,7 @@
         const bb = G.battle;
         if (!bb || !bb.starfall()) {
           RS.sfx('error');
-          UI.toast(`별이 ${bb ? UI.starMax(bb) : 3}개 모여야 해요 (웨이브마다 1개)`, 'warn');
+          UI.toast(bb && bb.stars >= (bb.starCost || 3) ? '적이 있을 때 쓸 수 있어요' : `별이 ${(bb && bb.starCost) || 3}개 모여야 해요 (웨이브마다 1개, 최대 ${bb ? UI.starMax(bb) : 5}개)`, 'warn');
           return;
         }
         RS.sfx('bomb');
@@ -761,7 +765,7 @@
     setCls($('#b-summon'), 'canS', 'off', !(run.gold >= cost && b.summonLimit() > 0));
     setText($('#b-speed'), 'spd', `x${G.speed}`);
     if (UI.starBtn) {
-      setText(UI.starBtn, 'star', `★ ${b.stars}/${UI.starMax(b)}`);
+      setText(UI.starBtn, 'star', `★ ${b.stars}/${b.starCost || 3}`);
       setCls(UI.starBtn, 'starOn', 'off', !b.canStarfall());
     }
     // 합성 가능한 칸 수 + 길에 닿지 않는 칸 (0.1초마다 20칸)
@@ -887,6 +891,10 @@
         if (ev.free) RS.sfx('summon');
         break;
       case 'won':
+        if (UI.G.battle && UI.G.battle.trialFailed) {
+          RS.sfx('lose');
+          break;
+        }
         RS.sfx('win');
         UI.toast('승리!', 'good');
         break;

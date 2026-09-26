@@ -45,7 +45,7 @@
     'dmgPct', 'aspdPct', 'rangeAdd', 'critChance', 'critMult', 'killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus',
     'rareChance', 'twinChance', 'mergeRefund', 'mergeDouble', 'mergeMirror', 'enemySpeedPct', 'eliteDmgPct',
     'firstStrike', 'shrapnel', 'freezeChance', 'diversity', 'purity', 'eliteSquad', 'rich', 'legendAura', 'demonForm',
-    'noxious', 'poison', 'eliteKillHeal',
+    'noxious', 'poison', 'eliteKillHeal', 'sellPct',
   ];
   // 정수여야 하는 수치 (생명·골드·사거리)
   const INT_KEYS = { interestCap: true, interestBonus: true, rangeAdd: true, eliteKillHeal: true };

@@ -232,7 +232,7 @@
     run.variants[1] = run.rng.int(RS.ACT_VARIANTS[0].length);
     RS.addRelic(run, cmd.relic);
     for (let k = 0; k < (cmd.startItems || 0); k++) RS.addItem(run, RS.randomItemId(run.rng));
-    if (asc >= 3) {
+    if (asc >= 6) {
       run.maxLife -= 4;
       run.life = run.maxLife;
     }
@@ -252,8 +252,13 @@
     RS.attachRng(run);
     RS.registerCustomAugs(run);
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
+    // 예전 저장본: 마지막 보스를 이기고 보상 화면에 멈춰 있었다면 그대로 끝낸다
+    if (run.phase === 'reward' && run.nodeType === 'boss' && typeof RS.isFinalBoss === 'function' && RS.isFinalBoss(run)) {
+      run.phase = 'victory';
+      run.pending = null;
+    }
     // 이전 버전 저장의 유닛에 판매 가치를 매긴다
-    if (Array.isArray(run.board) && typeof RS.migrateBoard === 'function') RS.migrateBoard(run);
+    if (Array.isArray(run.board) && typeof RS.migrateBoard === 'function') RS.migrateBoard(run, RS.collectMods(run));
     return run;
   };
 
@@ -601,7 +606,7 @@
     reward.aug = RS.rollAugments(run, RS.augChoiceCount(run), w, null, type === 'combat');
     if (type === 'elite') {
       reward.relics = RS.rollRelics(run, 2, [1, 2], [70, 30]);
-      if (M.blackStar) reward.takeAll = true;
+      if (M.blackStar && stage.type !== 'eventFight') reward.takeAll = true;
       if (run.burning && !run.keys.emerald) {
         run.keys.emerald = true;
         reward.key = 'emerald';
@@ -685,6 +690,10 @@
       run.phase = 'actStart';
       run.pending = run.act <= 3 ? { ancient: RS.rollAncient(run) } : null;
     } else {
+      // 상점·이벤트(전투 없이 끝난 것)도 길 위의 발견으로 증강 하나를 고른다: 전투만 고르는 길이 정답이 되지 않게
+      if ((run.nodeType === 'shop' || run.nodeType === 'event') && run.phase !== 'over') {
+        RS.enqueue(run, { k: 'aug', w: AUG_W[Math.min(4, run.act)], title: '길 위의 발견' });
+      }
       run.phase = 'map';
       run.pending = null;
     }
@@ -796,7 +805,9 @@
       item.undoCurse = null;
       item.undoCharm = 0;
       // 한 번에 산 묶음(제거 + 연마 등)의 나머지도 함께 취소
-      if (item.group) run.queue = run.queue.filter((x) => x === item || x.group !== item.group);
+      if (item.group) {
+        for (let i = run.queue.length - 1; i >= 0; i--) if (run.queue[i] !== item && run.queue[i].group === item.group) run.queue.splice(i, 1);
+      }
     } else if ((item.k === 'aug' || item.k === 'augList') && item.ids && item.ids.length) {
       const life = RS.skipAugBonus(run);
       if (life) texts.push(`노래하는 그릇: 최대 생명 +${life}`);
@@ -950,7 +961,7 @@
     if (it.kind === 'relic') RS.addRelic(run, it.id);
     else if (it.kind === 'item') RS.addItem(run, it.id);
     else if (it.kind === 'aug') RS.pickAugment(run, it.id);
-    else if (it.kind === 'unit') RS.grantUnits(run, it.tier, 1, it.price);
+    else if (it.kind === 'unit') RS.grantUnits(run, it.tier, 1, it.price > 0 ? it.price : undefined);
     else if (it.kind === 'rune') RS.enqueue(run, { k: 'rune', rune: it.id, title: '룬 새기기', undo });
     else if (it.kind === 'remove') {
       run.removeCount++;
@@ -1023,7 +1034,7 @@
       opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 +6% (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });
     }
     const candle = run.relicState.pumpkinCandle;
-    if (candle && candle.charges < 6) opts.push({ id: 'kindle', label: '불 붙이기', desc: `호박 양초를 다시 켠다 (남은 ${candle.charges}번 → 6번)` });
+    if (candle && candle.charges < 8) opts.push({ id: 'kindle', label: '불 붙이기', desc: `호박 양초를 다시 켠다 (남은 ${candle.charges}번 → 8번)` });
     if (run.quests && run.quests.egg) opts.push({ id: 'hatch', label: '부화', desc: '용의 알을 부화시킨다: 전설 유닛 1기 + 유물 [아기 용]' });
     const onRune = run.runes.some((r, i) => r === 'cloneR' && run.board[i]);
     if (onRune) {
@@ -1063,7 +1074,7 @@
         run.keys.ruby = true;
         break;
       case 'kindle':
-        run.relicState.pumpkinCandle.charges = 6;
+        run.relicState.pumpkinCandle.charges = 8;
         break;
       case 'hatch':
         run.quests.egg = false;
@@ -1104,7 +1115,7 @@
         if (extra) p.got.push(extra);
       }
     }
-    if (M.cursedKey) {
+    if (M.cursedKey && !takeKey && run.floor !== 5) {
       const c = RS.randomCurseId(run.rng);
       if (RS.addCurse(run, c)) p.curse = c;
     }

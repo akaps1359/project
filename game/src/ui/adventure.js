@@ -202,17 +202,18 @@
             h('p', { class: 'good' }, `막을 넘어오며 생명을 회복했습니다 (${Math.ceil(run.life)}/${run.maxLife})`))),
       );
       const A = RS.ANCIENT[anc.id];
-      const sel = typeof UI.optSel === 'string' && anc.boons.indexOf(UI.optSel) >= 0 ? UI.optSel : null;
+      const selIdx = typeof UI.optSel === 'number' && UI.optSel < anc.boons.length ? UI.optSel : null;
+      const sel = selIdx != null ? anc.boons[selIdx] : null;
       card.appendChild(h('div', { class: 'ancient' },
         h('div', { class: 'anc-head' }, icon(A.icon, '', 5), h('div', null, h('b', null, A.name), h('p', null, A.text))),
         h('h2', null, `${['', '하나', '둘', '셋', '넷'][anc.boons.length] || anc.boons.length} 중 하나를 고르세요`),
-        h('div', { class: 'options' }, anc.boons.map((bid) => {
+        h('div', { class: 'options' }, anc.boons.map((bid, bi) => {
           const bo = RS.ancientBoon(bid);
           return h('button', {
-            class: 'btn option anc' + (sel === bid ? ' sel' : ''),
+            class: 'btn option anc' + (selIdx === bi ? ' sel' : ''),
             onclick() {
               RS.sfx('click');
-              UI.optSel = bid;
+              UI.optSel = bi;
               UI.keepScroll = true;
               UI.showActStart();
             },
@@ -296,12 +297,12 @@
       UI.cancelQueued(run, item);
       done();
     };
-    const paid = !!(item.undo || item.refund);
+    const paid = !!(item.undo || item.refund || item.refundLife || item.undoCurse || item.undoCharm);
     // 취소 버튼: 유료면 '구매 취소 (+NG)', 고를 대상이 없으면 '계속', 그 밖에는 확인을 거친다
     const cancelBtn = (label, hasTargets) => {
       if (paid) {
         const amt = refundOf(item);
-        return btn(amt > 0 ? `구매 취소 (+${amt}G)` : '구매 취소', cancel, hasTargets ? 'sm' : 'gold grow');
+        return btn(amt > 0 ? `구매 취소 (+${amt}G)` : '취소하고 되돌리기', cancel, hasTargets ? 'sm' : 'gold grow');
       }
       if (!hasTargets) return btn('계속', cancel, 'gold grow');
       return btn(label, () => UI.confirm('그만둘까요?', `[${title}] 효과를 쓰지 않고 넘어갑니다. 되돌릴 수 없어요.`, label, cancel), 'sm');
@@ -525,13 +526,15 @@
       const bowl = !!RS.collectMods(run).singingBowl;
       body.appendChild(h('p', { class: 'dim small center skipnote' }, `건너뛰면 골드 +${sg}${bowl ? ' · 노래하는 그릇: 최대 생명 +2' : ''}`));
       footer = [
-        r.rerolls > 0 ? btn(`새로고침 ${r.rerolls}`, () => {
+        r.rerolls > 0 || r.hadRerolls ? btn(`새로고침 ${r.rerolls}`, () => {
+          if (!(r.rerolls > 0)) return;
+          r.hadRerolls = true;
           RS.rewardReroll(run);
           UI.rewardSel = null;
           G.save();
           UI.keepScroll = true;
           UI.showReward();
-        }, 'sm') : null,
+        }, 'sm', !(r.rerolls > 0)) : null,
         UI.btn2(`건너뛰기 +${sg}G`, '한 번 더: 건너뛰기', (e) => {
           lockFoot(e);
           RS.rewardSkipAug(run);

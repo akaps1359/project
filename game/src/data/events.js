@@ -315,7 +315,7 @@
       options: [
         { label: '잊는다', desc: '증강이나 저주 하나 제거', cond: hasRemovable, apply(run) { q(run, { k: 'remove', title: '살아 있는 벽' }); return '기억 하나가 흐려진다.'; } },
         { label: '바꾼다', desc: '증강 하나를 같은 등급의 다른 증강으로 변환 (즉시 효과 증강은 제외)', cond: hasTransformable, apply(run) { q(run, { k: 'transform', title: '살아 있는 벽' }); return '무언가가 뒤틀린다.'; } },
-        { label: '자란다', desc: '증강 하나 강화', cond: hasUpgradable, apply(run) { q(run, { k: 'upgrade', title: '살아 있는 벽' }); return '힘이 자라난다.'; } },
+        { label: '자란다', desc: '증강 하나 연마', cond: hasUpgradable, apply(run) { q(run, { k: 'upgrade', title: '살아 있는 벽' }); return '힘이 자라난다.'; } },
         leave(),
       ],
     },
@@ -339,7 +339,7 @@
       text: '숫돌처럼 거친 제단. 무기를 대면 날이 선다.',
       cond: hasUpgradable,
       options: [
-        { label: '기도한다', desc: '증강 하나 강화', cond: hasUpgradable, apply(run) { q(run, { k: 'upgrade', title: '연마의 제단' }); return '제단이 은은하게 울린다.'; } },
+        { label: '기도한다', desc: '증강 하나 연마', cond: hasUpgradable, apply(run) { q(run, { k: 'upgrade', title: '연마의 제단' }); return '제단이 은은하게 울린다.'; } },
         leave(),
       ],
     },

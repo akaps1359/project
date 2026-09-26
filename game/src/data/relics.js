@@ -27,7 +27,7 @@
     R('vampFang', '흡혈 송곳니', 1, 'fang', '엘리트·보스를 처치하면 최대 생명 +1', { eliteKillMaxLife: 1 }),
     R('rerollDice', '운명의 주사위', 1, 'dice', '증강을 고를 때 새로고침 1회', { augRerolls: 1 }),
     R('ancientCoin', '고대 주화', 1, 'coin', '이자 한도 +4', { interestCap: 4 }),
-    R('anchor', '닻', 1, 'anchor', '적이 한 바퀴를 돌 때 잃는 생명 -1 (최소 1)', { leakReduce: 1 }),
+    R('anchor', '닻', 1, 'anchor', '전투마다 처음 한 번은 한 바퀴를 돈 적에게 생명을 잃지 않는다', { leakShield: 1 }),
     R('bagPrep', '준비 가방', 1, 'pack', '전투를 시작할 때 무료 소환 1회', { startSummons: 1 }),
     R('lantern', '등불', 1, 'lantern', '전투를 시작할 때 골드 +15×막', { battleStartGold: 15 }),
     R('strawberry', '딸기', 1, 'berry', '최대 생명 +4', {}, {

@@ -45,7 +45,7 @@
     A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +40%', { purity: 0.4 }, { unique: true }),
     A('eliteSquad', '정예주의', 2, 'medal', '보드 유닛이 12기 이하면 피해 +45%', { eliteSquad: 0.45 }, { unique: true }),
     A('rich', '부자의 여유', 2, 'crown', '골드를 100 이상 보유하면 피해 +25%', { rich: 0.25 }, { unique: true }),
-    A('critMaster', '치명적 일격', 2, 'dagger', '치명타 확률 +8%, 치명타 피해 +50%', { critChance: 0.08, critMult: 0.5 }),
+    A('critMaster', '치명적 일격', 2, 'dagger', '치명타 확률 +8%, 치명타 피해 +50%', { critChance: 0.08, critMult: 0.5 }, { unique: true }),
     A('shrapnel', '파편탄', 2, 'burst', '전사·궁수·도적의 공격이 주변 적에게 30% 피해', { shrapnel: 0.3 }, { unique: true }),
     A('mud', '끈적한 땅', 2, 'drop', '모든 적 이동 속도 -10%', { enemySpeedPct: 0.1 }),
     A('compound', '복리', 2, 'coins', '이자 한도 +3, 이자가 붙으면 +1 추가', { interestCap: 3, interestBonus: 1 }),
@@ -58,8 +58,8 @@
       cost: '최대 생명 -5',
       onPick(run) { RS.changeMaxLife(run, -5); },
     }),
-    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성할 때 18% 확률로 2단계 상승', { mergeDouble: 0.18, mergeFail: 0.15 }, {
-      unique: true, cost: '12% 확률로 합성 실패(결과 소멸)',
+    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 18% 확률로 2단계 상승', { mergeDouble: 0.18, mergeFail: 0.15 }, {
+      unique: true, cost: '15% 확률로 합성 실패(결과 소멸)',
     }),
     A('greed', '탐욕', 2, 'bag', '처치 골드 +60%', { killGoldPct: 0.6, enemyHpPct: 0.15 }, {
       unique: true, cost: '적 체력 +15%',
@@ -94,8 +94,8 @@
     A('wraithForm', '망령 형상', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
       unique: true, cost: '필드 상한 60 → 50',
     }),
-    A('corruption', '타락', 3, 'corrupt', '강화 비용 -45%', { upgradeCostPct: -0.45, summonCostPct: 0.2 }, {
-      unique: true, cost: '소환 비용 +20%',
+    A('corruption', '타락', 3, 'corrupt', '강화 비용 -55%', { upgradeCostPct: -0.55, summonCostPct: 0.1 }, {
+      unique: true, cost: '소환 비용 +10%',
     }),
     A('creativeAI', '창조적 AI', 2, 'chip', '웨이브가 시작될 때 30% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.3 }, { unique: true }),
     A('noxious', '유독 가스', 2, 'gas', '모든 적이 초당 최대 체력의 0.9% 피해 (보스는 0.3%)', { noxious: 0.009 }, { unique: true }),

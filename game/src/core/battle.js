@@ -239,7 +239,7 @@
     let hp = RS.levelHp(L) * def.hp * (1 + M.enemyHpPct) * (hpMul || 1);
     if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.15 : 1);
     else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.15 : 1);
-    else if (asc >= 6) hp *= 1.1;
+    else if (asc >= 3) hp *= 1.1;
     const e = {
       id: this.nextId++, type, def, L,
       hp, maxHp: hp,
@@ -484,8 +484,8 @@
       aspd += 0.25;
     }
     const rst = run.relicState;
-    if (rst.pumpkinCandle && rst.pumpkinCandle.charges > 0) dmg += 0.4;
-    if (rst.waxToys) aspd += Math.max(0, 0.3 - 0.1 * Math.floor(rst.waxToys.fights / 3));
+    if (rst.pumpkinCandle && rst.pumpkinCandle.charges > 0) dmg += 0.5;
+    if (rst.waxToys) aspd += Math.max(0, 0.4 - 0.1 * Math.floor(rst.waxToys.fights / 4));
     if (this.kind === 'elite') dmg += (M.eliteBattleDmg || 0) + (M.bigBattleDmg || 0);
     if (this.kind === 'boss') dmg += M.bigBattleDmg || 0;
     if (this.buffs.rage > 0) aspd += 0.6;
@@ -548,6 +548,11 @@
       if (!s) continue;
       if (this.slotStun[i] > 0) continue;
       const st = this.slotStats[i];
+      // 전투 밖에서 보드가 바뀌어 수치가 없으면 다음 틱에 다시 계산한다
+      if (!st) {
+        this.statsDirty = true;
+        continue;
+      }
       const cds = this.cd[i];
       for (let u = 0; u < s.n; u++) {
         cds[u] -= dt;
@@ -1031,7 +1036,7 @@
     if (st) st.n = this.stars;
   };
   P.canStarfall = function () {
-    return !!this.M.stars && this.stars >= this.starCost && this.status === 'running';
+    return !!this.M.stars && this.stars >= this.starCost && this.status === 'running' && this.prep <= 0 && this.enemies.some((e) => !e.dead);
   };
   P.starfall = function () {
     if (!this.canStarfall()) return false;
