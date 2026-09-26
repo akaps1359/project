@@ -16,7 +16,7 @@
     },
     {
       id: 'bel', name: '벨', title: '강령술사', relic: 'soulJar', weights: W(1, 1, 1.2, 1, 1), portrait: ['mage', 2],
-      desc: '쓰러진 적의 영혼을 모은다. 적 40마리마다 유닛이 무료로 일어난다.',
+      desc: '쓰러진 적의 영혼을 모은다. 적 50마리마다 유닛이 무료로 일어난다.',
     },
     {
       id: 'ella', name: '엘라', title: '대현자', relic: 'manaSpring', weights: W(0.7, 1, 2, 0.7, 1.5), portrait: ['mage', 3],
@@ -29,8 +29,8 @@
       unlock: { bestAct: 3, text: '3막에 도달하면 해금' },
     },
     {
-      id: 'mira', name: '미라', title: '연금술사', relic: 'alchemyPot', weights: W(1, 1, 1, 1, 1), portrait: ['frost', 3], startItems: 2,
-      desc: '소모품의 달인. 소모품 2개를 들고 시작하고 전투 후 소모품이 더 잘 나온다.',
+      id: 'mira', name: '미라', title: '연금술사', relic: 'alchemyPot', weights: W(1, 1, 1, 1, 1), portrait: ['frost', 3], startItems: 3,
+      desc: '소모품의 달인. 소모품 3개를 들고 시작하고 전투 후 소모품이 더 잘 나온다.',
       unlock: { wins: 1, text: '한 번 클리어하면 해금' },
     },
     {

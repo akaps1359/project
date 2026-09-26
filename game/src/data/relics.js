@@ -149,8 +149,8 @@
     R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +30%', { cls: { knight: { dmg: 0.3 }, rogue: { dmg: 0.3 } } }),
     R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +40%, 범위 +2 (서리술사는 영웅 등급부터)', { cls: { mage: { dmg: 0.4, splash: 2 }, frost: { dmg: 0.4, splash: 2 } } }),
     R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +8, 공격 속도 +15%', { cls: { archer: { range: 8, aspd: 0.15 } } }),
-    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +1, 전투 후 소모품이 나올 확률 +20%', { itemSlots: 1, itemDropBonus: 0.2 }),
-    R('soulJar', '영혼 항아리', 5, 'vial', '적을 40마리 처치할 때마다 유닛 1기가 무료로 일어난다 (소환 비용이 오르지 않는다)', { souls: 40 }),
+    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +1, 전투 후 소모품이 나올 확률 +30%', { itemSlots: 1, itemDropBonus: 0.3 }),
+    R('soulJar', '영혼 항아리', 5, 'vial', '적을 50마리 처치할 때마다 유닛 1기가 무료로 일어난다 (소환 비용이 오르지 않는다)', { souls: 50 }),
     R('starScepter', '별의 왕홀', 5, 'star', '웨이브마다 별 +1 (전투가 끝나도 남고, 최대 5). 별 3개로 [별똥별]: 모든 적에게 큰 피해', { stars: 1 }, { state: { n: 0 } }),
 
     // ── 이벤트 전용 ──
