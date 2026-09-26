@@ -8,12 +8,20 @@
   RS.addGold = function (run, g) {
     run.gold = Math.max(0, run.gold + g);
   };
+  // 피어남의 표식이 있으면 생명을 회복할 수 없다
+  RS.canHeal = (run) => run.curses.indexOf('bloomMark') < 0;
+  // 실제로 회복한 양을 돌려준다
   RS.heal = function (run, v) {
-    if (run.curses.indexOf('bloomMark') >= 0) return;
+    if (!RS.canHeal(run)) return 0;
+    const before = run.life;
     run.life = Math.min(run.maxLife, run.life + v);
+    return Math.max(0, run.life - before);
   };
+  // 이벤트로는 죽지 않는다 (생명 1에서 멈춤). 실제로 잃은 양을 돌려준다
   RS.damageLife = function (run, v) {
+    const before = run.life;
     run.life = Math.max(1, run.life - v);
+    return Math.max(0, before - run.life);
   };
   RS.changeMaxLife = function (run, d) {
     run.maxLife = Math.max(1, run.maxLife + d);
@@ -36,10 +44,64 @@
       st.charges--;
       return false;
     }
-    run.curses.push(id);
     const def = RS.CURSE[id];
+    if (def.fades) syncCurseTimers(run);
+    run.curses.push(id);
+    if (def.fades) run.curseTimers.push({ id, at: run.stats.battles });
     if (def.onGain) def.onGain(run);
     return true;
+  };
+
+  // 사라지는 저주(죄책감)의 수명은 저주 하나하나가 생긴 시점(그때까지 치른 전투 수)으로 센다.
+  // 저주 목록은 여러 곳(제거 서비스, 정화 등)에서 직접 지워지므로, 쓸 때마다 개수를 맞춘다.
+  // justFought: 방금 전투 수를 올렸지만 아직 나이를 세지 않았다 (battleUpkeep)
+  function syncCurseTimers(run, justFought) {
+    const now = run.stats.battles;
+    if (!Array.isArray(run.curseTimers)) {
+      // 예전 저장본: 'id@칸' 키로 센 나이를 옮겨 온다
+      const age = run.curseAge || {};
+      const base = now - (justFought ? 1 : 0);
+      run.curseTimers = [];
+      run.curses.forEach((id, i) => {
+        const def = RS.CURSE[id];
+        if (def && def.fades) run.curseTimers.push({ id, at: base - (age[id + '@' + i] || 0) });
+      });
+      delete run.curseAge;
+      return run.curseTimers;
+    }
+    const have = {};
+    for (const id of run.curses) have[id] = (have[id] || 0) + 1;
+    // 지워진 저주의 기록은 버린다. 같은 저주가 여럿이면 먼저 생긴 것(곧 사라질 것)을 남긴다
+    const kept = {};
+    const out = [];
+    const sorted = run.curseTimers.slice().sort((a, b) => a.at - b.at);
+    for (const t of sorted) {
+      if ((kept[t.id] || 0) < (have[t.id] || 0)) {
+        out.push(t);
+        kept[t.id] = (kept[t.id] || 0) + 1;
+      }
+    }
+    // 기록 없이 들어온 저주는 지금부터 센다
+    for (const id of Object.keys(have)) {
+      const def = RS.CURSE[id];
+      if (!def || !def.fades) continue;
+      for (let k = kept[id] || 0; k < have[id]; k++) out.push({ id, at: now - (justFought ? 1 : 0) });
+    }
+    run.curseTimers = out;
+    return out;
+  }
+  // 사라지는 저주가 사라지기까지 남은 전투 수 (목록 순서대로, 사라지지 않는 저주는 null)
+  RS.curseBattlesLeft = function (run) {
+    const timers = syncCurseTimers(run).slice().sort((a, b) => a.at - b.at);
+    const used = {};
+    return run.curses.map((id) => {
+      const def = RS.CURSE[id];
+      if (!def || !def.fades) return null;
+      const list = timers.filter((t) => t.id === id);
+      const t = list[used[id] || 0];
+      used[id] = (used[id] || 0) + 1;
+      return t ? Math.max(1, def.fades - (run.stats.battles - t.at)) : def.fades;
+    });
   };
   RS.enqueue = function (run, item) {
     run.queue.push(item);
@@ -50,12 +112,19 @@
     const w = RS.COMMANDER[run.commander].weights;
     return rng.weighted(RS.CLASSES, (c) => w[c]);
   };
+  // 보드에 자리가 없으면 판매 가격만큼 골드로 돌려준다. { placed, gold } 를 돌려준다
   RS.grantUnits = function (run, tier, n) {
     const M = RS.collectMods(run);
+    const out = { placed: 0, gold: 0 };
     for (let k = 0; k < n; k++) {
       const cls = RS.pickClass(run, run.rng);
-      if (RS.addUnit(run.board, cls, tier) < 0) RS.addGold(run, RS.sellValue(run, tier, M));
+      if (RS.addUnit(run.board, cls, tier) < 0) {
+        const g = typeof RS.sellValue === 'function' ? RS.sellValue(run, tier, M) || 0 : 0;
+        RS.addGold(run, g);
+        out.gold += g;
+      } else out.placed++;
     }
+    return out;
   };
   // 한 등급의 유닛을 모두 무작위 클래스의 다른 등급으로 (판도라의 상자)
   RS.transformTier = function (run, from, to) {
@@ -107,11 +176,22 @@
   RS.removeAug = function (run, idx) {
     run.augments.splice(idx, 1);
   };
-  RS.transformAug = function (run, idx) {
+  function transformPool(run, idx) {
     const old = RS.augDef(run.augments[idx]);
     const owned = {};
     for (const id of run.augments) owned[RS.augDef(id).id] = true;
-    const pool = RS.AUGMENTS.filter((a) => a.rarity === old.rarity && a.id !== old.id && !(a.unique && owned[a.id]) && !a.onPick);
+    return RS.AUGMENTS.filter((a) => a.rarity === old.rarity && a.id !== old.id && !(a.unique && owned[a.id]) && !a.onPick);
+  }
+  // 즉시 효과 증강(onPick)은 바꿀 수 없다
+  RS.canTransformAug = function (run, idx) {
+    const id = run.augments[idx];
+    if (!id || RS.augDef(id).onPick) return false;
+    return transformPool(run, idx).length > 0;
+  };
+  RS.transformableCount = (run) => run.augments.filter((id, i) => RS.canTransformAug(run, i)).length;
+  RS.transformAug = function (run, idx) {
+    if (!run.augments[idx]) return null;
+    const pool = transformPool(run, idx);
     if (!pool.length) return null;
     const a = run.rng.pick(pool);
     run.augments[idx] = a.id;
@@ -170,6 +250,7 @@
     if (!run || run.v !== 2) return null;
     RS.attachRng(run);
     RS.registerCustomAugs(run);
+    if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
     return run;
   };
 
@@ -314,7 +395,12 @@
     const u = run.unknown;
     const M = RS.collectMods(run);
     u.count++;
-    if (M.tinyChest && u.count % 4 === 0) return 'treasure';
+    // 작은 상자: 얻은 뒤부터 센다 (유물마다 따로 센다)
+    if (M.tinyChest) {
+      const st = run.relicState.tinyChest || (run.relicState.tinyChest = { n: 0 });
+      st.n++;
+      if (st.n % 4 === 0) return 'treasure';
+    }
     const r = run.rng.next();
     const combat = M.juzu ? 0 : u.combat;
     if (r < combat) {
@@ -407,10 +493,12 @@
     return out;
   };
 
-  RS.rollRelics = function (run, n, rarities, weights) {
+  // exclude: 가진 유물 말고도 빼 둘 것 (상점에 이미 놓인 유물 등)
+  RS.rollRelics = function (run, n, rarities, weights, exclude) {
     const rng = run.rng;
     const owned = {};
     for (const id of run.relics) owned[id] = true;
+    if (exclude) for (const id of exclude) owned[id] = true;
     const out = [];
     for (let k = 0; k < n; k++) {
       const pools = rarities.map((r) => RS.RELICS.filter((x) => x.rarity === r && !owned[x.id] && out.indexOf(x.id) < 0));
@@ -422,8 +510,13 @@
     return out;
   };
 
-  RS.grantRandomRelic = function (run, rarities) {
-    const ids = RS.rollRelics(run, 1, rarities, rarities.map(() => 1));
+  // 아직 얻을 수 있는 유물이 남았는지 (rng 를 쓰지 않는다)
+  RS.relicsLeft = function (run, rarities, exclude) {
+    return RS.RELICS.some((x) => rarities.indexOf(x.rarity) >= 0 && run.relics.indexOf(x.id) < 0 && !(exclude && exclude.indexOf(x.id) >= 0));
+  };
+
+  RS.grantRandomRelic = function (run, rarities, exclude) {
+    const ids = RS.rollRelics(run, 1, rarities, rarities.map(() => 1), exclude);
     if (!ids.length) return null;
     RS.addRelic(run, ids[0]);
     return ids[0];
@@ -433,17 +526,26 @@
     return Math.max(1, 3 + RS.collectMods(run).augChoices);
   };
 
+  // 모험을 끝내는 보스: 4막 심장, 또는 열쇠 셋이 없을 때의 3막 보스
+  RS.isFinalBoss = function (run) {
+    if (run.nodeType !== 'boss') return false;
+    const k = run.keys || {};
+    return run.act === 4 || (run.act === 3 && !(k.ruby && k.emerald && k.sapphire));
+  };
+
   RS.finishBattle = function (run, battle) {
     const st = battle.stats;
+    const stage0 = battle.stage;
+    const trial = !!(stage0.spec && stage0.spec.trial);
     run.stats.battles++;
     run.stats.kills += st.kills;
     run.stats.dmg += st.dmg;
     for (const c of RS.CLASSES) run.stats.clsDmg[c] += st.clsDmg[c];
-    if (run.lament > 0) run.lament--;
+    // 문지기의 탄식은 허수아비 시험에는 걸리지 않으니 횟수도 쓰지 않는다
+    if (run.lament > 0 && !trial) run.lament--;
     if (run.tax > 0) run.tax--;
     RS.battleUpkeep(run);
-    const stage0 = battle.stage;
-    if (stage0.spec && stage0.spec.trial) {
+    if (trial) {
       // 허수아비 시험: 실패해도 모험은 계속된다
       RS.trialReward(run, battle);
       return;
@@ -451,6 +553,13 @@
     if (battle.result !== 'won') {
       run.phase = 'over';
       run.pending = { reason: battle.reason };
+      return;
+    }
+    // 마지막 보스: 쓸 수 없는 보상을 고르게 하지 않고 곧장 승리
+    if (RS.isFinalBoss(run)) {
+      run.stats.bosses++;
+      run.phase = 'victory';
+      run.pending = null;
       return;
     }
     const M = RS.collectMods(run);
@@ -474,7 +583,7 @@
       for (const i of idxs.slice(0, M.eliteUpgrade)) RS.upgradeAug(run, i);
     }
     if (type === 'elite') run.stats.elites++;
-    if (type === 'boss') run.stats.bosses++;
+    if (type === 'boss' && run.nodeType === 'boss') run.stats.bosses++;
     const reward = { gold, heal: M.winHeal, augDone: false, rerolls: M.augRerolls, relics: null, relicDone: false, item: null, key: null };
     // 소모품: 기본 40%, 나오면 -10%p, 안 나오면 +10%p
     if (!M.noItems && type !== 'boss') {
@@ -508,16 +617,25 @@
     RS.pickAugment(run, id);
     r.augDone = true;
   };
+  // 전투 보상에서 증강을 건너뛸 때 받는 골드 (망각의 서가 포함). 보상 화면 버튼도 이 값을 쓴다
+  RS.skipGoldAmount = function (run) {
+    const M = RS.collectMods(run);
+    return Math.round(BAL.skipGold[Math.min(3, run.act)] * (1 + (M.skipGoldMul || 0)));
+  };
+  // 증강을 건너뛸 때의 공통 효과 (노래하는 그릇). 늘어난 최대 생명을 돌려준다
+  RS.skipAugBonus = function (run) {
+    const M = RS.collectMods(run);
+    if (!M.singingBowl) return 0;
+    RS.changeMaxLife(run, 2);
+    RS.heal(run, 2);
+    return 2;
+  };
   RS.rewardSkipAug = function (run) {
     const r = run.pending.reward;
     if (r.augDone) return 0;
-    const M = RS.collectMods(run);
-    const g = BAL.skipGold[Math.min(3, run.act)] * (1 + (M.skipGoldMul || 0));
+    const g = RS.skipGoldAmount(run);
     RS.addGold(run, g);
-    if (M.singingBowl) {
-      RS.changeMaxLife(run, 2);
-      RS.heal(run, 2);
-    }
+    RS.skipAugBonus(run);
     r.augDone = true;
     return g;
   };
@@ -543,7 +661,8 @@
   // 노드를 마치고 다음으로. 쌓인 선택(증강 고르기 등)이 있으면 먼저 처리한다
   RS.advance = function (run) {
     if (run.nodeType === 'boss') {
-      if (run.act === 4 || (run.act === 3 && !(run.keys.ruby && run.keys.emerald && run.keys.sapphire))) {
+      // (예전 저장본이 마지막 보스 보상 화면에 멈춰 있어도 여기서 끝난다)
+      if (RS.isFinalBoss(run)) {
         run.phase = 'victory';
         run.pending = null;
         return;
@@ -565,7 +684,9 @@
   };
 
   RS.flushQueue = function (run) {
-    if (run.queue.length && run.phase !== 'choice' && run.phase !== 'victory' && run.phase !== 'over') {
+    if (run.phase === 'victory' || run.phase === 'over') return;
+    if (run.phase !== 'choice') pruneQueue(run);
+    if (run.queue.length && run.phase !== 'choice') {
       run.afterQueue = run.phase;
       run.afterPending = run.pending;
       run.phase = 'choice';
@@ -574,12 +695,119 @@
   };
   RS.popQueue = function (run) {
     run.queue.shift();
+    pruneQueue(run);
     if (!run.queue.length) {
       run.phase = run.afterQueue || 'map';
       run.pending = run.afterPending || null;
       run.afterQueue = null;
       run.afterPending = null;
     }
+  };
+
+  // 대기열 항목을 지금 처리할 수 있는지 (고를 대상이 하나라도 있는지)
+  RS.choiceActionable = function (run, item) {
+    switch (item && item.k) {
+      case 'remove':
+        return RS.removableCount(run) > 0;
+      case 'upgrade':
+        return run.augments.some((id) => RS.canUpgradeAug(id));
+      case 'transform':
+        return RS.transformableCount(run) > 0;
+      case 'rune':
+      case 'runeChoice':
+        return run.runes.some((r) => !r || RS.RUNE[r].bad);
+      case 'unit': {
+        const maxTier = item.maxTier == null ? 3 : item.maxTier;
+        if (item.op === 'dup') return run.board.some((s) => s && s.tier <= maxTier && RS.hasRoomFor(run.board, s.cls, s.tier));
+        return run.board.some((s) => s && s.tier <= maxTier);
+      }
+      case 'relicList':
+        return !!(item.ids && item.ids.length);
+      default:
+        return true;
+    }
+  };
+  // 앞에서부터, 고를 대상이 없어진 항목은 건너뛴다 (값을 치른 항목이면 돌려준다)
+  function pruneQueue(run) {
+    let guard = 0;
+    while (run.queue.length && guard++ < 50 && !RS.choiceActionable(run, run.queue[0])) {
+      const it = run.queue[0];
+      if (it.undo || it.refund || it.refundLife || it.undoCurse || it.undoCharm) RS.cancelChoice(run, it);
+      run.queue.shift();
+    }
+  }
+
+  // 플레이어가 대기열 선택을 그만두거나 건너뛸 때 (UI 가 popQueue 바로 앞에서 부른다).
+  // 값을 치른 서비스는 되돌려 주고, 증강 건너뛰기는 전투 보상과 같은 효과(노래하는 그릇)를 준다.
+  RS.cancelChoice = function (run, item) {
+    const out = { refund: 0, text: null };
+    if (!item) return out;
+    const texts = [];
+    if (item.undo) {
+      // 상점 구매 취소: 판매 전 상태로 되돌린다
+      const u = item.undo;
+      item.undo = null;
+      const p = run.phase === 'choice' ? run.afterPending : run.pending;
+      const shop = p && p.shop;
+      if (shop && shop.list && u.entry && u.shopIdx >= 0 && u.shopIdx < shop.list.length) {
+        const e = JSON.parse(JSON.stringify(u.entry));
+        e.sold = false;
+        shop.list[u.shopIdx] = e;
+        shop.boughtAny = !!u.boughtAny;
+      }
+      if (u.removeCount != null) run.removeCount = u.removeCount;
+      const bank = run.relicState.mawBank;
+      if (bank && u.mawBank != null) bank.active = u.mawBank;
+      if (u.gold > 0) RS.addGold(run, u.gold);
+      out.refund += u.gold || 0;
+      if (shop) RS.repriceShop(run, shop);
+      texts.push(u.gold > 0 ? `구매를 취소했다. 골드 +${u.gold}` : '구매를 취소했다.');
+    }
+    if (item.refund || item.refundLife || item.undoCurse || item.undoCharm) {
+      // 이벤트에서 값을 치른 서비스
+      const g = item.refund || 0;
+      if (g > 0) {
+        RS.addGold(run, g);
+        out.refund += g;
+        texts.push(`골드 ${g}을(를) 돌려받았다.`);
+      }
+      if (item.refundLife > 0) {
+        run.life = Math.min(run.maxLife, run.life + item.refundLife);
+        texts.push(`생명 ${item.refundLife}을(를) 돌려받았다.`);
+      }
+      if (item.undoCurse) {
+        const i = run.curses.lastIndexOf(item.undoCurse);
+        if (i >= 0) {
+          run.curses.splice(i, 1);
+          texts.push(`저주 [${RS.CURSE[item.undoCurse].name}]도 사라졌다.`);
+        }
+      }
+      if (item.undoCharm && run.relicState.omamori) run.relicState.omamori.charges += item.undoCharm;
+      item.refund = 0;
+      item.refundLife = 0;
+      item.undoCurse = null;
+      item.undoCharm = 0;
+      // 한 번에 산 묶음(제거 + 강화 등)의 나머지도 함께 취소
+      if (item.group) run.queue = run.queue.filter((x) => x === item || x.group !== item.group);
+    } else if ((item.k === 'aug' || item.k === 'augList') && item.ids && item.ids.length) {
+      const life = RS.skipAugBonus(run);
+      if (life) texts.push(`노래하는 그릇: 최대 생명 +${life}`);
+    }
+    out.text = texts.length ? texts.join(' ') : null;
+    return out;
+  };
+
+  // 대기열의 증강 선택지: 처음 보여 줄 때 굴린다. 'aug' 항목은 운명의 주사위 새로고침을 쓸 수 있다
+  RS.choiceAugIds = function (run, item) {
+    if (!item.ids) item.ids = RS.rollAugments(run, item.n || RS.augChoiceCount(run), item.w);
+    if (item.rerolls == null) item.rerolls = item.k === 'aug' && item.w ? RS.collectMods(run).augRerolls || 0 : 0;
+    return item.ids;
+  };
+  RS.choiceReroll = function (run, item) {
+    if (!item || !item.w || !item.ids || !(item.rerolls > 0)) return false;
+    item.rerolls--;
+    item.ids = RS.rollAugments(run, item.ids.length, item.w, item.ids);
+    return true;
   };
 
   // ── 이벤트 ──
@@ -601,10 +829,14 @@
   RS.optionEnabled = function (run, opt) {
     return !opt.cond || opt.cond(run);
   };
+  // 안전장치: 어떤 이유로든 고를 수 있는 선택지가 하나도 없으면 '떠난다'를 붙인다
+  const SAFE_LEAVE = { label: '떠난다', desc: '아무 일도 일어나지 않는다', safeLeave: true, apply: () => '발걸음을 돌렸다.' };
   RS.eventOptions = function (run) {
     const ev = RS.EVENT[run.pending.event];
     const step = run.pending.step || 0;
-    return ev.steps ? ev.steps[step].options : ev.options;
+    const opts = ev.steps ? ev.steps[step].options : ev.options;
+    if (opts.some((o) => RS.optionEnabled(run, o))) return opts;
+    return opts.concat([SAFE_LEAVE]);
   };
   RS.eventText = function (run) {
     const ev = RS.EVENT[run.pending.event];
@@ -661,23 +893,13 @@
     return Math.round((75 + 25 * run.removeCount) * (run.asc >= 2 ? 1.15 : 1));
   };
 
-  function shopRelic(run, exclude) {
-    const ids = RS.rollRelics(run, 1, [1, 2], [65, 35]).filter((id) => exclude.indexOf(id) < 0);
-    if (!ids.length) return null;
-    return { kind: 'relic', id: ids[0], base: RS.REL[ids[0]].rarity === 2 ? 190 : 130 };
-  }
+  const relicEntry = (id) => ({ kind: 'relic', id, base: RS.REL[id].rarity === 2 ? 190 : 130 });
 
   RS.genShop = function (run) {
     const rng = run.rng;
     const list = [];
-    const taken = [];
-    for (let k = 0; k < 3; k++) {
-      const it = shopRelic(run, taken);
-      if (it) {
-        taken.push(it.id);
-        list.push(it);
-      }
-    }
+    // 한 번에 굴려야 서로 겹치지 않는다 (유물 3개)
+    for (const id of RS.rollRelics(run, 3, [1, 2], [65, 35])) list.push(relicEntry(id));
     for (let k = 0; k < 3; k++) list.push({ kind: 'item', id: RS.randomItemId(rng), base: 45 + rng.int(26) });
     const augs = RS.rollAugments(run, 2, [0, 30, 55, 15]);
     augs.forEach((id, k) => list.push({ kind: 'aug', id, base: [0, 80, 110, 160][RS.AUG[id].rarity], sale: k === 0 }));
@@ -709,25 +931,30 @@
     if (it.kind === 'item' && (run.items.length >= RS.itemSlots(run) || RS.collectMods(run).noItems)) return { err: 'full' };
     if (it.kind === 'unit' && !RS.hasEmptySlot(run.board)) return { err: 'board' };
     if (it.kind === 'remove' && !RS.removableCount(run)) return { err: 'none' };
+    if (it.kind === 'rune' && !run.runes.some((r) => !r || RS.RUNE[r].bad)) return { err: 'noslot' };
+    const bank = run.relicState.mawBank;
+    // 대상을 고르는 서비스(제거·룬)는 선택 화면에서 그만두면 되돌릴 수 있게 기록해 둔다 (RS.cancelChoice)
+    const undo = { gold: it.price, shopIdx: idx, entry: JSON.parse(JSON.stringify(it)), removeCount: run.removeCount, boughtAny: !!shop.boughtAny, mawBank: bank ? bank.active : null };
     RS.addGold(run, -it.price);
     shop.boughtAny = true;
-    const bank = run.relicState.mawBank;
     if (bank) bank.active = false;
     it.sold = true;
     if (it.kind === 'relic') RS.addRelic(run, it.id);
     else if (it.kind === 'item') RS.addItem(run, it.id);
     else if (it.kind === 'aug') RS.pickAugment(run, it.id);
     else if (it.kind === 'unit') RS.grantUnits(run, it.tier, 1);
-    else if (it.kind === 'rune') RS.enqueue(run, { k: 'rune', rune: it.id, title: '룬 새기기' });
+    else if (it.kind === 'rune') RS.enqueue(run, { k: 'rune', rune: it.id, title: '룬 새기기', undo });
     else if (it.kind === 'remove') {
       run.removeCount++;
-      RS.enqueue(run, { k: 'remove', title: '제거 서비스' });
+      RS.enqueue(run, { k: 'remove', title: '제거 서비스', undo });
     }
     if (RS.collectMods(run).courier && it.kind !== 'remove') {
       // 택배원: 빈자리에 같은 종류의 새 물건
       let fresh = null;
-      if (it.kind === 'relic') fresh = shopRelic(run, shop.list.filter((x) => x.kind === 'relic').map((x) => x.id));
-      else if (it.kind === 'item') fresh = { kind: 'item', id: RS.randomItemId(run.rng), base: 45 + run.rng.int(26) };
+      if (it.kind === 'relic') {
+        const ids = RS.rollRelics(run, 1, [1, 2], [65, 35], shop.list.filter((x) => x.kind === 'relic').map((x) => x.id));
+        if (ids.length) fresh = relicEntry(ids[0]);
+      } else if (it.kind === 'item') fresh = { kind: 'item', id: RS.randomItemId(run.rng), base: 45 + run.rng.int(26) };
       else if (it.kind === 'aug') {
         const a = RS.rollAugments(run, 1, [0, 30, 55, 15], shop.list.filter((x) => x.kind === 'aug').map((x) => x.id));
         if (a.length) fresh = { kind: 'aug', id: a[0], base: [0, 80, 110, 160][RS.AUG[a[0]].rarity] };
@@ -750,10 +977,34 @@
   RS.restHealAmount = (run) => Math.ceil(run.maxLife * BAL.restHealPct) + (RS.collectMods(run).restHealAdd || 0);
   RS.restTrainAmount = (run) => BAL.trainLevels + RS.collectMods(run).restTrainBonus;
 
+  // 복제의 룬 위 유닛 중 실제로 복제할 수 있는 칸 (같은 유닛 칸이나 빈칸이 있어야 한다)
+  RS.cloneTargets = function (run) {
+    const out = [];
+    run.runes.forEach((r, i) => {
+      const s = run.board[i];
+      if (r === 'cloneR' && s && RS.hasRoomFor(run.board, s.cls, s.tier)) out.push(i);
+    });
+    return out;
+  };
+  // 고른 칸이 없으면 가장 높은 등급 유닛을 복제한다
+  RS.cloneTarget = function (run, prefer) {
+    const list = RS.cloneTargets(run);
+    if (prefer != null && list.indexOf(prefer) >= 0) return prefer;
+    let best = -1;
+    for (const i of list) if (best < 0 || run.board[i].tier > run.board[best].tier) best = i;
+    return best;
+  };
+
   RS.restOptions = function (run) {
     const M = RS.collectMods(run);
     const opts = [];
-    opts.push({ id: 'heal', label: '휴식', desc: `생명 +${RS.restHealAmount(run)}${M.dreamCatcher ? ' · 증강 선택' : ''}`, off: M.noRestHeal ? '각성제 때문에 잠들 수 없다' : null });
+    const bloom = !RS.canHeal(run);
+    const dream = M.dreamCatcher ? ' · 증강 선택' : '';
+    opts.push({
+      id: 'heal', label: '휴식',
+      desc: bloom ? `회복할 수 없다 (피어남의 표식)${dream}` : `생명 +${RS.restHealAmount(run)}${dream}`,
+      off: M.noRestHeal ? '각성제 때문에 잠들 수 없다' : bloom && !M.dreamCatcher ? '피어남의 표식 때문에 회복할 수 없다' : null,
+    });
     opts.push({ id: 'train', label: '수련', desc: `클래스 하나 강화 +${RS.restTrainAmount(run)}`, off: M.noSmith ? '융합 망치 때문에 할 수 없다' : null });
     const up = run.augments.some((id) => RS.canUpgradeAug(id));
     opts.push({ id: 'smith', label: '연마', desc: '증강 하나를 강화 (효과 ×1.5)', off: M.noSmith ? '융합 망치 때문에 할 수 없다' : !up ? '강화할 수 있는 증강이 없다' : null });
@@ -766,13 +1017,19 @@
     const candle = run.relicState.pumpkinCandle;
     if (candle && candle.charges < 5) opts.push({ id: 'kindle', label: '불 붙이기', desc: `호박 양초를 다시 켠다 (남은 ${candle.charges}번 → 5번)` });
     if (run.quests && run.quests.egg) opts.push({ id: 'hatch', label: '부화', desc: '용의 알을 부화시킨다: 전설 유닛 1기 + 유물 [아기 용]' });
-    const clone = run.runes.map((r, i) => (r === 'cloneR' && run.board[i] ? i : -1)).filter((i) => i >= 0);
-    if (clone.length) opts.push({ id: 'clone', label: '복제', desc: '복제의 룬 위 유닛 1기를 복제', off: RS.hasEmptySlot(run.board) || clone.some((i) => run.board[i].n < 3) ? null : '보드에 자리가 없다' });
+    const onRune = run.runes.some((r, i) => r === 'cloneR' && run.board[i]);
+    if (onRune) {
+      const ci = RS.cloneTarget(run);
+      const s = ci >= 0 ? run.board[ci] : null;
+      opts.push({ id: 'clone', label: '복제', desc: s ? `복제의 룬 위 유닛 1기를 복제 (${RS.TIER[s.tier].name} ${RS.CLASS[s.cls].name})` : '복제의 룬 위 유닛 1기를 복제', off: s ? null : '보드에 자리가 없다' });
+    }
     if (run.act <= 3 && !run.keys.ruby) opts.push({ id: 'recall', label: '회수', desc: '루비 열쇠를 얻는다 (휴식·수련 대신)' });
     return opts;
   };
 
+  // 결과 문장을 돌려준다 (없으면 null)
   RS.restDo = function (run, id, arg) {
+    let text = null;
     switch (id) {
       case 'heal':
         RS.heal(run, RS.restHealAmount(run));
@@ -806,12 +1063,16 @@
         if (!RS.hasRelic(run, 'babyDragon')) RS.addRelic(run, 'babyDragon');
         break;
       case 'clone': {
-        const i = run.runes.findIndex((r, k) => r === 'cloneR' && run.board[k]);
-        if (i >= 0) RS.addUnit(run.board, run.board[i].cls, run.board[i].tier, i);
+        const i = RS.cloneTarget(run, arg);
+        if (i >= 0) {
+          const s = run.board[i];
+          if (RS.addUnit(run.board, s.cls, s.tier, i) >= 0) text = `${RS.TIER[s.tier].name} ${RS.CLASS[s.cls].name} 복제!`;
+        }
         break;
       }
     }
-    run.pending.done = true;
+    if (run.pending) run.pending.done = true;
+    return text;
   };
 
   // ── 보물 ──
@@ -852,16 +1113,15 @@
     const st = run.relicState;
     if (st.pumpkinCandle && st.pumpkinCandle.charges > 0) st.pumpkinCandle.charges--;
     if (st.waxToys) st.waxToys.fights++;
-    run.curseAge = run.curseAge || {};
-    for (let i = run.curses.length - 1; i >= 0; i--) {
-      const def = RS.CURSE[run.curses[i]];
-      if (!def.fades) continue;
-      const key = run.curses[i] + '@' + i;
-      run.curseAge[key] = (run.curseAge[key] || 0) + 1;
-      if (run.curseAge[key] >= def.fades) {
-        run.curses.splice(i, 1);
-        delete run.curseAge[key];
-      }
+    // 사라지는 저주: 생긴 뒤 전투를 정해진 횟수만큼 치르면 사라진다
+    const timers = syncCurseTimers(run, true);
+    const now = run.stats.battles;
+    for (let k = timers.length - 1; k >= 0; k--) {
+      const t = timers[k];
+      if (now - t.at < RS.CURSE[t.id].fades) continue;
+      timers.splice(k, 1);
+      const i = run.curses.indexOf(t.id);
+      if (i >= 0) run.curses.splice(i, 1);
     }
     const w = run.quests && run.quests.wongo;
     if (w && w.left > 0) {
@@ -875,20 +1135,36 @@
   };
 
   // 허수아비 시험 보상 (시간 안에 쓰러뜨렸는지에 따라)
+  // 보상을 줄 수 없으면(가방이 가득 참 등) 골드로 대신 주고, trial.text 에 실제로 받은 것을 적는다
   RS.trialReward = function (run, battle) {
     const tier = battle.stage.spec.trial;
     const ok = battle.result === 'won' && !battle.trialFailed;
-    const reward = { gold: 0, augDone: true, relics: null, relicDone: true, trial: { tier, ok } };
+    const reward = { gold: 0, augDone: true, relics: null, relicDone: true, trial: { tier, ok, text: null } };
     if (ok) {
+      const a = Math.min(3, run.act);
+      const fallback = (g, why) => {
+        reward.gold = g;
+        RS.addGold(run, g);
+        reward.trial.text = `${why} 대신 골드 +${g}`;
+      };
       if (tier === 1) {
         const id = RS.randomItemId(run.rng);
-        if (RS.addItem(run, id)) reward.item = id;
+        if (RS.addItem(run, id)) {
+          reward.item = id;
+          reward.trial.text = `소모품 [${RS.ITEM[id].name}]`;
+        } else fallback(30 * a, '소모품을 가질 수 없어');
       } else if (tier === 2) {
-        RS.enqueue(run, { k: 'upgrade', title: '허수아비 시험' });
-        RS.enqueue(run, { k: 'upgrade', title: '허수아비 시험' });
+        const n = Math.min(2, run.augments.filter((id) => RS.canUpgradeAug(id)).length);
+        for (let k = 0; k < n; k++) RS.enqueue(run, { k: 'upgrade', title: '허수아비 시험' });
+        if (n) reward.trial.text = `증강 ${n}개 강화`;
+        else fallback(60 * a, '강화할 증강이 없어');
       } else {
-        reward.relics = RS.rollRelics(run, 1, [2], [1]);
-        reward.relicDone = false;
+        const ids = RS.rollRelics(run, 1, [2], [1]);
+        if (ids.length) {
+          reward.relics = ids;
+          reward.relicDone = false;
+          reward.trial.text = '희귀 유물';
+        } else fallback(100 * a, '남은 희귀 유물이 없어');
       }
     }
     run.phase = 'reward';
@@ -902,15 +1178,16 @@
     const tier = s.tier;
     s.n--;
     if (s.n <= 0) run.board[i] = null;
+    const bloom = !RS.canHeal(run);
     if (tier === 0) return '정령들이 시큰둥하다. 아무 일도 없었다.';
     if (tier === 1) {
-      RS.heal(run, 5);
-      return '정령들이 기뻐한다. 생명 +5';
+      const h = RS.heal(run, 5);
+      return bloom ? '정령들이 기뻐하지만, 피어남의 표식 때문에 회복하지 못했다.' : `정령들이 기뻐한다. 생명 +${h}`;
     }
     if (tier === 2) {
       RS.changeMaxLife(run, 5);
       RS.heal(run, run.maxLife);
-      return '정령들이 춤춘다! 최대 생명 +5, 생명 모두 회복';
+      return bloom ? '정령들이 춤춘다! 최대 생명 +5 (피어남의 표식 때문에 회복은 못 했다)' : '정령들이 춤춘다! 최대 생명 +5, 생명 모두 회복';
     }
     RS.changeMaxLife(run, 10);
     RS.heal(run, 10);

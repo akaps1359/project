@@ -116,6 +116,8 @@
     if (b.kind === 'big') return { text: find(BIG, b.id).text, cost: find(COSTS, b.cost).text };
     return { text: '시작 유물을 무작위 보스 유물로 바꾼다' };
   };
+  // 시작 유물 교환에서 빼는 보스 유물: 시작할 때는 보드·증강·저주가 비어 있어 아무 일도 하지 않는다
+  const NEOW_SWAP_EXCLUDE = ['pandoraBox', 'emptyCage'];
   RS.applyBlessing = function (run, b) {
     if (b.kind === 'small') find(SMALL, b.id).apply(run);
     else if (b.kind === 'mid') find(MID, b.id).apply(run);
@@ -123,9 +125,15 @@
       find(COSTS, b.cost).apply(run);
       find(BIG, b.id).apply(run);
     } else {
+      // 시작 시점에는 효과가 없는 보스 유물(바꿀 유닛도, 없앨 증강·저주도 없다)은 나오지 않는다
+      const ids = RS.rollRelics(run, 1, [3], [1], NEOW_SWAP_EXCLUDE);
+      if (!ids.length) return;
       const start = run.relics.find((id) => RS.REL[id].rarity === 5);
-      if (start) run.relics.splice(run.relics.indexOf(start), 1);
-      RS.grantRandomRelic(run, [3]);
+      if (start) {
+        run.relics.splice(run.relics.indexOf(start), 1);
+        delete run.relicState[start];
+      }
+      RS.addRelic(run, ids[0]);
     }
   };
 })((globalThis.RS = globalThis.RS || {}));

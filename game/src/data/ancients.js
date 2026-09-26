@@ -45,6 +45,7 @@
     runes2: { name: '룬 각인', desc: '룬 두 개를 골라 보드에 새긴다', apply(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'runeChoice', runes: pick2(run), title: '룬 각인' }); } },
     trainAll2: { name: '고대 수련', desc: '모든 클래스 강화 +2', apply(run) { for (const c of RS.CLASSES) run.classLv[c] += 2; } },
     bossRelic: { name: '보물 더미', desc: '보스 유물 2개 중 하나를 고른다', apply(run) { const ids = RS.rollRelics(run, 2, [3], [1]); if (ids.length) RS.enqueue(run, { k: 'relicList', ids, title: '보물 더미' }); } },
+    relicPair: { name: '도전자의 배낭', desc: '무작위 희귀 유물 1개와 일반 유물 1개', apply(run) { RS.grantRandomRelic(run, [2]); RS.grantRandomRelic(run, [1]); } },
   };
   function pick2(run) {
     const a = RS.randomRune(run.rng);
@@ -83,7 +84,7 @@
     {
       id: 'dar', name: '수집가 다르', icon: 'bag', acts: [2, 3],
       text: '"예전 도전자들이 두고 간 것들이야. 하나쯤 가져가도 되겠지."',
-      pools: [['bossRelic'], ['bossRelic'], ['legend', 'gold400']],
+      pools: [['bossRelic'], ['relicPair'], ['legend', 'gold400']],
     },
   ];
   RS.ANCIENT = {};
@@ -99,9 +100,13 @@
     const owned = {};
     for (const id of run.relics) owned[id] = true;
     const boons = [];
+    const fresh = (b) => !owned[b] && boons.indexOf(b) < 0;
     for (const p of A.pools) {
-      const opts = p.filter((b) => !owned[b] && boons.indexOf(b) < 0);
-      boons.push(rng.pick(opts.length ? opts : p));
+      let opts = p.filter(fresh);
+      // 풀이 다 떨어졌으면 다른 풀에서 아직 안 나온 것을 고른다 (같은 선택지가 두 번 나오지 않게)
+      if (!opts.length) opts = [].concat(...A.pools).filter(fresh);
+      if (!opts.length) opts = Object.keys(BOONS).filter(fresh);
+      if (opts.length) boons.push(rng.pick(opts));
     }
     return { id: A.id, boons, done: false };
   };
