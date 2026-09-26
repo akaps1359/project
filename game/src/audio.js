@@ -1,0 +1,97 @@
+// 간단한 효과음 합성 (파일 없이 WebAudio 로 만든다)
+(function (RS) {
+  'use strict';
+
+  let ctx = null;
+  let master = null;
+  let muted = false;
+  const last = {};
+
+  try {
+    muted = localStorage.getItem('rs_muted') === '1';
+  } catch (e) {
+    /* 저장소를 못 쓰면 기본값 */
+  }
+
+  function ensure() {
+    if (ctx) {
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.35;
+    master.connect(ctx.destination);
+    return ctx;
+  }
+
+  function tone(freq, dur, type, vol, slide, delay) {
+    const t0 = ctx.currentTime + (delay || 0);
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, slide), t0 + dur);
+    g.gain.setValueAtTime(vol || 0.2, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g);
+    g.connect(master);
+    o.start(t0);
+    o.stop(t0 + dur + 0.02);
+  }
+
+  const SFX = {
+    click: () => tone(660, 0.05, 'square', 0.08),
+    summon: () => { tone(520, 0.07, 'square', 0.1, 780); tone(780, 0.08, 'square', 0.08, 1040, 0.06); },
+    rare: () => { tone(660, 0.08, 'square', 0.1); tone(880, 0.08, 'square', 0.1, null, 0.07); tone(1320, 0.12, 'square', 0.1, null, 0.14); },
+    merge: () => { tone(440, 0.07, 'triangle', 0.18); tone(660, 0.07, 'triangle', 0.18, null, 0.06); tone(990, 0.14, 'triangle', 0.18, null, 0.12); },
+    legend: () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'square', 0.1, null, i * 0.07)); },
+    upgrade: () => { tone(330, 0.06, 'square', 0.1, 660); tone(660, 0.1, 'square', 0.08, 990, 0.06); },
+    kill: () => tone(220, 0.05, 'square', 0.04, 110),
+    big: () => { tone(160, 0.25, 'sawtooth', 0.15, 50); tone(90, 0.3, 'square', 0.1, 40, 0.05); },
+    leak: () => { tone(180, 0.15, 'sawtooth', 0.14, 90); },
+    coin: () => { tone(988, 0.05, 'square', 0.07); tone(1319, 0.08, 'square', 0.07, null, 0.05); },
+    wave: () => { tone(392, 0.08, 'triangle', 0.12); tone(523, 0.12, 'triangle', 0.12, null, 0.08); },
+    boss: () => { tone(110, 0.5, 'sawtooth', 0.18, 70); tone(82, 0.6, 'square', 0.1, 55, 0.1); },
+    bomb: () => { tone(120, 0.4, 'sawtooth', 0.2, 40); },
+    freeze: () => { tone(1400, 0.2, 'triangle', 0.1, 700); },
+    win: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, null, i * 0.1)); },
+    lose: () => { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.22, 'triangle', 0.14, null, i * 0.14)); },
+    error: () => tone(140, 0.08, 'square', 0.08),
+  };
+  const GAP = { kill: 0.06, leak: 0.12, coin: 0.05, summon: 0.04 };
+
+  RS.sfx = function (name) {
+    if (muted) return;
+    const c = ensure();
+    if (!c || c.state !== 'running') return;
+    const now = c.currentTime;
+    if (last[name] && now - last[name] < (GAP[name] || 0.03)) return;
+    last[name] = now;
+    try {
+      SFX[name] && SFX[name]();
+    } catch (e) {
+      /* 소리는 실패해도 게임은 계속 */
+    }
+  };
+
+  // iOS 는 사용자 터치 안에서 오디오를 깨워야 한다
+  RS.unlockAudio = function () {
+    if (muted) return;
+    const c = ensure();
+    if (c && c.state === 'suspended') c.resume();
+  };
+
+  RS.isMuted = () => muted;
+  RS.setMuted = function (m) {
+    muted = m;
+    try {
+      localStorage.setItem('rs_muted', m ? '1' : '0');
+    } catch (e) {
+      /* 무시 */
+    }
+    if (!m) RS.unlockAudio();
+  };
+})((globalThis.RS = globalThis.RS || {}));
