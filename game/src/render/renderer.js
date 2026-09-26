@@ -20,6 +20,21 @@
       path: ['#4a3a5e', '#433555', '#524268'], pathEdge: '#2b203c', pebble: '#b04779',
       slot: '#3a2d50', slotHi: '#5a4776', slotLo: '#231a33', inner: '#43355c',
     },
+    bog: {
+      ground: ['#2f4a3c', '#355244', '#2a4236'], speck: ['#3f6450', '#22382c', '#5a7d5e', '#8fae7a', '#6b5a8a'],
+      path: ['#5e5a3e', '#565236', '#686446'], pathEdge: '#3b3826', pebble: '#7d7856',
+      slot: '#3f4a55', slotHi: '#5a6674', slotLo: '#29313a', inner: '#47525f',
+    },
+    harbor: {
+      ground: ['#24445e', '#284b66', '#203d55'], speck: ['#3a6a8a', '#1a3148', '#5f93b5', '#a8d4e8', '#2f5a78'],
+      path: ['#8a6a48', '#7d603f', '#977553'], pathEdge: '#4a3826', pebble: '#a88a64',
+      slot: '#3a4458', slotHi: '#56627a', slotLo: '#262d3c', inner: '#434e66',
+    },
+    heart: {
+      ground: ['#3a1422', '#421828', '#33101d'], speck: ['#5a1f33', '#260b15', '#8a2a44', '#e04a52', '#6b2440'],
+      path: ['#5c2a3a', '#532433', '#663044'], pathEdge: '#2e0f1a', pebble: '#b04a5e',
+      slot: '#43263a', slotHi: '#643a55', slotLo: '#2a1424', inner: '#4d2c44',
+    },
   };
 
   function Renderer(canvas) {
@@ -252,13 +267,38 @@
     }
   };
 
+  // 룬: 칸 네 귀퉁이에 룬 색 표시, 금 간 칸은 금을 그린다
+  const CRACK = [[7, 4], [8, 5], [8, 6], [9, 7], [10, 8], [10, 9], [9, 10], [10, 11], [11, 12], [12, 13], [12, 14], [13, 15], [14, 16], [14, 17]];
+  P.drawRune = function (ctx, R, x, y) {
+    if (R.bad) {
+      ctx.fillStyle = '#1d1428';
+      for (const p of CRACK) ctx.fillRect(x + p[0], y + p[1], 1, 1);
+      return;
+    }
+    const a = 2;
+    const z = F.SLOT - 3;
+    ctx.globalAlpha = 0.75 + 0.25 * Math.sin(this.t * 3);
+    ctx.fillStyle = R.color;
+    ctx.fillRect(x + a, y + a, 3, 1);
+    ctx.fillRect(x + a, y + a, 1, 3);
+    ctx.fillRect(x + z - 2, y + a, 3, 1);
+    ctx.fillRect(x + z, y + a, 1, 3);
+    ctx.fillRect(x + a, y + z, 3, 1);
+    ctx.fillRect(x + a, y + z - 2, 1, 3);
+    ctx.fillRect(x + z - 2, y + z, 3, 1);
+    ctx.fillRect(x + z, y + z - 2, 1, 3);
+    ctx.globalAlpha = 1;
+  };
+
   P.drawSlots = function (ctx, b, dt) {
     const board = b.run.board;
+    const runes = b.run.runes;
     const t = this.t;
     for (let i = 0; i < F.SIZE; i++) {
       const x = F.GX + (i % F.COLS) * F.SLOT;
       const y = F.GY + Math.floor(i / F.COLS) * F.SLOT;
       const s = board[i];
+      if (runes && runes[i]) this.drawRune(ctx, RS.RUNE[runes[i]], x, y);
       if (this.lunge[i] > 0) this.lunge[i] -= dt;
       if (this.pop[i] > 0) this.pop[i] -= dt;
       if (this.drag && this.drag.over === i && this.drag.from !== i) {
@@ -342,10 +382,13 @@
     for (let k = 0; k < b.enemies.length; k++) list.push(b.enemies[k]);
     list.sort((a, c) => a.y - c.y);
     const t = this.t;
+    const blind = !!b.M.blindfold;
     for (const e of list) {
       let name = e.type;
       if (name === 'slime' || name === 'bat') {
         if (Math.floor(t * 4 + e.phase) % 2) name += '2';
+      } else if (name === 'frog' && e.hopT !== undefined && (e.hopT < 0.25 || e.hopT > e.def.hop.every - 0.3)) {
+        name = 'frog2'; // 뛰기 직전·직후 웅크린 모습
       }
       const spr = RS.SPR[name];
       const w = spr.width;
@@ -353,6 +396,16 @@
       const bob = e.boss ? 0 : Math.round(Math.sin(t * 8 + e.phase));
       const x = Math.round(e.x - w / 2);
       const y = Math.round(e.y - h + 5 + bob);
+      // 물속에 잠긴 늪의 여왕: 흐릿한 모습과 물결만
+      if (e.subT > 0) {
+        ctx.globalAlpha = 0.28;
+        ctx.drawImage(spr, x, y);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#a8ecff';
+        const k = Math.floor(t * 6) % 3;
+        for (let j = 0; j < w; j += 3) ctx.fillRect(x + j + k, y + h - 3, 2, 1);
+        continue;
+      }
       if (e.boss && b.enraged) {
         ctx.drawImage(RS.SPR[e.type + '_w'], x - 1, y);
         ctx.drawImage(RS.SPR[e.type + '_w'], x + 1, y);
@@ -377,8 +430,15 @@
         ctx.fillRect(x + (e.id % w), y + 2, 1, 1);
       }
       if (e.stunT > 0) this.drawStars(ctx, Math.round(e.x), y - 2);
-      // 체력바
-      if (!e.boss && e.hp < e.maxHp) {
+      // 불타는 엘리트
+      if (e.burning) {
+        const fl = RS.SPR.i_flameE;
+        const k = Math.floor(t * 8) % 2;
+        ctx.drawImage(fl, x - 2, y - 2 - k);
+        ctx.drawImage(fl, x + w - fl.width + 2, y - 3 + k);
+      }
+      // 체력바 (눈가리개를 하면 보이지 않는다)
+      if (!blind && !e.boss && e.hp < e.maxHp) {
         const bw = Math.max(8, w - 4);
         const bx = Math.round(e.x - bw / 2);
         const by = y - 3;

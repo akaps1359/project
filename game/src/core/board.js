@@ -117,7 +117,7 @@
   };
 
   // 같은 유닛을 한 칸에 모으고, 근접은 바깥·원거리는 안쪽으로 다시 배치한다.
-  RS.autoArrange = function (board) {
+  RS.autoArrange = function (board, runes) {
     const groups = {};
     for (const s of board) {
       if (!s) continue;
@@ -160,7 +160,25 @@
         }
       }
     }
+    if (runes) arrangeRunes(board, runes);
   };
+
+  // 좋은 룬 칸에는 같은 구역(바깥/안쪽)의 가장 강한 유닛을, 금 간 칸은 가능하면 비운다
+  function arrangeRunes(board, runes) {
+    const power = (s) => (s ? Math.pow(3, s.tier) * s.n : -1);
+    const zone = (i) => (RS.isInner(i) ? 'in' : 'out');
+    for (let i = 0; i < board.length; i++) {
+      const r = runes[i];
+      if (!r) continue;
+      const bad = RS.RUNE[r] && RS.RUNE[r].bad;
+      let best = i;
+      for (let j = 0; j < board.length; j++) {
+        if (j === i || runes[j] || zone(j) !== zone(i)) continue;
+        if (bad ? power(board[j]) < power(board[best]) : power(board[j]) > power(board[best])) best = j;
+      }
+      if (best !== i) RS.swapSlots(board, i, best);
+    }
+  }
 
   RS.canMerge = function (board, i) {
     const s = board[i];
@@ -173,10 +191,10 @@
   };
 
   // 두 개의 서로 다른 클래스 후보 (고대 두루마리)
-  RS.mergeOptions = function (rng) {
-    const a = rng.pick(RS.CLASSES);
-    let b = rng.pick(RS.CLASSES);
-    while (b === a) b = rng.pick(RS.CLASSES);
+  RS.mergeOptions = function (rng, run) {
+    const a = RS.pickClass(run, rng);
+    let b = a;
+    while (b === a) b = RS.pickClass(run, rng);
     return [a, b];
   };
 
@@ -203,7 +221,7 @@
     }
     const count = M.mergeMirror && rng.chance(M.mergeMirror) ? 2 : 1;
     for (let k = 0; k < count; k++) {
-      const cls = pickCls || rng.pick(RS.CLASSES);
+      const cls = pickCls || RS.pickClass(run, rng);
       const slot = RS.addUnit(board, cls, tier, i);
       if (slot >= 0) res.results.push({ cls, tier, slot });
       else res.gold += RS.sellValue(run, tier, M);
@@ -241,8 +259,9 @@
   RS.rollSummonTier = function (rng, M) {
     if (M.noRare) return 0;
     const r = rng.next();
-    if (r < RS.BAL.epicChance) return 2;
-    if (r < RS.BAL.epicChance + RS.BAL.rareChance + M.rareChance) return 1;
+    const epic = RS.BAL.epicChance + (M.epicChance || 0);
+    if (r < epic) return 2;
+    if (r < epic + RS.BAL.rareChance + M.rareChance) return 1;
     return 0;
   };
 })((globalThis.RS = globalThis.RS || {}));

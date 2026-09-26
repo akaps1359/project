@@ -12,7 +12,7 @@
     rareChance: 0.05, // 소환 시 희귀 등급 기본 확률
     epicChance: 0.005,
     hpBase: 64, // 웨이브 레벨 0의 슬라임 체력 (첫 몇 레벨은 60%부터 완만하게)
-    hpGrowth: [0, 1.105, 1.078, 1.065], // [막] 웨이브 레벨당 체력 배율. 후반엔 플레이어 성장도 느려진다
+    hpGrowth: [0, 1.1025, 1.07, 1.058, 1.045], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
     waveTime: 16, // 다음 웨이브까지 시간(초)
     prepTime: 5,
     spawnGap: 0.55,
@@ -96,25 +96,64 @@
     // 보스
     slimeKing: { name: '슬라임 킹', hp: 7.5, speed: 13, gold: 40, leak: 6, boss: true, splitAt: [0.66, 0.33], splitN: 4, splitHp: 0.5, trait: '체력이 줄면 슬라임을 뱉는다' },
     lich: { name: '리치', hp: 7, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 }, trait: '물리 피해 25% 감소, 해골 소환' },
+    // 대체 막 (안개 늪 · 가라앉은 항구)
+    frog: { name: '늪 개구리', hp: 0.9, speed: 24, gold: 1, leak: 1, hop: { every: 3.5, dist: 26 }, trait: '가끔 앞으로 크게 뛴다' },
+    crab: { name: '철갑 게', hp: 2, speed: 19, gold: 2, leak: 1, armorLight: 0.5, countMul: 0.7, gap: 0.7, trait: '궁수·도적 피해 50% 감소' },
+    bogQueen: { name: '늪의 여왕', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2 }, trait: '개구리를 부르고, 가끔 물속에 잠겨 공격받지 않는다' },
+    captain: { name: '해골 선장', hp: 7, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 }, trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다' },
+    dummy: { name: '낡은 허수아비', hp: 1, speed: 11, gold: 0, leak: 0, trait: '시간 안에 쓰러뜨려야 하는 시험 대상' },
+    // 4막
+    spireShield: { name: '균열 방패병', hp: 9, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2, trait: '궁수·도적 피해 50%, 모든 물리 피해 20% 감소' },
+    spireSpear: { name: '균열 창병', hp: 7, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 }, trait: '빠르고 주변 적을 가속' },
+    riftHeart: { name: '균열의 심장', hp: 28, speed: 8, gold: 0, leak: 12, boss: true, dpsCap: 0.035, bossTimeAdd: 30, summon: { every: 6, type: 'imp', n: 2, hp: 0.5 }, trait: '1초에 최대 체력의 3.5%까지만 피해를 받는다. 임프를 부른다' },
     riftLord: { name: '균열의 군주', hp: 10, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5, trait: '균열로 유닛을 기절시킨다. 체력 절반에서 가속' },
   };
 
-  // pool: [적, 가중치, 등장 층(d)]
-  RS.ACTS = [
-    {
-      name: '슬라임 숲', boss: 'slimeKing', theme: 'forest',
-      pool: [['slime', 5, 1], ['bat', 3, 2], ['golem', 2, 3]],
-      elites: ['bigSlime', 'ogre'],
-    },
-    {
-      name: '망자의 묘지', boss: 'lich', theme: 'grave',
-      pool: [['slime', 1, 1], ['bat', 3, 1], ['golem', 2, 1], ['ghost', 3, 1], ['skeleton', 3, 1], ['imp', 2, 11]],
-      elites: ['darkKnight', 'witch', 'ogre'],
-    },
-    {
-      name: '균열의 첨탑', boss: 'riftLord', theme: 'rift',
-      pool: [['bat', 2, 1], ['golem', 3, 1], ['ghost', 3, 1], ['imp', 3, 1], ['skeleton', 2, 1], ['shaman', 2, 15]],
-      elites: ['darkKnight', 'witch', 'bigSlime', 'ogre'],
-    },
+  // pool: [적, 가중치, 등장 진행도(d)]. 1막·2막은 슬레이 더 스파이어 2처럼 두 지역 중 하나가 무작위로 나온다
+  RS.ACT_VARIANTS = [
+    [
+      {
+        id: 'forest', name: '슬라임 숲', boss: 'slimeKing', theme: 'forest',
+        pool: [['slime', 5, 1], ['bat', 3, 2], ['golem', 2, 3]],
+        elites: ['bigSlime', 'ogre'],
+      },
+      {
+        id: 'bog', name: '안개 늪', boss: 'bogQueen', theme: 'bog',
+        pool: [['frog', 5, 1], ['slime', 2, 1], ['bat', 3, 2], ['crab', 1, 4]],
+        elites: ['bigSlime', 'witch'],
+      },
+    ],
+    [
+      {
+        id: 'grave', name: '망자의 묘지', boss: 'lich', theme: 'grave',
+        pool: [['slime', 1, 1], ['bat', 3, 1], ['golem', 2, 1], ['ghost', 3, 1], ['skeleton', 3, 1], ['imp', 2, 14]],
+        elites: ['darkKnight', 'witch', 'ogre'],
+      },
+      {
+        id: 'harbor', name: '가라앉은 항구', boss: 'captain', theme: 'harbor',
+        pool: [['crab', 3, 1], ['skeleton', 3, 1], ['ghost', 2, 1], ['frog', 2, 1], ['imp', 2, 14]],
+        elites: ['darkKnight', 'ogre', 'bigSlime'],
+      },
+    ],
+    [
+      {
+        id: 'rift', name: '균열의 첨탑', boss: 'riftLord', theme: 'rift',
+        pool: [['bat', 2, 1], ['golem', 3, 1], ['ghost', 3, 1], ['imp', 3, 1], ['skeleton', 2, 1], ['shaman', 2, 23]],
+        elites: ['darkKnight', 'witch', 'bigSlime', 'ogre'],
+      },
+    ],
+    [
+      {
+        id: 'heart', name: '균열의 심장부', boss: 'riftHeart', theme: 'heart',
+        pool: [['imp', 3, 1], ['ghost', 3, 1], ['golem', 2, 1], ['shaman', 2, 1]],
+        elites: ['spireShield', 'spireSpear'],
+      },
+    ],
   ];
+  // 예전 코드 호환: 각 막의 첫 번째 지역
+  RS.ACTS = RS.ACT_VARIANTS.map((v) => v[0]);
+  RS.actDef = (run) => {
+    const vs = RS.ACT_VARIANTS[run.act - 1];
+    return vs[(run.variants && run.variants[run.act]) || 0] || vs[0];
+  };
 })((globalThis.RS = globalThis.RS || {}));

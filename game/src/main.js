@@ -1,10 +1,10 @@
-// 게임 진행 제어: 루프, 저장, 화면 전환
+// 게임 진행 제어: 루프, 저장, 화면 전환, 메타 기록
 (function (RS) {
   'use strict';
 
   const STEP = 1 / 60;
   const MAX_STEPS = 12;
-  const SAVE_KEY = 'rs_save_v1';
+  const SAVE_KEY = 'rs_save_v2';
   const META_KEY = 'rs_meta_v1';
   const SPEED_KEY = 'rs_speed';
 
@@ -27,10 +27,11 @@
   const G = (RS.G = {
     run: null, battle: null, renderer: null,
     speed: 1, paused: false, modalOpen: false, hidden: false,
-    meta: { runs: 0, wins: 0, bestAct: 0, bestFloor: 0 },
+    meta: { runs: 0, wins: 0, bestAct: 0, bestFloor: 0, maxAsc: 0, wongo: 0 },
     last: 0, acc: 0, hudT: 0, wake: null,
   });
   const UI = RS.UI;
+  UI.G = G;
 
   function loadMeta() {
     try {
@@ -40,17 +41,35 @@
       /* 손상된 기록은 무시 */
     }
   }
-  function saveMeta() {
+  G.saveMeta = function () {
     store(META_KEY, JSON.stringify(G.meta));
-  }
-  function recordProgress(run, won) {
+  };
+
+  // 모험이 끝날 때 기록하고, 새로 열린 것을 돌려준다
+  function recordEnd(run, won) {
     const m = G.meta;
-    if (run.act > m.bestAct || (run.act === m.bestAct && run.floor > m.bestFloor)) {
-      m.bestAct = run.act;
-      m.bestFloor = run.floor;
+    const unlockedBefore = RS.COMMANDERS.filter((c) => RS.commanderUnlocked(c, m)).map((c) => c.id);
+    const ascBefore = m.maxAsc || 0;
+    // 4막까지 갔다면 3막을 끝까지 오른 것으로 기록
+    const act = Math.min(3, run.act);
+    const floor = run.act > 3 ? RS.FLOORS_PER_ACT : run.floor;
+    if (act > m.bestAct || (act === m.bestAct && floor > m.bestFloor)) {
+      m.bestAct = act;
+      m.bestFloor = floor;
     }
-    if (won) m.wins++;
-    saveMeta();
+    if (won) {
+      m.wins++;
+      if (run.asc >= ascBefore) m.maxAsc = Math.min(RS.MAX_ASC, run.asc + 1);
+      if (run.act === 4) m.heart = true;
+    }
+    m.wongo = (m.wongo || 0) + Math.floor((run.stats.wongo || 0) / 10);
+    G.saveMeta();
+    const out = [];
+    for (const c of RS.COMMANDERS) {
+      if (RS.commanderUnlocked(c, m) && unlockedBefore.indexOf(c.id) < 0) out.push(`지휘관 ${c.title} ${c.name}`);
+    }
+    if ((m.maxAsc || 0) > ascBefore) out.push(`승천 ${m.maxAsc}`);
+    return out;
   }
 
   G.savedRun = function () {
@@ -70,17 +89,17 @@
     else store(SAVE_KEY, RS.saveString(run));
   };
 
-  G.newRun = function (seed) {
-    G.run = RS.newRun(seed);
+  G.newRun = function (seed, opts) {
+    G.run = RS.newRun(seed, opts);
     G.meta.runs++;
-    saveMeta();
+    G.saveMeta();
     G.save();
     G.route();
   };
 
   G.continueRun = function () {
     const run = G.savedRun();
-    if (!run) return G.newRun();
+    if (!run) return UI.showCommanders();
     G.run = run;
     G.route();
   };
@@ -89,6 +108,7 @@
     const run = G.run;
     releaseWake();
     switch (run.phase) {
+      case 'neow': UI.showNeow(); break;
       case 'map': UI.showMap(); break;
       case 'battle': G.startBattle(); break;
       case 'reward': UI.showReward(); break;
@@ -97,34 +117,44 @@
       case 'rest': UI.showRest(); break;
       case 'treasure': UI.showTreasure(); break;
       case 'actStart': UI.showActStart(); break;
+      case 'choice': UI.showChoice(); break;
       case 'over':
-      case 'victory':
+      case 'victory': {
+        let unlocks = null;
         if (!run.recorded) {
           run.recorded = true;
-          recordProgress(run, run.phase === 'victory');
+          unlocks = recordEnd(run, run.phase === 'victory');
         }
-        UI.showEnd(run.phase === 'victory');
+        UI.showEnd(run.phase === 'victory', unlocks);
         break;
+      }
     }
   };
 
-  G.enterNode = function (f, lane) {
-    RS.enterNode(G.run, f, lane);
+  // 진행 한 걸음: 상태를 바꾸고, 쌓인 선택(증강 고르기 등)을 먼저 처리한 뒤 저장
+  const step = (fn) => (...args) => {
+    fn(...args);
+    RS.flushQueue(G.run);
     G.save();
     G.route();
   };
-  G.leaveNode = function () {
-    RS.advance(G.run);
-    G.save();
-    G.route();
-  };
-  G.afterReward = function () {
-    if (RS.rewardComplete(G.run)) RS.advance(G.run);
-    G.save();
-    G.route();
-  };
-  G.startAct = function () {
+
+  G.afterNeow = step(() => {
     G.run.phase = 'map';
+    G.run.pending = null;
+  });
+  G.enterNode = step((f, lane, wing) => RS.enterNode(G.run, f, lane, wing));
+  G.leaveNode = step(() => RS.advance(G.run));
+  G.afterReward = step(() => {
+    if (RS.rewardComplete(G.run)) RS.advance(G.run);
+  });
+  G.startAct = step(() => {
+    G.run.phase = 'map';
+    G.run.pending = null;
+  });
+  G.startEventFight = step(() => RS.startEventFight(G.run));
+  G.finishChoice = function () {
+    RS.popQueue(G.run);
     G.save();
     G.route();
   };
@@ -133,7 +163,7 @@
     const run = G.run;
     G.battle = new RS.Battle(run, run.pending.stage);
     G.renderer.reset();
-    G.renderer.setTheme(RS.ACTS[run.act - 1].theme);
+    G.renderer.setTheme(RS.actDef(run).theme);
     G.acc = 0;
     G.paused = false;
     UI.showBattle();
@@ -220,14 +250,19 @@
     loadMeta();
     G.speed = Math.min(3, Math.max(1, parseInt(load(SPEED_KEY) || '1', 10) || 1));
     if (hotData && hotData.save && !load(SAVE_KEY)) store(SAVE_KEY, hotData.save);
-    UI.init(G);
-    UI.showTitle();
+    UI.initBattle();
+    // 툴팁 바깥을 누르면 닫기
+    document.addEventListener('pointerdown', (e) => {
+      const tip = document.getElementById('tip');
+      if (tip && !tip.hidden && !tip.contains(e.target) && !e.target.closest('.chip,.node,.keys')) tip.hidden = true;
+    }, true);
     // iOS 사파리는 touchend·click 안에서만 소리를 깨울 수 있다
     for (const ev of ['pointerdown', 'touchend', 'click']) document.addEventListener(ev, () => RS.unlockAudio(), { passive: true });
     document.addEventListener('visibilitychange', () => {
       G.hidden = document.hidden;
       if (document.hidden && G.battle && !G.modalOpen) UI.openPause();
     });
+    UI.showTitle();
     const hot = window.claude && window.claude.hot;
     if (hot && hot.snapshot) {
       try {

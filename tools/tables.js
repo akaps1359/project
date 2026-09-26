@@ -54,12 +54,43 @@ p('|---|---|');
 for (const c of RS.CURSES) p(`| ${c.name} | ${c.desc} |`);
 
 p('\n### 이벤트 (' + RS.EVENTS.length + '종)\n');
-p('| 이벤트 | 선택지 |');
-p('|---|---|');
-const fake = { act: 1, gold: 100, life: 20, maxLife: 20, board: RS.newBoard() };
+p('| 이벤트 | 막 | 선택지 |');
+p('|---|---|---|');
+const fake = RS.newRun(1, {});
+const txt = (v) => {
+  try {
+    return typeof v === 'function' ? v(fake) : v;
+  } catch (e) {
+    return '(상황에 따라)';
+  }
+};
 for (const e of RS.EVENTS) {
-  const opts = e.options.map((o) => `**${o.label}**: ${typeof o.desc === 'function' ? o.desc(fake) : o.desc}`).join('<br>');
-  p(`| ${e.title} | ${opts} |`);
+  const opts = (e.steps ? e.steps[0].options : e.options).map((o) => `**${txt(o.label)}**: ${txt(o.desc)}`).join('<br>');
+  p(`| ${e.title}${e.steps ? ' (여러 단계)' : ''} | ${e.acts ? e.acts.join('·') : '전체'} | ${opts} |`);
 }
+
+p('\n### 지휘관\n');
+p('| 지휘관 | 시작 유물 | 특징 | 해금 |');
+p('|---|---|---|---|');
+for (const c of RS.COMMANDERS) p(`| ${c.title} ${c.name} | ${RS.REL[c.relic].name}: ${RS.REL[c.relic].desc} | ${c.desc} | ${c.unlock ? c.unlock.text : '처음부터'} |`);
+
+p('\n### 고대 존재 (2·3막 시작)\n');
+p('| 존재 | 막 | 선택지 풀 1 | 풀 2 | 풀 3 |');
+p('|---|---|---|---|---|');
+const boon = (id) => {
+  const b = RS.ancientBoon(id);
+  return `${b.name.replace(' (고대 유물)', '')}: ${b.desc}${b.cost ? ` (대가: ${b.cost})` : ''}`;
+};
+for (const a of RS.ANCIENTS) p(`| ${a.name} | ${a.acts.join('·')} | ${a.pools.map((pool) => pool.map(boon).join('<br>')).join(' | ')} |`);
+
+p('\n### 룬\n');
+p('| 룬 | 효과 |');
+p('|---|---|');
+for (const r of RS.RUNES) p(`| ${r.name} | ${r.desc} |`);
+
+p('\n### 승천\n');
+p('| 단계 | 추가 효과 |');
+p('|---:|---|');
+RS.ASCENSION.forEach((t, i) => i && p(`| ${i} | ${t} |`));
 
 console.log(out.join('\n'));

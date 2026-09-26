@@ -375,6 +375,109 @@
   ]);
 
   // ── 아이콘 (UI) ──
+  // ── 2.0 지역 적: 안개 늪 · 가라앉은 항구 · 시험 ──
+  def('frog', [
+    '............',
+    '..ww....ww..',
+    '.wwkw..wkww.',
+    '.nnnnnnnnnn.',
+    'nnnnnnnnnnnn',
+    'nnNkkkkkkNnn',
+    'nnnnnnnnnnnn',
+    '.nttttttttn.',
+    'NNnttttttnNN',
+    'NN.NN..NN.NN',
+    '............',
+  ]);
+  def('frog2', [
+    '............',
+    '............',
+    '..ww....ww..',
+    '.wwkw..wkww.',
+    '.nnnnnnnnnn.',
+    'nnnnnnnnnnnn',
+    'nnNkkkkkkNnn',
+    'nnnnnnnnnnnn',
+    'NnttttttttnN',
+    'NNNNN..NNNNN',
+    '............',
+  ]);
+  def('crab', [
+    '..............',
+    '.rr........rr.',
+    'r..r......r..r',
+    'rr.r.w..w.r.rr',
+    '.rr.rkrrkr.rr.',
+    '...rrrrrrrr...',
+    '..rmmmmmmmmr..',
+    '.rrMMMMMMMMrr.',
+    '.RrrrrrrrrrrR.',
+    'R.R.R....R.R.R',
+    '..............',
+  ]);
+  def('bogQueen', [
+    '........................',
+    '..........g..g..g.......',
+    '..........ggggggg.......',
+    '..www.....grgugrg..www..',
+    '.wwkkw....ggggggg.wkkww.',
+    '.wwkkwnnnnnnnnnnnnwkkww.',
+    '..wwwnnnnnnnnnnnnnnwww..',
+    '..nnnnnnpnnnnnnpnnnnnn..',
+    '.nnnnnnnnnnnnnnnnnnnnnn.',
+    '.nnnNkkkkkkkkkkkkkkNnnn.',
+    '.nnnnNNkkkkkkkkkkNNnnnn.',
+    'nnnnnnnNNNNNNNNNNnnnnnnn',
+    'nnpnnnnnnnnnnnnnnnnnnpnn',
+    'nnnnttttttttttttttttnnnn',
+    'nnnttttttttttttttttttnnn',
+    'Nnnttttttttttttttttttnnn',
+    'NNnnttttttttttttttttnnNN',
+    'NNNnnnnnnnnnnnnnnnnnnNNN',
+    '.NNN.NNNN......NNNN.NNN.',
+    '........................',
+  ]);
+  def('captain', [
+    '....................',
+    '......kkkkkkkk......',
+    '....kkkkkkkkkkkk....',
+    '...kkkkkkwwkkkkkk...',
+    '..kkkkkkkkkkkkkkkk..',
+    '.....gggggggggg.....',
+    '.....wwwwwwwwww.....',
+    '.....wkkwwwwkkw.....',
+    '.....wkkwwwwkkw.....',
+    '.....wwwwkkwwww.....',
+    '......wkwkwkwkw.....',
+    '.......wwwwww.......',
+    '....rrrrwwwwrrrr....',
+    '...rrrrrrggrrrrrr...',
+    '..rrrRrrrrrrrrRrrr..',
+    '..rr.RrrrggrrrR.rr..',
+    '..ww.RrrrrrrrrR.m...',
+    '.....RrrrggrrrR..m..',
+    '.....RRRRRRRRRR.mm..',
+    '......MM....MM......',
+    '......MM....MM......',
+    '.....MMM....MMM.....',
+  ]);
+  def('dummy', [
+    '............',
+    '....gggg....',
+    '...gyyyyg...',
+    '...ykyyky...',
+    '...yyyyyy...',
+    '....gyyg....',
+    '.bbbbbbbbbb.',
+    '.b.gyrryg.b.',
+    '...grwwrg...',
+    '...grrrrg...',
+    '....gyyg....',
+    '.....bb.....',
+    '.....bb.....',
+    '....BBBB....',
+  ]);
+
   const I = (name, rows) => def('i_' + name, rows);
   I('sword', ['.......ww', '......wWw', '.....wWw.', '....wWw..', '.g.wWw...', '..gWw....', '..bg.....', '.b..g....', 'b........']);
   I('wing', ['......ww.', '....wwwW.', '...wwwWW.', '..wwwWW..', '.wwwWW...', '.wwWW....', 'wwWW.....', 'wWW......', 'W........']);
@@ -440,6 +543,128 @@
   I('n_rest', ['...a.....', '..aya.a..', '..ayyaya.', '.aayyyya.', '.ayyyyya.', 'bBbBbBbBb', '.bBbBbBb.']);
   I('n_treasure', ['.bbbbbbb.', 'bbbbbbbbb', 'bgggggggb', 'BBBByBBBB', 'bbbbybbbb', 'bbbbbbbbb', 'BBBBBBBBB']);
   I('n_boss', ['y..y..y..y', 'yy.yyyy.yy', 'yyyyyyyyyy', '.rwwwwwwr.', '.wwwwwwww.', '.wkkwwkkw.', '.wwwkkwww.', '..wkwkww..', '..wwwwww..']);
+
+  // 4막 적
+  def('spireShield', [
+    '................',
+    '.....mmmmmm.....',
+    '....mmmmmmmm....',
+    '....mMvMMvMm....',
+    '....mmmmmmmm....',
+    '..uuUmmmmmmm....',
+    '.uuuuUkkkkkkk...',
+    '.uuvuUkkkkkkkk..',
+    '.uvvvUkkvvkkkk..',
+    '.uuvuUkkkkkkkk..',
+    '.uuuuUkkkkkkk...',
+    '..uuUkkkkkkk....',
+    '.....kk...kk....',
+    '.....KK...KK....',
+    '................',
+  ]);
+  def('spireSpear', [
+    '.............w..',
+    '............wW..',
+    '.....mmmmm.wW...',
+    '....mmmmmmwW....',
+    '....mMvMvbW.....',
+    '....mmmmbm......',
+    '...kkkkbkk......',
+    '..kkkkbkkkk.....',
+    '..kkvbvvkkk.....',
+    '..kkbkkkkkk.....',
+    '...bkkkkkk......',
+    '..b.kk..kk......',
+    '....KK..KK......',
+    '................',
+  ]);
+  def('riftHeart', [
+    '........................',
+    '.......RR.......RR......',
+    '......RrrR.....RrrR.....',
+    '.....RrrrrR...RrrrrR....',
+    '....RrrvvrrR.RrrrrrrR...',
+    '...RrrvvvrrrRrrrrrrrrR..',
+    '...RrrvvrrrrrrrrrrrrrR..',
+    '...RrrrrrrrrkkkrrrrrrR..',
+    '...RrrrrrrrkvvvkrrrrrR..',
+    '...RrrrrrrrkvVvkrrrrrR..',
+    '....RrrrrrrkvvvkrrrrR...',
+    '....RrrrrrrrkkkrrrrrR...',
+    '.....RrrrrrrrrrrrrrR....',
+    '......RrrrrrrrrrrrR.....',
+    '.......RrrrrrrrrrR......',
+    '..v.....RrrrrrrrR.....v.',
+    '...v.....RrrrrrR.....v..',
+    '....v.....RrrrR.....v...',
+    '...........RR...........',
+    '........................',
+  ]);
+
+  // 새 아이콘 (유물·증강·열쇠)
+  I('anchor', ['...mm....', '..m..m...', '...mm....', 'mmmmmmmm.', '...mm....', 'm..mm..m.', 'mm.mm.mm.', '.mmmmmm..']);
+  I('pack', ['..bbbb..', '.b....b.', 'bbbbbbbb', 'bBbggbBb', 'bbbggbbb', 'bbbbbbbb', 'bBBBBBBb', '.bbbbbb.']);
+  I('lantern', ['...kk...', '..k..k..', '.kkkkkk.', '.kyyyyk.', '.kyaayk.', '.kyyyyk.', '.kkkkkk.', '..kkkk..']);
+  I('berry', ['...nn....', '..nNn....', '.rrrrr...', 'rryrrrr..', 'rrrrryr..', 'rryrrrr..', '.rrrrr...', '..rrr....']);
+  I('pen', ['.......k', '......kk', '.....kk.', '....bk..', '...bb...', '..gb....', '.gg.....', 'y.......']);
+  I('flower', ['..y.y...', '.yyyyy..', 'yyaaayy.', '.yyayy..', 'yyyyyyy.', '..nn....', '.n.n....', '...n....']);
+  I('meat', ['......ww', '.....ww.', '..rrrw..', '.rrrrr..', 'rrRrrr..', 'rrrrRr..', '.rrrr...', '..rr....']);
+  I('pillow', ['........', '.pppppp.', 'pwppppPp', 'pppppppp', 'ppppppPp', 'pPppppPp', '.pppppp.', '........']);
+  I('charm', ['..rrrr..', '.r....r.', '..rrrr..', '.rrrrrr.', '.rryyrr.', '.rryyrr.', '.rrrrrr.', '..r..r..']);
+  I('mask', ['.wwwwww.', 'wwwwwwww', 'wkwwwwkw', 'wwwwwwww', 'wwkwwkww', 'wwwkkwww', '.wwwwww.', '..wwww..']);
+  I('beads', ['..bbb...', '.b...b..', 'b.....b.', 'b.....b.', '.b...b..', '..bbb...', '...g....', '..ggg...']);
+  I('chest', ['.bbbbbbb.', 'bbbbbbbbb', 'bgggggggb', 'BBBByBBBB', 'bbbbybbbb', 'bbbbbbbbb', 'BBBBBBBBB']);
+  I('fish', ['........', '...uuu..u', '..uuuuuuu', '.uuwuuuu.', 'uuuuuuuuu', '..uuuuu.u', '...uuu...', '.........']);
+  I('rod', ['......M', '.....MM', '....MM.', '...MM..', '..MM...', '.MM....', 'MM.....']);
+  I('mango', ['...n....', '..aaaa..', '.aayaaa.', 'aayaaaaa', 'aaaaaaaa', 'aaaaaaAa', '.aaaaAa.', '..aaaa..']);
+  I('sling', ['b.....b.', '.b...b..', '..b.b...', '...b....', '...b....', '...b....', '..bbb...', '........']);
+  I('insect', ['.a....a.', '..a..a..', '..yyyy..', '.yyyyyy.', 'y.yyyy.y', '.yyyyyy.', 'y.yyyy.y', '..yyyy..']);
+  I('wheel', ['..yyyy..', '.y.bb.y.', 'y.b..b.y', 'ybb..bby', 'ybb..bby', 'y.b..b.y', '.y.bb.y.', '..yyyy..']);
+  I('bowl', ['........', '..y..y..', '...yy...', 'gggggggg', 'gyyyyyyg', '.gyyyyg.', '..gggg..', '........']);
+  I('dream', ['..bbbb..', '.b.ww.b.', 'b.w..w.b', 'b.w..w.b', '.b.ww.b.', '..bbbb..', '.w..w...', '.u..u...']);
+  I('pipe', ['..w.w...', '...w....', '........', 'bbbb....', 'bBBbbbbb', 'bbbb...b', '.bb.....', '........']);
+  I('shovel', ['.......b', '......b.', '.....b..', '....b...', '.MMb....', 'MmmM....', 'MmmM....', '.MM.....']);
+  I('kettle', ['..MMMM..', '.M....M.', '.M....M.', 'kkkkkkkk', 'kkkkkkkk', 'kKkkkkKk', 'kkkkkkkk', '.kkkkkk.']);
+  I('doll', ['..rrrr..', '.rsssrr.', '.rseser.', '.rsssrr.', 'rrrrrrrr', 'rryyyyrr', 'rrrrrrrr', '.rrrrrr.']);
+  I('card', ['........', 'gggggggg', 'gkkkkkkg', 'gggggggg', 'gwwwgggg', 'gggggggg', 'GGGGGGGG', '........']);
+  I('box', ['.bbbbbb.', 'bBbbbbBb', 'bbbbbbbb', 'bbwwwwbb', 'bbbbbbbb', 'bBbbbbBb', 'bbbbbbbb', '.BBBBBB.']);
+  I('boots', ['..w.....', '.www....', 'wwbb....', '..bb....', '..bb....', '..bbbb..', '..bbbbb.', '..BBBBB.']);
+  I('compass', ['..gggg..', '.gwwwwg.', 'gwwrwwwg', 'gwwrwwwg', 'gwwkwwwg', 'gwwkwwwg', '.gwwwwg.', '..gggg..']);
+  I('shell', ['...ww...', '..wWww..', '.wWwwWw.', 'wwwWwwWw', 'wWwwWwww', 'wwWwwwWw', '.wwwwww.', '..WWWW..']);
+  I('ecto', ['..nn.nn..', '.ntnnntn.', '.nnnnnnn.', '.nnnnnnN.', '..nnnnN..', '...nnN...', '....N....', '.........']);
+  I('cup', ['.w.w....', '..w.w...', 'bbbbbb..', 'bBBBBbbb', 'bBBBBb.b', 'bBBBBbbb', 'bbbbbb..', '.bbbb...']);
+  I('hammer', ['MMMMMM..', 'MmmmmM..', 'MMMMMM..', '..b.....', '..b.....', '..b.....', '..b.....', '..B.....']);
+  I('gourd', ['...b....', '..nn....', '.nnnn...', '..nn....', '.nnnnn..', 'nnnnnnn.', 'nnnnnnN.', '.nnnnN..']);
+  I('crown2', ['.........', 'y...y....', 'yy.yy..y.', 'yyyyy.yy.', 'yryy.yyry', 'yyyy.yyyy', 'GGG..GGGG']);
+  I('blind', ['........', '........', 'kkkkkkkk', 'kKkkkkKk', 'kkkkkkkk', '........', '........', '........']);
+  I('redgem', ['.rrrrr.', 'rrwrrrr', 'rwrrrrr', 'rrrrrrR', '.rrrRR.', '..rRR..', '...R...']);
+  I('choker', ['........', 'pppppppp', 'p......p', '.p....p.', '..pyyp..', '...yy...', '........', '........']);
+  I('snake', ['..nnnn..', '.nnnnnn.', 'nnyknnnn', 'nnnnnnnn', '.nnnnnn.', '...nn.r.', '..nn..r.', '.nn.....']);
+  I('key', ['.gg.....', 'g..g....', 'g..g....', '.gggggg.', '....g.g.', '....g...', '........', '........']);
+  I('brand', ['..rrrr..', '.r....r.', 'r..rr..r', 'r.r..r.r', 'r.r..r.r', 'r..rr..r', '.r....r.', '..rrrr..']);
+  I('collar', ['........', 'MMMMMMMM', 'M......M', 'M......M', '.M....M.', '..MggM..', '...gg...', '........']);
+  I('blackstar', ['....k....', '....k....', '...kkk...', 'kkkkpkkkk', '.kkkkkkk.', '..kkkkk..', '..kk.kk..', '.kk...kk.']);
+  I('bell', ['...gg...', '..gyyg..', '.gyyyyg.', '.gyyyyg.', '.gyyyyg.', 'gyyyyyyg', 'gggggggg', '...gg...']);
+  I('pandora', ['.pppppp.', 'pPPPPPPp', 'pppyyppp', 'pppyyppp', 'pppppppp', 'pPppppPp', 'pppppppp', '.PPPPPP.']);
+  I('house', ['...rr...', '..rrrr..', '.rrrrrr.', 'rrrrrrrr', '.bbbbbb.', '.bybbyb.', '.bbbybb.', '.bbbybb.']);
+  I('planet', ['......y.', '..uuuu..', '.uuuuuu.', 'yyuuuuyy', '.yyyyyy.', '.uuuuuu.', '..uuuu..', '.y......']);
+  I('bark', ['..bb....', '.bBbb...', '.bbBbb..', 'bbbbBbb.', '.bbbbbBb', '..bbbbb.', '...bbb..', '....n...']);
+  I('cage', ['...MM...', '..M..M..', '.MMMMMM.', '.M.M.MM.', '.M.M.MM.', '.M.M.MM.', '.MMMMMM.', '........']);
+  I('horns', ['r......r', 'rr....rr', '.rr..rr.', '.rrrrrr.', 'rryrryrr', 'rrrrrrrr', '.rrkkrr.', '..rrrr..']);
+  I('echo', ['..pp....', '.p..p...', 'p.pp.p..', 'p.p.p.p.', 'p.p.p.p.', 'p.pp.p..', '.p..p...', '..pp....']);
+  I('halo', ['.yyyyyy.', 'y......y', '.yyyyyy.', '........', '...ww...', '..wwww..', '.wwwwww.', '..wwww..']);
+  I('ghost2', ['..wwww..', '.wwwwww.', 'wwkwwkww', 'wwwwwwww', 'wwwkkwww', 'wwwwwwww', 'wWwwwwWw', 'w.W..W.w']);
+  I('corrupt', ['..pppp..', '.ppkkpp.', 'ppkppkpp', 'pkpvvpkp', 'pkpvvpkp', 'ppkppkpp', '.ppkkpp.', '..pppp..']);
+  I('chip', ['.n.n.n..', 'nnnnnnn.', '.kkkkk..', 'nkyykkn.', '.kyykk..', 'nkkkkkn.', '.nnnnn..', '.n.n.n..']);
+  I('gas', ['...t....', '..ttt.t.', '.ttTtttt', 'tttTTttt', '.tTttTt.', '..ttttt.', '...t.t..', '........']);
+  I('vial', ['..ww....', '..bb....', '.wttw...', 'wtttnw..', 'wtntttw.', 'wttttnw.', 'wtttttw.', '.wwwww..']);
+  I('altar', ['...r....', '..rrr...', '...r....', '.wwwww..', 'wwwwwww.', '.w.w.w..', '.w.w.w..', 'wwwwwww.']);
+  I('fist', ['.rrrr...', 'rrrrrr..', 'rsrsrsr.', 'rsrsrsr.', 'rrrrrrr.', '.rrrrrr.', '..rrrr..', '..rrrr..']);
+  I('key_ruby', ['.rr.....', 'r..r....', 'r..r....', '.rrrrrr.', '....r.r.', '....r...']);
+  I('key_emerald', ['.nn.....', 'n..n....', 'n..n....', '.nnnnnn.', '....n.n.', '....n...']);
+  I('key_sapphire', ['.uu.....', 'u..u....', 'u..u....', '.uuuuuu.', '....u.u.', '....u...']);
+  I('flameE', ['...r....', '..rar...', '.rayar..', '.ayyya..', '..aya...']);
+  I('egg', ['...ww...', '..wwWw..', '.wwwwtw.', '.wtwwww.', '.wwwwtW.', '.wwtwwW.', '..wWWW..']);
 
   // ── 굽기 ──
   function parse(rows, pal) {
