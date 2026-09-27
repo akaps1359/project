@@ -727,12 +727,21 @@
   }
 
   const SPR = (RS.SPR = {});
+  // 스프라이트의 대표 색 두 가지 (외곽선 제외, 많이 쓰인 순). 쓰러질 때 파편 색으로 쓴다
+  const SPR_COL = (RS.SPR_COL = {});
+  function mainColors(img) {
+    const cnt = {};
+    for (const c of img.px) if (c && c !== OUTLINE) cnt[c] = (cnt[c] || 0) + 1;
+    const list = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+    return list.length ? [list[0], list[1] || list[0]] : ['#ffffff', '#ffffff'];
+  }
   RS.bakeSprites = function () {
     const tierPal = (t) => ({ c: t.color, C: t.dark, l: t.light });
     for (const cls of RS.CLASSES) {
       for (let tier = 0; tier < RS.TIER.length; tier++) {
         const img = withOutline(parse(SRC[cls].rows, tierPal(RS.TIER[tier])));
         SPR[cls + tier] = toCanvas(img);
+        SPR[cls + tier + '_w'] = toCanvas(img, '#ffffff'); // 소환·합성 순간 번쩍임
       }
     }
     for (const name in SRC) {
@@ -742,6 +751,7 @@
       if (!name.startsWith('i_')) {
         SPR[name + '_w'] = toCanvas(img, '#ffffff');
         SPR[name + '_i'] = toCanvas(img, '#8fe3ff');
+        SPR_COL[name] = mainColors(img);
       }
     }
   };
@@ -797,16 +807,20 @@
     return String(Math.max(0, Math.round(v)));
   };
 
-  // 글자 폭 4px(외곽선 겹침 포함). 가운데 정렬로 그린다.
-  RS.drawNum = function (ctx, str, x, y, color) {
+  // 글자 폭 4px(외곽선 겹침 포함). 가운데 정렬로 그린다. scale 을 주면 가운데를 기준으로 키운다 (튀어 오르는 숫자)
+  RS.drawNum = function (ctx, str, x, y, color, scale) {
     const set = GLYPH[color || 'w'];
-    const w = str.length * 4 + 1;
-    let cx = Math.round(x - w / 2);
-    const cy = Math.round(y);
+    const k = scale || 1;
+    const w = (str.length * 4 + 1) * k;
+    let cx = k === 1 ? Math.round(x - w / 2) : x - w / 2;
+    const cy = k === 1 ? Math.round(y) : y + 3.5 - 3.5 * k;
     for (const ch of str) {
       const g = set[ch];
-      if (g) ctx.drawImage(g, cx, cy);
-      cx += 4;
+      if (g) {
+        if (k === 1) ctx.drawImage(g, cx, cy);
+        else ctx.drawImage(g, cx, cy, g.width * k, g.height * k);
+      }
+      cx += 4 * k;
     }
   };
 })((globalThis.RS = globalThis.RS || {}));

@@ -1,4 +1,7 @@
-// 전장 캔버스 렌더러 (논리 해상도 160×186, CSS 로 확대)
+// 전장 캔버스 렌더러
+// 논리 해상도는 160×186 그대로 두고, 캔버스는 화면의 실제 픽셀(기기 해상도)로 그린다.
+// 모든 사각형·스프라이트는 논리 좌표를 기기 픽셀로 반올림해서 그리므로(PixelCtx) 도트는 또렷하고,
+// 움직이는 것은 논리 픽셀 한 칸보다 촘촘하게(부드럽게) 움직인다. 빛은 기기 해상도로 부드럽게 더한다.
 (function (RS) {
   'use strict';
 
@@ -9,65 +12,201 @@
       ground: ['#3c7443', '#447f4a', '#356a3c'], speck: ['#5a9a55', '#2e5e36', '#7cb86a', '#e8d27a', '#e89aa8'],
       path: ['#a88455', '#9a7849', '#b8935f'], pathEdge: '#6e5234', pebble: '#c9a878',
       slot: '#4b4660', slotHi: '#6a6484', slotLo: '#322e44', inner: '#554f6d',
+      tuft: ['#2a5a33', '#5fa35a'], amb: 'firefly',
     },
     grave: {
       ground: ['#3a3950', '#403f58', '#34334a'], speck: ['#525170', '#2b2a3d', '#6b6a88', '#8f8aa8', '#4f6b52'],
       path: ['#6f6a86', '#65607c', '#7a7592'], pathEdge: '#44405a', pebble: '#8c87a4',
       slot: '#3e3a55', slotHi: '#5b5676', slotLo: '#2a2740', inner: '#47425f',
+      tuft: ['#2b2a3d', '#4f6b52'], amb: 'wisp',
     },
     rift: {
       ground: ['#2a1f3d', '#2f2344', '#251b36'], speck: ['#3d2c57', '#1c1429', '#7a3d8a', '#c050a0', '#4a2f66'],
       path: ['#4a3a5e', '#433555', '#524268'], pathEdge: '#2b203c', pebble: '#b04779',
       slot: '#3a2d50', slotHi: '#5a4776', slotLo: '#231a33', inner: '#43355c',
+      tuft: ['#1c1429', '#7a3d8a'], amb: 'mote',
     },
     bog: {
       ground: ['#2f4a3c', '#355244', '#2a4236'], speck: ['#3f6450', '#22382c', '#5a7d5e', '#8fae7a', '#6b5a8a'],
       path: ['#5e5a3e', '#565236', '#686446'], pathEdge: '#3b3826', pebble: '#7d7856',
       slot: '#3f4a55', slotHi: '#5a6674', slotLo: '#29313a', inner: '#47525f',
+      tuft: ['#22382c', '#5a7d5e'], amb: 'bubble',
     },
     harbor: {
       ground: ['#24445e', '#284b66', '#203d55'], speck: ['#3a6a8a', '#1a3148', '#5f93b5', '#a8d4e8', '#2f5a78'],
       path: ['#8a6a48', '#7d603f', '#977553'], pathEdge: '#4a3826', pebble: '#a88a64',
       slot: '#3a4458', slotHi: '#56627a', slotLo: '#262d3c', inner: '#434e66',
+      tuft: null, amb: 'sparkle',
     },
     heart: {
       ground: ['#3a1422', '#421828', '#33101d'], speck: ['#5a1f33', '#260b15', '#8a2a44', '#e04a52', '#6b2440'],
       path: ['#5c2a3a', '#532433', '#663044'], pathEdge: '#2e0f1a', pebble: '#b04a5e',
       slot: '#43263a', slotHi: '#643a55', slotLo: '#2a1424', inner: '#4d2c44',
+      tuft: ['#260b15', '#8a2a44'], amb: 'ember',
     },
   };
+
+  // 적의 걸음걸이: 통통 튀기 / 날기 / 떠다니기 / 뒤뚱 걷기 / 묵직하게 걷기 / 종종걸음 / 맥동
+  const GAIT = {
+    slime: 'hop', bigSlime: 'hop', slimeKing: 'hop', frog: 'hop',
+    bat: 'fly', ghost: 'float', lich: 'float', witch: 'float', bogQueen: 'float', riftLord: 'float',
+    golem: 'heavy', ogre: 'heavy', darkKnight: 'heavy', captain: 'heavy', spireShield: 'heavy', spireSpear: 'heavy',
+    crab: 'scuttle', riftHeart: 'pulse', dummy: 'still',
+  };
+
+  // ── 기기 픽셀에 맞춰 그리는 그리기 도구 ──
+  function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  const GLOW = {};
+  function glowTex(col) {
+    if (GLOW[col]) return GLOW[col];
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, hexA(col, 1));
+    g.addColorStop(0.3, hexA(col, 0.5));
+    g.addColorStop(1, hexA(col, 0));
+    x.fillStyle = g;
+    x.fillRect(0, 0, 64, 64);
+    return (GLOW[col] = c);
+  }
+
+  class PixelCtx {
+    constructor(raw) {
+      this.raw = raw;
+      this.S = 1;
+      this.ox = 0;
+      this.oy = 0;
+    }
+    set fillStyle(v) { this.raw.fillStyle = v; }
+    get fillStyle() { return this.raw.fillStyle; }
+    set globalAlpha(v) { this.raw.globalAlpha = v; }
+    get globalAlpha() { return this.raw.globalAlpha; }
+    X(x) { return Math.round((x + this.ox) * this.S); }
+    Y(y) { return Math.round((y + this.oy) * this.S); }
+    fillRect(x, y, w, h) {
+      const x0 = this.X(x);
+      const y0 = this.Y(y);
+      const x1 = this.X(x + w);
+      const y1 = this.Y(y + h);
+      if (x1 > x0 && y1 > y0) this.raw.fillRect(x0, y0, x1 - x0, y1 - y0);
+    }
+    drawImage(img, x, y, w, h) {
+      if (w === undefined) {
+        w = img.width;
+        h = img.height;
+      }
+      const x0 = this.X(x);
+      const y0 = this.Y(y);
+      const x1 = this.X(x + w);
+      const y1 = this.Y(y + h);
+      if (x1 > x0 && y1 > y0) this.raw.drawImage(img, x0, y0, x1 - x0, y1 - y0);
+    }
+    // 흔들림(평행 이동)만 쓴다
+    setTransform(a, b, c, d, e, f) {
+      this.ox = e;
+      this.oy = f;
+    }
+    // 발밑(ax, ay)을 기준으로 늘이기·기울이기·뒤집기를 적용해 스프라이트를 그린다
+    sprite(img, ax, ay, sx, sy, rot, flip) {
+      if (!rot && sx === 1 && sy === 1 && !flip) {
+        this.drawImage(img, ax - img.width / 2, ay - img.height);
+        return;
+      }
+      const r = this.raw;
+      const S = this.S;
+      r.save();
+      r.translate(Math.round((ax + this.ox) * S), Math.round((ay + this.oy) * S));
+      if (rot) r.rotate(rot);
+      r.scale((flip ? -1 : 1) * sx * S, sy * S);
+      r.drawImage(img, -img.width / 2, -img.height);
+      r.restore();
+    }
+    // 부드러운 빛 (더하기 합성)
+    glow(x, y, rad, col, a) {
+      if (a <= 0.01) return;
+      const r = this.raw;
+      const S = this.S;
+      const R = rad * S;
+      const pa = r.globalAlpha;
+      r.globalCompositeOperation = 'lighter';
+      r.imageSmoothingEnabled = true;
+      r.globalAlpha = Math.min(1, a);
+      r.drawImage(glowTex(col), (x + this.ox) * S - R, (y + this.oy) * S - R, 2 * R, 2 * R);
+      r.globalAlpha = pa;
+      r.imageSmoothingEnabled = false;
+      r.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  const ease = {
+    out: (k) => 1 - (1 - k) * (1 - k),
+    inOut: (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2),
+  };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 
   function Renderer(canvas) {
     this.canvas = canvas;
     canvas.width = F.W;
     canvas.height = F.H;
-    this.ctx = canvas.getContext('2d');
-    this.ctx.imageSmoothingEnabled = false;
+    this.raw = canvas.getContext('2d');
+    this.raw.imageSmoothingEnabled = false;
+    this.ctx = new PixelCtx(this.raw);
     this.bg = null;
     this.theme = null;
     this.shots = [];
     this.fxs = [];
     this.nums = [];
-    this.lunge = new Float32Array(F.SIZE);
-    this.lungeBig = new Uint8Array(F.SIZE).fill(1);
+    this.parts = [];
+    this.amb = [];
+    // 유닛 칸마다 연출 상태
+    this.atk = new Float32Array(F.SIZE); // 공격 모션 남은 시간
+    this.atkDur = new Float32Array(F.SIZE);
+    this.face = new Int8Array(F.SIZE).fill(1); // 1 오른쪽, -1 왼쪽
     this.lungeDir = [];
-    for (let i = 0; i < F.SIZE; i++) this.lungeDir.push({ x: 0, y: 0 });
-    this.pop = new Float32Array(F.SIZE);
+    for (let i = 0; i < F.SIZE; i++) this.lungeDir.push({ x: 1, y: 0 });
+    this.pop = new Float32Array(F.SIZE); // 소환·합성 연출 남은 시간
+    this.popMax = new Float32Array(F.SIZE);
+    this.popKind = new Uint8Array(F.SIZE); // 1 소환(떨어짐), 2 합성(빛)
+    this.popDust = new Uint8Array(F.SIZE);
     this.shake = 0;
     this.t = 0;
     this.sel = -1;
     this.drag = null;
-    this.hoverSlot = -1;
-    this.flashRift = [];
     this.noReach = new Uint8Array(F.SIZE);
+    this.vignette = null;
   }
   const P = Renderer.prototype;
+
+  // 화면 크기에 맞춰 캔버스를 기기 해상도로 만든다. cssScale: 논리 픽셀 하나의 CSS 크기
+  P.resize = function (cssScale, dpr) {
+    const W = Math.max(F.W, Math.round(F.W * cssScale * dpr));
+    const S = W / F.W;
+    const H = Math.round(F.H * S);
+    if (this.canvas.width !== W || this.canvas.height !== H) {
+      this.canvas.width = W;
+      this.canvas.height = H;
+      this.raw.imageSmoothingEnabled = false;
+      this.vignette = null;
+    }
+    this.ctx.S = S;
+    return { w: W / dpr, h: H / dpr };
+  };
 
   P.setTheme = function (name) {
     if (this.theme === name && this.bg) return;
     this.theme = name;
     this.bg = buildBackground(THEMES[name] || THEMES.forest, name);
+    this.amb.length = 0;
   };
+
+  function onPath(px, py, o) {
+    return px >= F.L - o && px < F.R + o && py >= F.T - o && py < F.B + o && !(px >= F.L + o && px < F.R - o && py >= F.T + o && py < F.B - o);
+  }
 
   function buildBackground(th, name) {
     const c = document.createElement('canvas');
@@ -85,25 +224,53 @@
       x.fillStyle = rng.pick(th.speck);
       x.fillRect(rng.int(F.W), rng.int(F.H), 1, 1);
     }
-    // 길 (폭 18 사각 루프)
+    // 길 (폭 18 사각 루프): 바깥 가장자리는 밝게, 안쪽 가장자리는 그늘지게
     const o = 9;
     x.fillStyle = th.pathEdge;
     x.fillRect(F.L - o - 1, F.T - o - 1, F.R - F.L + 2 * o + 2, F.B - F.T + 2 * o + 2);
     x.fillStyle = th.path[0];
     x.fillRect(F.L - o, F.T - o, F.R - F.L + 2 * o, F.B - F.T + 2 * o);
+    x.fillStyle = th.path[2];
+    x.fillRect(F.L - o, F.T - o, F.R - F.L + 2 * o, 1);
+    x.fillRect(F.L - o, F.T - o, 1, F.B - F.T + 2 * o);
     // 안쪽 땅
     x.fillStyle = th.pathEdge;
     x.fillRect(F.L + o - 1, F.T + o - 1, F.R - F.L - 2 * o + 2, F.B - F.T - 2 * o + 2);
     x.fillStyle = th.ground[1];
     x.fillRect(F.L + o, F.T + o, F.R - F.L - 2 * o, F.B - F.T - 2 * o);
+    x.fillStyle = th.path[1];
+    x.fillRect(F.L + o - 2, F.T + o - 2, F.R - F.L - 2 * o + 4, 1);
+    x.fillRect(F.L + o - 2, F.T + o - 2, 1, F.B - F.T - 2 * o + 4);
     for (let k = 0; k < 500; k++) {
       const px = rng.int(F.W);
       const py = rng.int(F.H);
-      const onPath = px >= F.L - o && px < F.R + o && py >= F.T - o && py < F.B + o &&
-        !(px >= F.L + o && px < F.R - o && py >= F.T + o && py < F.B - o);
-      if (!onPath) continue;
+      if (!onPath(px, py, o)) continue;
       x.fillStyle = rng.chance(0.2) ? th.pebble : rng.pick(th.path);
       x.fillRect(px, py, rng.chance(0.3) ? 2 : 1, 1);
+    }
+    // 돌멩이: 밝은 윗면 + 아래 그림자
+    for (let k = 0; k < 60; k++) {
+      const px = rng.int(F.W);
+      const py = rng.int(F.H);
+      if (!onPath(px, py, o - 1) || !onPath(px + 2, py + 2, o - 1)) continue;
+      x.fillStyle = th.pathEdge;
+      x.fillRect(px, py + 1, 2, 1);
+      x.fillStyle = th.pebble;
+      x.fillRect(px, py, 2, 1);
+    }
+    // 풀포기 (길 밖 땅)
+    if (th.tuft) {
+      for (let k = 0; k < 70; k++) {
+        const px = rng.int(F.W - 2);
+        const py = 2 + rng.int(F.H - 4);
+        if (onPath(px, py, o + 2) || onPath(px + 2, py, o + 2)) continue;
+        if (px > F.GX - 3 && px < F.GX + F.COLS * F.SLOT + 2 && py > F.GY - 3 && py < F.GY + F.ROWS * F.SLOT + 2) continue;
+        x.fillStyle = th.tuft[0];
+        x.fillRect(px, py, 1, 2);
+        x.fillRect(px + 2, py, 1, 2);
+        x.fillStyle = th.tuft[1];
+        x.fillRect(px + 1, py - 1, 1, 3);
+      }
     }
     // 칸
     for (let i = 0; i < F.SIZE; i++) {
@@ -147,6 +314,163 @@
     return c;
   }
 
+  // 가장자리를 살짝 어둡게 (기기 해상도로 부드럽게)
+  P.buildVignette = function () {
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.56);
+    g.addColorStop(0, 'rgba(10,6,18,0)');
+    g.addColorStop(1, 'rgba(10,6,18,0.42)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, W, H);
+    this.vignette = c;
+  };
+
+  // ── 파티클 ──
+  // o: { sp:[최소,최대] 속도, ang: 중심 각, spread: 퍼짐, g: 중력, life:[최소,최대], cols:[], size, drag, glow }
+  P.emit = function (x, y, n, o) {
+    const parts = this.parts;
+    for (let k = 0; k < n; k++) {
+      if (parts.length >= 420) return;
+      const a = (o.ang == null ? -Math.PI / 2 : o.ang) + (Math.random() - 0.5) * (o.spread == null ? Math.PI * 2 : o.spread);
+      const sp = rnd(o.sp ? o.sp[0] : 10, o.sp ? o.sp[1] : 30);
+      const life = rnd(o.life ? o.life[0] : 0.3, o.life ? o.life[1] : 0.6);
+      parts.push({
+        x: x + (o.jit ? rnd(-o.jit, o.jit) : 0), y: y + (o.jit ? rnd(-o.jit, o.jit) : 0),
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: o.g || 0, drag: o.drag || 0,
+        life, max: life, col: pick(o.cols || ['#ffffff']), size: o.size || 1, glow: o.glow || 0,
+      });
+    }
+  };
+  P.drawParts = function (ctx, dt) {
+    const parts = this.parts;
+    let w = 0;
+    for (let k = 0; k < parts.length; k++) {
+      const p = parts[k];
+      p.life -= dt;
+      if (p.life <= 0) continue;
+      parts[w++] = p;
+      if (p.drag) {
+        const d = Math.max(0, 1 - p.drag * dt);
+        p.vx *= d;
+        p.vy *= d;
+      }
+      p.vy += p.g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      const a = Math.min(1, (p.life / p.max) * 1.8);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.col;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      if (p.glow) ctx.glow(p.x, p.y, p.glow, p.col, a * 0.35);
+    }
+    ctx.globalAlpha = 1;
+    parts.length = w;
+  };
+
+  // ── 분위기: 막마다 떠다니는 것들 (반딧불·도깨비불·거품·물빛·균열 입자·불티) ──
+  const AMB = {
+    firefly: { n: 9, cols: ['#e6f58a', '#f5e27a'] },
+    wisp: { n: 9, cols: ['#bfe0ff', '#9ab8ff'] },
+    bubble: { n: 10, cols: ['#b8e8a0', '#8fcf8a'] },
+    sparkle: { n: 12, cols: ['#ffffff', '#a8d4e8'] },
+    mote: { n: 14, cols: ['#f07fb0', '#a061e8', '#d3a0f7'] },
+    ember: { n: 14, cols: ['#ff9a3d', '#e04a52', '#ffe46b'] },
+  };
+  P.spawnAmb = function (kind, fresh) {
+    const A = AMB[kind];
+    const life = kind === 'sparkle' ? rnd(0.5, 1.2) : kind === 'bubble' ? rnd(1.2, 2.4) : rnd(3, 7);
+    const m = {
+      kind, col: pick(A.cols), x: rnd(2, F.W - 2), y: rnd(2, F.H - 2), vx: 0, vy: 0,
+      life, max: life, ph: Math.random() * 6.28,
+    };
+    if (kind === 'wisp' || kind === 'mote') m.vy = -rnd(2, 5);
+    if (kind === 'ember') {
+      m.vy = -rnd(6, 12);
+      if (!fresh) m.y = F.H + 2;
+    }
+    if (kind === 'bubble') m.vy = -rnd(1.5, 3.5);
+    if (fresh) m.life = rnd(0, life); // 처음에는 수명이 제각각이게
+    this.amb.push(m);
+  };
+  P.drawAmbient = function (ctx, dt) {
+    const th = THEMES[this.theme] || THEMES.forest;
+    const kind = th.amb;
+    if (!kind) return;
+    const A = AMB[kind];
+    while (this.amb.length < A.n) this.spawnAmb(kind, this.amb.length < A.n && this.t < 0.1);
+    const t = this.t;
+    for (let k = 0; k < this.amb.length; k++) {
+      const m = this.amb[k];
+      m.life -= dt;
+      if (m.life <= 0) {
+        this.amb.splice(k--, 1);
+        this.spawnAmb(kind, false);
+        continue;
+      }
+      const age = m.max - m.life;
+      const fade = Math.min(1, age / 0.6, m.life / 0.6);
+      if (kind === 'firefly') {
+        m.vx += rnd(-12, 12) * dt;
+        m.vy += rnd(-12, 12) * dt;
+        m.vx *= 0.98;
+        m.vy *= 0.98;
+        const blink = 0.45 + 0.55 * Math.max(0, Math.sin(t * 2.2 + m.ph));
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+        ctx.globalAlpha = fade * blink;
+        ctx.fillStyle = m.col;
+        ctx.fillRect(m.x - 0.5, m.y - 0.5, 1, 1);
+        ctx.glow(m.x, m.y, 4, m.col, fade * blink * 0.45);
+      } else if (kind === 'wisp' || kind === 'mote') {
+        m.y += m.vy * dt;
+        const sx = m.x + Math.sin(t * 1.3 + m.ph) * (kind === 'mote' ? 3 : 1.5);
+        ctx.globalAlpha = fade * 0.8;
+        ctx.fillStyle = m.col;
+        ctx.fillRect(sx - 0.5, m.y - 0.5, 1, 1);
+        ctx.glow(sx, m.y, kind === 'mote' ? 3.5 : 5, m.col, fade * 0.35);
+      } else if (kind === 'ember') {
+        m.y += m.vy * dt;
+        const sx = m.x + Math.sin(t * 2 + m.ph) * 2;
+        const fl = 0.6 + 0.4 * Math.sin(t * 13 + m.ph);
+        ctx.globalAlpha = fade * fl;
+        ctx.fillStyle = m.col;
+        ctx.fillRect(sx - 0.5, m.y - 0.5, 1, 1);
+        ctx.glow(sx, m.y, 3, m.col, fade * fl * 0.4);
+      } else if (kind === 'bubble') {
+        m.y += m.vy * dt;
+        ctx.globalAlpha = fade * 0.7;
+        ctx.fillStyle = m.col;
+        if (m.life > 0.15) {
+          ctx.fillRect(m.x - 1, m.y, 1, 1);
+          ctx.fillRect(m.x + 1, m.y, 1, 1);
+          ctx.fillRect(m.x, m.y - 1, 1, 1);
+          ctx.fillRect(m.x, m.y + 1, 1, 1);
+        } else {
+          // 톡 터진다
+          ctx.fillRect(m.x - 2, m.y, 1, 1);
+          ctx.fillRect(m.x + 2, m.y, 1, 1);
+          ctx.fillRect(m.x, m.y - 2, 1, 1);
+        }
+      } else if (kind === 'sparkle') {
+        const k2 = Math.sin((age / m.max) * Math.PI);
+        ctx.globalAlpha = k2;
+        ctx.fillStyle = m.col;
+        ctx.fillRect(m.x, m.y, 1, 1);
+        if (k2 > 0.6) {
+          ctx.globalAlpha = (k2 - 0.6) * 1.8;
+          ctx.fillRect(m.x - 1, m.y, 3, 1);
+          ctx.fillRect(m.x, m.y - 1, 1, 3);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  };
+
   // ── 이벤트 수신 ──
   P.consume = function (b) {
     const list = b.fx;
@@ -160,58 +484,73 @@
             if (this.fxs.length < 60) this.fxs.push({ k: 'ring', x: ev.x2, y: ev.y2 - 3, r: RS.CLASS.knight.cleaveR, t: 0.18, max: 0.18, col: ev.crit ? '#ffe46b' : RS.TIER[ev.tier].light });
             if (ev.crit) this.shake = Math.max(this.shake, 0.08);
           }
-          if (ev.slot >= 0) {
-            this.lunge[ev.slot] = ev.cls === 'knight' ? 0.14 : 0.09;
-            this.lungeBig[ev.slot] = ev.cls === 'knight' ? 2 : 1;
-            const d = this.lungeDir[ev.slot];
-            const dx = ev.x2 - ev.x1;
-            const dy = ev.y2 - ev.y1;
-            const len = Math.max(1, Math.hypot(dx, dy));
-            d.x = Math.round(dx / len);
-            d.y = Math.round(dy / len);
-          }
+          if (ev.slot >= 0) this.startAttack(b, ev);
           break;
         case 'num':
           // 숫자가 너무 많으면 치명타·큰 적 위주로만 띄운다
           if (this.nums.length < (ev.crit ? 16 : 7)) {
-            this.nums.push({ x: ev.x + (Math.random() * 8 - 4), y: ev.y - Math.random() * 5, s: RS.fmtNum(ev.v), c: ev.crit ? 'y' : 'w', t: ev.crit ? 0.8 : 0.55, max: ev.crit ? 0.8 : 0.55 });
+            const life = ev.crit ? 0.85 : 0.6;
+            this.nums.push({ x: ev.x + rnd(-3, 3), y: ev.y - rnd(0, 4), vx: rnd(-10, 10), vy: ev.crit ? -34 : -26, s: RS.fmtNum(ev.v), c: ev.crit ? 'y' : 'w', t: life, max: life, big: ev.crit ? 1.9 : 1.45 });
           }
           break;
         case 'boom':
-          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.25, max: 0.25, col: RS.TIER[ev.tier].light });
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.25, max: 0.25, col: RS.TIER[ev.tier].light, glow: true });
+          this.emit(ev.x, ev.y, 6, { sp: [15, 40], life: [0.2, 0.45], cols: ['#ff9a3d', '#ffe46b', RS.TIER[ev.tier].light], g: 30, drag: 3, glow: 2.5 });
           break;
-        case 'kill':
-          this.fxs.push({ k: 'puff', x: ev.x, y: ev.y, t: 0.35, max: 0.35, big: ev.big });
-          if (ev.gold >= 1) this.nums.push({ x: ev.x, y: ev.y - 8, s: '+' + Math.floor(ev.gold), c: 'g', t: 0.7, max: 0.7 });
+        case 'kill': {
+          const cols = RS.SPR_COL[ev.type] || ['#ffffff', '#b8c2d3'];
+          this.fxs.push({ k: 'pop', name: ev.type, x: ev.x, y: ev.y + 5, t: 0.2, max: 0.2 });
+          this.emit(ev.x, ev.y, ev.big ? 20 : 8, { sp: [20, ev.big ? 70 : 45], life: [0.3, 0.6], cols: cols.concat(['#fff6e6']), g: 90, drag: 1.5, size: ev.big ? 1.5 : 1, jit: 2 });
+          if (ev.gold >= 1) {
+            this.nums.push({ x: ev.x, y: ev.y - 8, vx: 0, vy: -18, s: '+' + Math.floor(ev.gold), c: 'g', t: 0.75, max: 0.75, big: 1.3 });
+            this.emit(ev.x, ev.y - 3, Math.min(4, 1 + Math.floor(ev.gold / 3)), { sp: [25, 45], ang: -Math.PI / 2, spread: 1.4, life: [0.35, 0.55], cols: ['#ffe46b', '#f5c44a'], g: 160, glow: 2 });
+          }
           if (ev.big) this.shake = Math.max(this.shake, 0.25);
           break;
+        }
         case 'leak':
           this.fxs.push({ k: 'leak', x: F.L, y: F.T, t: 0.5, max: 0.5 });
-          this.nums.push({ x: F.L + 6, y: F.T + 4, s: '-' + Math.round(ev.v), c: 'r', t: 0.9, max: 0.9 });
+          this.nums.push({ x: F.L + 6, y: F.T + 4, vx: 6, vy: -16, s: '-' + Math.round(ev.v), c: 'r', t: 0.9, max: 0.9, big: 1.6 });
+          this.emit(F.L, F.T, 12, { sp: [20, 55], life: [0.3, 0.6], cols: ['#e04a52', '#f07fb0', '#ffffff'], drag: 2.5, glow: 2 });
           this.shake = Math.max(this.shake, 0.18);
           break;
         case 'summon':
-          this.pop[ev.slot] = 0.3;
-          if (ev.twin != null) this.pop[ev.twin] = 0.3;
+          this.startPop(ev.slot, 1, 0.38);
+          if (ev.twin != null) this.startPop(ev.twin, 1, 0.38);
+          if (ev.tier > 0) {
+            const c = RS.slotCenter(ev.slot);
+            this.fxs.push({ k: 'beam', x: c.x, y: c.y + 7, t: 0.5, max: 0.5, col: RS.TIER[ev.tier].light });
+          }
           break;
         case 'merge':
           for (const r of ev.res.results) {
-            this.pop[r.slot] = 0.45;
+            this.startPop(r.slot, 2, 0.5);
             const c = RS.slotCenter(r.slot);
-            this.fxs.push({ k: 'star', x: c.x, y: c.y, t: 0.5, max: 0.5, col: RS.TIER[r.tier].light });
+            const col = RS.TIER[r.tier].light;
+            this.fxs.push({ k: 'star', x: c.x, y: c.y, t: 0.5, max: 0.5, col });
+            this.fxs.push({ k: 'beam', x: c.x, y: c.y + 7, t: 0.55, max: 0.55, col });
+            // 사방에서 빛 조각이 모여든다
+            for (let j = 0; j < 10; j++) {
+              const a = (j / 10) * Math.PI * 2;
+              const d = 16;
+              if (this.parts.length < 420) this.parts.push({ x: c.x + Math.cos(a) * d, y: c.y + Math.sin(a) * d, vx: -Math.cos(a) * d / 0.25, vy: -Math.sin(a) * d / 0.25, g: 0, drag: 0, life: 0.25, max: 0.25, col, size: 1, glow: 3 });
+            }
+            this.emit(c.x, c.y, 10, { sp: [25, 55], life: [0.3, 0.55], cols: [col, '#ffffff'], drag: 3, glow: 3 });
+            if (r.tier >= 3) this.shake = Math.max(this.shake, 0.15);
           }
           break;
         case 'heal':
-          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.4, max: 0.4, col: '#62c35f' });
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.4, max: 0.4, col: '#62c35f', glow: true });
           break;
         case 'haste':
-          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.4, max: 0.4, col: '#a061e8' });
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.4, max: 0.4, col: '#a061e8', glow: true });
           break;
         case 'summonFx':
-          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: 14, t: 0.4, max: 0.4, col: '#f07fb0' });
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: 14, t: 0.4, max: 0.4, col: '#f07fb0', glow: true });
           break;
         case 'keg':
           this.fxs.push({ k: 'flash', t: 0.2, max: 0.2, col: '#ff9a3d' });
+          this.emit(F.L, F.T, 16, { sp: [30, 80], life: [0.3, 0.6], cols: ['#ff9a3d', '#ffe46b', '#e04a52'], g: 40, drag: 2, glow: 3 });
           break;
         case 'bomb':
           this.fxs.push({ k: 'flash', t: 0.3, max: 0.3, col: '#ffe46b' });
@@ -232,16 +571,18 @@
           if (ev.cls === 'frost') this.fxs.push({ k: 'shards', x: ev.x, y: ev.y, r: ev.r, t: 0.6, max: 0.6, seed: Math.random() * 6 });
           if (ev.cls === 'archer') this.fxs.push({ k: 'flash', t: 0.15, max: 0.15, col: '#ffe46b' });
           if (ev.cls === 'knight') {
-            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.35, max: 0.35, col: T4.light });
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.35, max: 0.35, col: T4.light, glow: true });
             this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r * 0.6, t: 0.3, max: 0.3, col: '#ffffff' });
+            this.emit(ev.x, ev.y + 4, 16, { sp: [30, 70], ang: -Math.PI / 2, spread: Math.PI * 1.6, life: [0.3, 0.6], cols: ['#b8a58a', '#8d7a60', '#fff6e6'], g: 140, drag: 1 });
             this.shake = Math.max(this.shake, 0.25);
           } else if (ev.cls === 'mage') {
             this.fxs.push({ k: 'meteor', x: ev.x, y: ev.y, r: ev.r, t: 0.45, max: 0.45 });
           } else if (ev.cls === 'frost') {
-            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.45, max: 0.45, col: '#a8ecff' });
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.45, max: 0.45, col: '#a8ecff', glow: true });
             this.fxs.push({ k: 'flash', t: 0.25, max: 0.25, col: '#a8ecff' });
           } else if (ev.cls === 'rogue') {
             this.fxs.push({ k: 'star', x: ev.x, y: ev.y, t: 0.35, max: 0.35, col: T4.light });
+            this.emit(ev.x, ev.y, 8, { sp: [20, 45], life: [0.25, 0.45], cols: ['#2a1f3d', '#a061e8', T4.light], drag: 3 });
           }
           break;
         }
@@ -249,10 +590,50 @@
           this.shake = 0.5;
           this.fxs.push({ k: 'flash', t: 0.35, max: 0.35, col: '#ffffff' });
           break;
+        case 'wave':
+          // 새 웨이브: 균열 문이 크게 일렁인다
+          this.fxs.push({ k: 'ring', x: F.L, y: F.T, r: 16, t: 0.45, max: 0.45, col: '#d3a0f7', glow: true });
+          break;
+        case 'boss':
+          // 보스 등장: 문에서 붉은 빛이 터지고 화면이 흔들린다
+          this.shake = Math.max(this.shake, 0.4);
+          this.fxs.push({ k: 'flash', t: 0.3, max: 0.3, col: '#e04a52' });
+          this.fxs.push({ k: 'ring', x: F.L, y: F.T, r: 26, t: 0.6, max: 0.6, col: '#e04a52', glow: true });
+          this.emit(F.L, F.T, 24, { sp: [30, 80], life: [0.4, 0.8], cols: ['#e04a52', '#f07fb0', '#a061e8'], drag: 2, glow: 3 });
+          break;
       }
     }
     list.length = 0;
     b.numCount = 0;
+  };
+
+  // 공격 모션 시작: 대상 쪽으로 몸을 돌리고, 직업마다 다른 동작
+  const ATK_DUR = { knight: 0.26, archer: 0.22, mage: 0.3, rogue: 0.16, frost: 0.26 };
+  P.startAttack = function (b, ev) {
+    const i = ev.slot;
+    const dx = ev.x2 - ev.x1;
+    const dy = ev.y2 - ev.y1;
+    const len = Math.max(1, Math.hypot(dx, dy));
+    if (Math.abs(dx) > 2) this.face[i] = dx < 0 ? -1 : 1;
+    const D = ATK_DUR[ev.cls] || 0.2;
+    // 연사하는 유닛은 모션이 거의 끝났을 때만 새로 시작한다 (덜덜 떨리지 않게)
+    if (this.atk[i] > this.atkDur[i] * 0.35) return;
+    this.atk[i] = D;
+    this.atkDur[i] = D;
+    this.lungeDir[i].x = dx / len;
+    this.lungeDir[i].y = dy / len;
+    if (ev.cls === 'frost') {
+      const c = RS.slotCenter(i);
+      this.emit(c.x, c.y - 2, 2, { sp: [6, 14], ang: -Math.PI / 2, spread: 1.2, life: [0.3, 0.5], cols: ['#a8ecff', '#ffffff'], glow: 2 });
+    }
+  };
+
+  P.startPop = function (slot, kind, dur) {
+    if (slot == null || slot < 0) return;
+    this.pop[slot] = dur;
+    this.popMax[slot] = dur;
+    this.popKind[slot] = kind;
+    this.popDust[slot] = 0;
   };
 
   P.addShot = function (ev) {
@@ -260,7 +641,7 @@
     const dur = ev.cls === 'knight' ? (ev.crit ? 0.26 : 0.2) : ev.cls === 'rogue' ? 0.1 : ev.cls === 'mage' ? 0.16 : 0.12;
     // 전사는 번갈아 가며 반대 방향으로 벤다
     this.slashFlip = !this.slashFlip;
-    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip, miss: ev.miss, rain: ev.rain });
+    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip, miss: ev.miss, rain: ev.rain, spin: Math.random() * 6 });
   };
 
   // ── 그리기 ──
@@ -271,36 +652,54 @@
     let sy = 0;
     if (this.shake > 0) {
       this.shake -= dt;
-      sx = Math.round((Math.random() - 0.5) * 3);
-      sy = Math.round((Math.random() - 0.5) * 3);
+      // 부드럽게 흔들리다 잦아든다
+      const A = Math.min(2.2, this.shake * 7 + 0.4);
+      sx = (Math.sin(this.t * 71) * 0.6 + Math.sin(this.t * 133) * 0.4) * A;
+      sy = (Math.cos(this.t * 83) * 0.6 + Math.sin(this.t * 157) * 0.4) * A;
     }
     ctx.setTransform(1, 0, 0, 1, sx, sy);
+    this.raw.fillStyle = '#15111d';
+    this.raw.fillRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.drawImage(this.bg, 0, 0);
-    this.drawPortal(ctx);
+    this.drawPortal(ctx, dt);
     if (b) {
       this.drawRift(ctx, b);
       this.drawSlots(ctx, b, dt);
-      this.drawEnemies(ctx, b);
+      this.drawEnemies(ctx, b, dt);
     }
     this.drawShots(ctx, dt);
     this.drawFx(ctx, dt);
+    this.drawParts(ctx, dt);
+    this.drawAmbient(ctx, dt);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (!this.vignette) this.buildVignette();
+    this.raw.drawImage(this.vignette, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, sx, sy);
     this.drawNums(ctx, dt);
     if (b) this.drawDrag(ctx, b);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
-  P.drawPortal = function (ctx) {
+  P.drawPortal = function (ctx, dt) {
     const cx = F.L;
     const cy = F.T;
+    const t = this.t;
+    ctx.glow(cx, cy, 13 + Math.sin(t * 2.4) * 1.5, '#a061e8', 0.5);
     const cols = ['#f07fb0', '#a061e8', '#5e3593'];
-    for (let k = 0; k < 10; k++) {
-      const a = this.t * 3 + (k * Math.PI * 2) / 10;
-      const r = 3 + (k % 3) * 1.6;
+    for (let k = 0; k < 12; k++) {
+      const a = t * 3 + (k * Math.PI * 2) / 12;
+      const r = 2.5 + (k % 3) * 1.7;
       ctx.fillStyle = cols[k % 3];
-      ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r), 1, 1);
+      ctx.fillRect(cx + Math.cos(a) * r - 0.5, cy + Math.sin(a) * r - 0.5, 1, 1);
     }
     ctx.fillStyle = '#f7d9ff';
     ctx.fillRect(cx - 1, cy - 1, 2, 2);
+    // 주변 입자가 문으로 빨려 든다
+    if (dt > 0 && Math.random() < dt * 6 && this.parts.length < 380) {
+      const a = Math.random() * Math.PI * 2;
+      const d = rnd(10, 15);
+      this.parts.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, vx: -Math.cos(a) * d * 1.6, vy: -Math.sin(a) * d * 1.6, g: 0, drag: 0, life: 0.55, max: 0.55, col: pick(cols), size: 1, glow: 0 });
+    }
   };
 
   P.drawRift = function (ctx, b) {
@@ -315,7 +714,7 @@
     }
   };
 
-  // 룬: 칸 네 귀퉁이에 룬 색 표시, 금 간 칸은 금을 그린다
+  // 룬: 칸을 룬 색으로 물들이고 네 귀퉁이 표시, 금 간 칸은 금을 그린다
   const CRACK = [[7, 4], [8, 5], [8, 6], [9, 7], [10, 8], [10, 9], [9, 10], [10, 11], [11, 12], [12, 13], [12, 14], [13, 15], [14, 16], [14, 17]];
   P.drawRune = function (ctx, R, x, y) {
     if (R.bad) {
@@ -327,7 +726,6 @@
     }
     const a = 2;
     const z = F.SLOT - 3;
-    // 강화된 칸: 룬 색으로 칸을 물들이고 테두리를 두른 뒤, 왼쪽 위에 룬 문양
     ctx.globalAlpha = 0.22;
     ctx.fillStyle = R.color;
     ctx.fillRect(x + 1, y + 1, F.SLOT - 2, F.SLOT - 2);
@@ -340,7 +738,8 @@
     ctx.fillRect(x + 3, y + 2, 1, 1);
     ctx.fillRect(x + 2, y + 3, 3, 1);
     ctx.fillRect(x + 3, y + 4, 1, 1);
-    ctx.globalAlpha = 0.75 + 0.25 * Math.sin(this.t * 3);
+    const pulse = 0.75 + 0.25 * Math.sin(this.t * 3);
+    ctx.globalAlpha = pulse;
     ctx.fillStyle = R.color;
     ctx.fillRect(x + a, y + a, 3, 1);
     ctx.fillRect(x + a, y + a, 1, 3);
@@ -351,6 +750,92 @@
     ctx.fillRect(x + z - 2, y + z, 3, 1);
     ctx.fillRect(x + z, y + z - 2, 1, 3);
     ctx.globalAlpha = 1;
+    ctx.glow(x + 3.5, y + 3.5, 4, R.color, 0.25 * pulse);
+  };
+
+  // 칸 유닛 한 기: 숨쉬기 + 공격 모션 + 소환·합성 연출
+  const TIER_GLOW = [null, null, ['#a65ee8', 0.16, 10], ['#f2a531', 0.24, 11], ['#ef4f6f', 0.34, 13]];
+  P.unitPose = function (i, s, dt) {
+    const t = this.t;
+    const br = Math.sin(t * 2.1 + i * 1.7);
+    const pose = { ox: 0, oy: 0, sx: 1 - 0.015 * br, sy: 1 + 0.03 * br, rot: 0, flash: 0, ghost: 0 };
+    if (this.atk[i] > 0) {
+      this.atk[i] = Math.max(0, this.atk[i] - dt);
+      const D = this.atkDur[i] || 0.2;
+      const p = 1 - this.atk[i] / D;
+      const d = this.lungeDir[i];
+      const f = this.face[i];
+      let off = 0;
+      switch (s.cls) {
+        case 'knight':
+          // 뒤로 젖혔다가 크게 내리친다
+          if (p < 0.3) {
+            const k = p / 0.3;
+            off = -1.2 * ease.out(k);
+            pose.rot = -0.2 * k * f;
+          } else if (p < 0.55) {
+            const k = (p - 0.3) / 0.25;
+            off = -1.2 + 4.6 * ease.out(k);
+            pose.rot = (-0.2 + 0.45 * k) * f;
+            pose.sx *= 1 + 0.08 * k;
+          } else {
+            const k = (p - 0.55) / 0.45;
+            off = 3.4 * (1 - ease.inOut(k));
+            pose.rot = 0.25 * (1 - k) * f;
+          }
+          break;
+        case 'archer':
+          off = -1.5 * Math.sin(Math.PI * Math.min(1, p / 0.6));
+          pose.sx *= 1 + 0.05 * Math.sin(Math.PI * p);
+          break;
+        case 'mage':
+          pose.oy -= 2.2 * Math.sin(Math.PI * p);
+          pose.sy *= 1 + 0.06 * Math.sin(Math.PI * p);
+          break;
+        case 'rogue':
+          off = 3 * Math.sin(Math.PI * p);
+          pose.rot = 0.12 * Math.sin(Math.PI * p) * f;
+          pose.ghost = 0.35 * Math.sin(Math.PI * p);
+          break;
+        case 'frost':
+          pose.oy -= 1.2 * Math.sin(Math.PI * p);
+          break;
+      }
+      pose.ox += d.x * off;
+      pose.oy += d.y * off;
+    }
+    if (this.pop[i] > 0) {
+      this.pop[i] = Math.max(0, this.pop[i] - dt);
+      const q = 1 - this.pop[i] / (this.popMax[i] || 0.3);
+      if (this.popKind[i] === 1) {
+        // 소환: 위에서 떨어져 착지하며 찌그러졌다 펴진다
+        if (q < 0.5) {
+          const k = q / 0.5;
+          pose.oy -= 16 * (1 - k * k);
+          pose.sy *= 1.12;
+          pose.sx *= 0.9;
+        } else {
+          const k = (q - 0.5) / 0.5;
+          const w = Math.sin(Math.PI * k) * (1 - k);
+          pose.sy *= 1 - 0.22 * w;
+          pose.sx *= 1 + 0.18 * w;
+          if (!this.popDust[i]) {
+            this.popDust[i] = 1;
+            const c = RS.slotCenter(i);
+            this.emit(c.x, c.y + 7, 7, { sp: [12, 28], ang: -Math.PI / 2, spread: Math.PI * 1.4, life: [0.25, 0.45], cols: ['#d8cbb0', '#a8987a'], g: 40, drag: 3 });
+          }
+        }
+        pose.flash = Math.max(0, 1 - q * 2.2);
+      } else {
+        // 합성: 빛에 싸여 떠올랐다 내려앉는다
+        pose.oy -= 3.5 * Math.sin(Math.PI * q);
+        pose.flash = Math.max(0, 0.9 - q * 1.4);
+        const w = Math.sin(Math.PI * Math.min(1, q * 1.4));
+        pose.sx *= 1 + 0.1 * w;
+        pose.sy *= 1 + 0.1 * w;
+      }
+    }
+    return pose;
   };
 
   P.drawSlots = function (ctx, b, dt) {
@@ -362,8 +847,6 @@
       const y = F.GY + Math.floor(i / F.COLS) * F.SLOT;
       const s = board[i];
       if (runes && runes[i]) this.drawRune(ctx, RS.RUNE[runes[i]], x, y);
-      if (this.lunge[i] > 0) this.lunge[i] -= dt;
-      if (this.pop[i] > 0) this.pop[i] -= dt;
       const dr = this.drag;
       if (dr && dr.moved && dr.over === i && dr.from !== i) {
         const bad = dr.overReach === false;
@@ -375,7 +858,11 @@
         ctx.fillRect(x, y, 1, F.SLOT);
         ctx.fillRect(x + F.SLOT - 1, y, 1, F.SLOT);
       }
-      if (!s) continue;
+      if (!s) {
+        this.atk[i] = 0;
+        this.pop[i] = 0;
+        continue;
+      }
       const T = RS.TIER[s.tier];
       // 등급 테두리
       ctx.fillStyle = T.dark;
@@ -385,31 +872,55 @@
         ctx.fillRect(x + 2, y + F.SLOT - 4, F.SLOT - 4, 1);
       }
       const spr = RS.SPR[s.cls + s.tier];
-      const bob = Math.sin(t * 3 + i) > 0.6 ? -1 : 0;
-      let ox = 0;
-      let oy = bob;
-      if (this.lunge[i] > 0) {
-        ox += this.lungeDir[i].x * this.lungeBig[i];
-        oy += this.lungeDir[i].y * this.lungeBig[i];
-      }
-      if (this.pop[i] > 0) oy -= Math.round(this.pop[i] * 8);
+      const pose = this.unitPose(i, s, dt);
+      const ax = x + 13;
+      const ay = y + 20;
       let draggedAway = false;
+      let alpha = 1;
       if (dr && dr.moved) {
         if (dr.from === i) {
-          ctx.globalAlpha = 0.35;
+          alpha = 0.35;
           draggedAway = true;
-        } else if (dr.over === i) ctx.globalAlpha = 0.35; // 자리를 내줄 유닛
+        } else if (dr.over === i) alpha = 0.35; // 자리를 내줄 유닛
       }
-      const stunned = b.slotStun[i] > 0;
-      ctx.drawImage(spr, x + 4 + ox, y + 2 + oy);
+      // 그림자 (몸이 뜨면 작아진다)
+      const lift = Math.min(1, Math.max(0, -pose.oy / 16));
+      ctx.globalAlpha = 0.32 * alpha * (1 - lift * 0.6);
+      ctx.fillStyle = '#0c0814';
+      const sw = 10 - lift * 4;
+      ctx.fillRect(ax - sw / 2 + pose.ox * 0.5, ay - 1, sw, 1);
+      ctx.fillRect(ax - sw / 2 + 1 + pose.ox * 0.5, ay, sw - 2, 1);
       ctx.globalAlpha = 1;
+      // 영웅 이상은 은은한 빛
+      const tg = TIER_GLOW[s.tier];
+      if (tg && !draggedAway) ctx.glow(ax, ay - 8, tg[2] + Math.sin(t * 2 + i) * 1, tg[0], tg[1] * (s.tier >= 4 ? 0.8 + 0.2 * Math.sin(t * 4 + i) : 1));
+      const flip = this.face[i] < 0;
+      if (pose.ghost > 0.02) {
+        ctx.globalAlpha = pose.ghost * alpha;
+        ctx.sprite(spr, ax + pose.ox * 0.45, ay + pose.oy * 0.45, pose.sx, pose.sy, pose.rot * 0.5, flip);
+      }
+      ctx.globalAlpha = alpha;
+      ctx.sprite(spr, ax + pose.ox, ay + pose.oy, pose.sx, pose.sy, pose.rot, flip);
+      if (pose.flash > 0.02) {
+        ctx.globalAlpha = pose.flash * alpha;
+        ctx.sprite(RS.SPR[s.cls + s.tier + '_w'], ax + pose.ox, ay + pose.oy, pose.sx, pose.sy, pose.rot, flip);
+      }
+      ctx.globalAlpha = 1;
+      // 마법사: 공격할 때 지팡이 끝에 빛
+      if (s.cls === 'mage' && this.atk[i] > 0) {
+        const p = 1 - this.atk[i] / (this.atkDur[i] || 0.3);
+        ctx.glow(ax + (flip ? -6 : 6) + pose.ox, ay - 17 + pose.oy, 5, T.light, 0.6 * Math.sin(Math.PI * p));
+      }
       // 신화: 유닛 둘레를 도는 반짝이
       if (s.tier >= 4 && !draggedAway) {
         const T4 = RS.TIER[s.tier];
         for (let k = 0; k < 3; k++) {
           const a = t * 2.4 + k * 2.094 + i;
+          const px = x + F.SLOT / 2 + Math.cos(a) * 8;
+          const py = y + F.SLOT / 2 - 1 + Math.sin(a) * 8;
           ctx.fillStyle = k === 0 ? '#ffffff' : T4.light;
-          ctx.fillRect(Math.round(x + F.SLOT / 2 + Math.cos(a) * 8), Math.round(y + F.SLOT / 2 - 1 + Math.sin(a) * 8), 1, 1);
+          ctx.fillRect(px - 0.5, py - 0.5, 1, 1);
+          ctx.glow(px, py, 2.5, T4.light, 0.35);
         }
       }
       if (draggedAway && dr.over >= 0 && dr.over !== i && board[dr.over]) {
@@ -419,7 +930,7 @@
         ctx.drawImage(RS.SPR[o.cls + o.tier], x + 4, y + 2);
         ctx.globalAlpha = 1;
       }
-      if (stunned) {
+      if (b.slotStun[i] > 0) {
         ctx.fillStyle = 'rgba(160,97,232,0.45)';
         ctx.fillRect(x + 2, y + 2, F.SLOT - 4, F.SLOT - 4);
         this.drawStars(ctx, x + 13, y + 4);
@@ -430,8 +941,9 @@
         ctx.fillRect(x + F.SLOT - 9, y + F.SLOT - 10, 7, 7);
         RS.drawNum(ctx, String(s.n), x + F.SLOT - 5.5, y + F.SLOT - 10, RS.canMerge(board, i) ? 'y' : 'w');
       }
-      if (RS.canMerge(board, i) && Math.floor(t * 3) % 2 === 0) {
-        ctx.drawImage(RS.SPR.i_up, x + 1, y + 1, 7, 7);
+      if (RS.canMerge(board, i)) {
+        // 합성 가능: 위아래로 통통 튀는 화살표
+        ctx.drawImage(RS.SPR.i_up, x + 1, y + 1 - Math.abs(Math.sin(t * 5)) * 1.5, 7, 7);
       }
       // 사거리가 길에 닿지 않는 칸: 오른쪽 위에 빨간 x (2Hz)
       if (this.noReach && this.noReach[i] && Math.floor(t * 4) % 2 === 0) {
@@ -452,11 +964,14 @@
       const i = this.sel;
       const x = F.GX + (i % F.COLS) * F.SLOT;
       const y = F.GY + Math.floor(i / F.COLS) * F.SLOT;
+      const pulse = 0.75 + 0.25 * Math.sin(t * 6);
+      ctx.globalAlpha = pulse;
       ctx.fillStyle = '#ffe46b';
       ctx.fillRect(x, y, F.SLOT, 1);
       ctx.fillRect(x, y + F.SLOT - 1, F.SLOT, 1);
       ctx.fillRect(x, y, 1, F.SLOT);
       ctx.fillRect(x + F.SLOT - 1, y, 1, F.SLOT);
+      ctx.globalAlpha = 1;
       const s = board[i];
       if (s && b.slotStats[i]) {
         const c = RS.slotCenter(i);
@@ -466,113 +981,252 @@
         for (let k = 0; k < n; k++) {
           if (k % 2) continue;
           const a = (k / n) * Math.PI * 2 + t * 0.4;
-          ctx.fillRect(Math.round(c.x + Math.cos(a) * r), Math.round(c.y + Math.sin(a) * r), 1, 1);
+          ctx.fillRect(c.x + Math.cos(a) * r - 0.5, c.y + Math.sin(a) * r - 0.5, 1, 1);
         }
       }
     }
   };
 
-  // 끌고 있는 유닛은 손가락보다 조금 위에 그린다
+  // 끌고 있는 유닛은 손가락보다 조금 위에, 살짝 흔들리며
   P.drawDrag = function (ctx, b) {
     const dr = this.drag;
     if (!dr || !dr.moved) return;
     const s = b.run.board[dr.from];
     if (!s) return;
     const spr = RS.SPR[s.cls + s.tier];
-    ctx.drawImage(spr, Math.round(dr.x - spr.width / 2), Math.round(dr.y - 26));
+    const vx = dr.x - (dr.px == null ? dr.x : dr.px);
+    dr.px = dr.x;
+    dr.tilt = (dr.tilt || 0) * 0.8 + Math.max(-0.3, Math.min(0.3, vx * 0.08)) * 0.2;
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#0c0814';
+    ctx.fillRect(dr.x - 4, dr.y - 7, 8, 1);
+    ctx.globalAlpha = 1;
+    ctx.sprite(spr, dr.x, dr.y - 8, 1.08, 1.08, dr.tilt, false);
   };
 
   P.drawStars = function (ctx, x, y) {
-    const k = Math.floor(this.t * 8) % 4;
+    const k = (this.t * 8) % 4;
     ctx.fillStyle = '#ffe46b';
     ctx.fillRect(x - 4 + k, y, 1, 1);
     ctx.fillRect(x + 3 - k, y + 1, 1, 1);
   };
 
-  P.drawEnemies = function (ctx, b) {
+  // 적 한 마리의 걸음새 (속도가 느려지면 걸음도 느려지고, 기절하면 멈춘다)
+  P.enemyPose = function (e, dt) {
+    const gait = GAIT[e.type] || 'walk';
+    const rate = e.stunT > 0 ? 0 : Math.max(0.25, 1 - (e.slow || 0));
+    e._g = (e._g == null ? e.phase : e._g) + dt * rate;
+    const g = e._g;
+    const pose = { ox: 0, oy: 0, sx: 1, sy: 1, rot: 0, fly: 0 };
+    switch (gait) {
+      case 'hop': {
+        const s = Math.sin(g * 7);
+        pose.oy = -Math.max(0, s) * 1.6;
+        pose.sy = 1 + 0.07 * s;
+        pose.sx = 1 - 0.06 * s;
+        break;
+      }
+      case 'fly':
+        pose.fly = 3 + Math.sin(g * 5) * 1.5;
+        break;
+      case 'float':
+        pose.fly = 2 + Math.sin(g * 2.6) * 1.4;
+        pose.sx = 1 + 0.02 * Math.sin(g * 2.6 + 1);
+        break;
+      case 'heavy': {
+        const s = Math.sin(g * 4.5);
+        pose.oy = -Math.abs(s) * 0.8;
+        pose.rot = s * 0.035;
+        break;
+      }
+      case 'scuttle':
+        pose.ox = Math.sin(g * 16) * 0.4;
+        pose.oy = -Math.abs(Math.sin(g * 16)) * 0.4;
+        break;
+      case 'pulse': {
+        const s = Math.sin(g * 4);
+        pose.sx = pose.sy = 1 + 0.04 * s;
+        break;
+      }
+      case 'still':
+        break;
+      default: {
+        const s = Math.sin(g * 8);
+        pose.oy = -Math.abs(s) * 0.9;
+        pose.rot = s * 0.07;
+      }
+    }
+    if (e.boss) {
+      pose.rot *= 0.5;
+      pose.oy *= 0.7;
+    }
+    // 균열 문에서 막 나온 적: 작게 시작해 부풀며 나타난다
+    e._age = (e._age || 0) + dt;
+    if (e._age < 0.3) {
+      const k = ease.out(e._age / 0.3);
+      pose.sx *= 0.3 + 0.7 * k;
+      pose.sy *= 0.3 + 0.7 * k;
+      pose.appear = 1 - k;
+    }
+    // 맞으면 움찔 (납작해지며 뒤로 살짝 밀린다)
+    if (e.flash > 0) {
+      const k = e.flash / 0.08;
+      pose.sx *= 1 + 0.12 * k;
+      pose.sy *= 1 - 0.1 * k;
+      const back = e.dir === 0 ? -1 : e.dir === 2 ? 1 : 0;
+      const backY = e.dir === 1 ? -1 : e.dir === 3 ? 1 : 0;
+      pose.ox += back * 0.7 * k;
+      pose.oy += backY * 0.7 * k;
+    }
+    // 가로로 움직일 때 가는 쪽을 본다
+    if (e.dir === 0) e._f = 1;
+    else if (e.dir === 2) e._f = -1;
+    return pose;
+  };
+
+  P.drawEnemies = function (ctx, b, dt) {
     const list = this.sorted || (this.sorted = []);
     list.length = 0;
     for (let k = 0; k < b.enemies.length; k++) list.push(b.enemies[k]);
     list.sort((a, c) => a.y - c.y);
     const t = this.t;
     const blind = !!b.M.blindfold;
+    // 그림자 먼저 (모든 적 아래에)
+    ctx.fillStyle = '#0c0814';
+    for (const e of list) {
+      if (e.subT > 0) continue;
+      const spr = RS.SPR[e.type];
+      const w = Math.max(6, Math.round(spr.width * 0.6));
+      const fl = GAIT[e.type] === 'fly' || GAIT[e.type] === 'float';
+      const sw = fl ? w * 0.7 : w;
+      ctx.globalAlpha = fl ? 0.2 : 0.3;
+      ctx.fillRect(e.x - sw / 2, e.y + 4, sw, 1);
+      ctx.fillRect(e.x - sw / 2 + 1, e.y + 5, sw - 2, 1);
+    }
+    ctx.globalAlpha = 1;
     for (const e of list) {
       let name = e.type;
+      const pose = this.enemyPose(e, dt);
       if (name === 'slime' || name === 'bat') {
-        if (Math.floor(t * 4 + e.phase) % 2) name += '2';
+        if (Math.floor(e._g * 4) % 2) name += '2';
       } else if (name === 'frog' && e.hopT !== undefined && (e.hopT < 0.25 || e.hopT > e.def.hop.every - 0.3)) {
         name = 'frog2'; // 뛰기 직전·직후 웅크린 모습
+        if (e.hopT < 0.25) pose.oy -= Math.sin((e.hopT / 0.25) * Math.PI) * 3;
       }
       const spr = RS.SPR[name];
       const w = spr.width;
       const h = spr.height;
-      const bob = e.boss ? 0 : Math.round(Math.sin(t * 8 + e.phase));
-      const x = Math.round(e.x - w / 2);
-      const y = Math.round(e.y - h + 5 + bob);
+      const ax = e.x + pose.ox;
+      const ay = e.y + 5 + pose.oy - pose.fly;
+      const flip = e._f === -1;
       // 물속에 잠긴 늪의 여왕: 흐릿한 모습과 물결만
       if (e.subT > 0) {
         ctx.globalAlpha = 0.28;
-        ctx.drawImage(spr, x, y);
+        ctx.sprite(spr, ax, ay, 1, 1, 0, flip);
         ctx.globalAlpha = 1;
         ctx.fillStyle = '#a8ecff';
-        const k = Math.floor(t * 6) % 3;
-        for (let j = 0; j < w; j += 3) ctx.fillRect(x + j + k, y + h - 3, 2, 1);
+        const k = (t * 6) % 3;
+        for (let j = 0; j < w; j += 3) ctx.fillRect(ax - w / 2 + j + k, ay - 3, 2, 1);
         continue;
       }
       if (e.boss && b.enraged) {
-        ctx.drawImage(RS.SPR[e.type + '_w'], x - 1, y);
-        ctx.drawImage(RS.SPR[e.type + '_w'], x + 1, y);
+        ctx.glow(ax, ay - h / 2, h * 0.8, '#e04a52', 0.35 + 0.15 * Math.sin(t * 10));
+        ctx.sprite(RS.SPR[e.type + '_w'], ax - 1, ay, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite(RS.SPR[e.type + '_w'], ax + 1, ay, pose.sx, pose.sy, pose.rot, flip);
       }
       if (e.elite) {
+        ctx.glow(ax, ay - h / 2, h * 0.7, '#f5c44a', 0.18 + 0.08 * Math.sin(t * 6));
         ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 6);
-        ctx.drawImage(RS.SPR[e.type + '_w'], x, y - 1);
+        ctx.sprite(RS.SPR[e.type + '_w'], ax, ay - 1, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       }
-      ctx.drawImage(spr, x, y);
+      if (GAIT[e.type] === 'float' && e.type === 'ghost') ctx.globalAlpha = 0.82 + 0.18 * Math.sin(e._g * 3);
+      ctx.sprite(spr, ax, ay, pose.sx, pose.sy, pose.rot, flip);
+      ctx.globalAlpha = 1;
+      if (pose.appear > 0) {
+        ctx.globalAlpha = pose.appear;
+        ctx.sprite(RS.SPR[e.type + '_w'], ax, ay, pose.sx, pose.sy, 0, flip);
+        ctx.globalAlpha = 1;
+        ctx.glow(ax, ay - h / 2, 8, '#a061e8', 0.5 * pose.appear);
+      }
       if (e.flash > 0) {
         ctx.globalAlpha = 0.8;
-        ctx.drawImage(RS.SPR[e.type + '_w'], x, y);
+        ctx.sprite(RS.SPR[e.type + '_w'], ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       } else if (e.slow > 0 || e.stunT > 0) {
         ctx.globalAlpha = e.stunT > 0 ? 0.6 : 0.35;
-        ctx.drawImage(RS.SPR[e.type + '_i'], x, y);
+        ctx.sprite(RS.SPR[e.type + '_i'], ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       }
-      if (e.burnT > 0 && Math.floor(t * 10) % 2) {
-        ctx.fillStyle = '#ff9a3d';
-        ctx.fillRect(x + (e.id % w), y + 2, 1, 1);
-      }
-      if (e.stunT > 0) this.drawStars(ctx, Math.round(e.x), y - 2);
-      // 불타는 엘리트
+      const top = ay - h;
+      // 불·독: 불티와 거품이 피어오른다
+      if (e.burnT > 0 && dt > 0 && Math.random() < dt * 10) this.emit(ax + rnd(-w / 3, w / 3), top + h * 0.4, 1, { sp: [6, 14], ang: -Math.PI / 2, spread: 0.8, life: [0.3, 0.5], cols: ['#ff9a3d', '#ffe46b'], glow: 2 });
+      if (e.poisonT > 0 && dt > 0 && Math.random() < dt * 6) this.emit(ax + rnd(-w / 3, w / 3), top + h * 0.5, 1, { sp: [4, 9], ang: -Math.PI / 2, spread: 0.6, life: [0.4, 0.6], cols: ['#9ee06a', '#62c35f'] });
+      if (e.stunT > 0) this.drawStars(ctx, ax, top - 2);
+      // 성난 엘리트
       if (e.burning) {
         const fl = RS.SPR.i_flameE;
-        const k = Math.floor(t * 8) % 2;
-        ctx.drawImage(fl, x - 2, y - 2 - k);
-        ctx.drawImage(fl, x + w - fl.width + 2, y - 3 + k);
+        const k = Math.sin(t * 16) * 0.8;
+        ctx.drawImage(fl, ax - w / 2 - 2, top - 2 - k);
+        ctx.drawImage(fl, ax + w / 2 - fl.width + 2, top - 3 + k);
+        ctx.glow(ax, top + 2, 8, '#ff9a3d', 0.25);
       }
+      e._top = top;
     }
-    // 체력바는 모든 적을 그린 뒤에 (눈가리개를 하면 보이지 않는다)
+    // 체력바는 모든 적을 그린 뒤에 (눈가리개를 하면 보이지 않는다). 방금 깎인 만큼은 잠시 밝게 남는다
     if (blind) return;
     for (const e of list) {
-      if (e.boss || e.subT > 0 || e.hp >= e.maxHp) continue;
+      if (e.boss || e.subT > 0) continue;
+      const frac = Math.max(0, e.hp) / e.maxHp;
+      if (e._hs == null || e._hs < frac) e._hs = frac;
+      else e._hs = Math.max(frac, e._hs - dt * 1.2);
+      if (e.hp >= e.maxHp) continue;
       const spr = RS.SPR[e.type];
       const w = spr.width;
-      const top = Math.round(e.y - spr.height + 5 + (e.boss ? 0 : Math.round(Math.sin(t * 8 + e.phase))));
+      const top = e._top != null ? e._top : e.y - spr.height + 5;
       const bw = Math.max(8, w - 4);
-      const bx = Math.round(e.x - bw / 2);
+      const bx = e.x - bw / 2;
       const by = top - 3;
-      const fill = Math.max(1, Math.round((bw * Math.max(0, e.hp)) / e.maxHp));
+      const fill = Math.max(0.5, bw * frac);
+      const chip = bw * e._hs;
       if (e.elite) {
         ctx.fillStyle = '#1d1428';
         ctx.fillRect(bx - 1, by - 1, bw + 2, 3);
+        ctx.fillStyle = '#fff6e6';
+        ctx.fillRect(bx, by, chip, 1);
         ctx.fillStyle = '#f5c44a';
         ctx.fillRect(bx, by, fill, 1);
       } else {
         ctx.fillStyle = '#3a1d2c';
-        ctx.fillRect(bx + fill, by, bw - fill, 1);
+        ctx.fillRect(bx, by, bw, 1);
+        ctx.fillStyle = '#ffe0a0';
+        ctx.fillRect(bx, by, chip, 1);
         ctx.fillStyle = '#e04a52';
         ctx.fillRect(bx, by, fill, 1);
       }
+    }
+  };
+
+  // 투사체가 목표에 닿을 때 튀는 조각
+  P.impact = function (s) {
+    if (s.miss) {
+      this.emit(s.x2, s.y2 - 2, 3, { sp: [8, 18], life: [0.2, 0.35], cols: ['#8a93a3', '#b8c2d3'], drag: 3 });
+      return;
+    }
+    const T = RS.TIER[s.tier];
+    switch (s.cls) {
+      case 'archer':
+        this.emit(s.x2, s.y2 - 2, s.rain ? 5 : 3, { sp: [15, 35], life: [0.15, 0.3], cols: s.rain ? ['#ffe46b', '#ffffff'] : ['#f6f1e8', '#8d5b3d', T.light], g: 60, drag: 2, glow: s.rain ? 2 : 0 });
+        break;
+      case 'frost':
+        this.emit(s.x2, s.y2 - 2, 5, { sp: [12, 30], life: [0.25, 0.45], cols: ['#a8ecff', '#e8fbff', '#52b6e0'], g: 50, drag: 2, glow: 2 });
+        break;
+      case 'rogue':
+        this.emit(s.x2, s.y2 - 2, s.crit ? 5 : 3, { sp: [20, 40], life: [0.12, 0.25], cols: s.crit ? ['#ffe46b', '#ffffff'] : ['#d3dbe6', '#ffffff'], drag: 4, glow: s.crit ? 2 : 0 });
+        break;
+      case 'knight':
+        this.emit(s.x2, s.y2 - 3, s.crit ? 8 : 5, { sp: [25, 55], life: [0.15, 0.3], cols: s.crit ? ['#ffe46b', '#ff9a3d', '#ffffff'] : ['#ffffff', T.light], drag: 4, glow: s.crit ? 2.5 : 1.5 });
+        break;
     }
   };
 
@@ -581,60 +1235,95 @@
     for (let k = 0; k < this.shots.length; k++) {
       const s = this.shots[k];
       s.t -= dt;
-      if (s.t <= 0) continue;
+      if (s.t <= 0) {
+        if (s.cls !== 'mage') this.impact(s); // 마법사는 폭발(boom)이 따로 있다
+        continue;
+      }
       this.shots[w++] = s;
       const p = 1 - s.t / s.max;
-      const x = Math.round(s.x1 + (s.x2 - s.x1) * p);
-      const y = Math.round(s.y1 + (s.y2 - s.y1) * p);
+      const x = s.x1 + (s.x2 - s.x1) * p;
+      const y = s.y1 + (s.y2 - s.y1) * p;
       const T = RS.TIER[s.tier];
+      const dx = s.x2 - s.x1;
+      const dy = s.y2 - s.y1;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / len;
+      const uy = dy / len;
       switch (s.cls) {
         case 'archer': {
           if (s.rain) {
             // 신화 화살비: 금빛 긴 화살 + 꼬리
-            const dx = s.x2 - s.x1;
-            const dy = s.y2 - s.y1;
-            const len = Math.max(1, Math.hypot(dx, dy));
-            for (let k2 = 0; k2 < 6; k2++) {
+            for (let k2 = 0; k2 < 7; k2++) {
               ctx.fillStyle = k2 === 0 ? '#ffffff' : k2 < 3 ? '#ffe46b' : T.light;
-              ctx.globalAlpha = 1 - k2 * 0.14;
-              ctx.fillRect(Math.round(x - (dx / len) * k2), Math.round(y - (dy / len) * k2), 1, 1);
+              ctx.globalAlpha = 1 - k2 * 0.12;
+              ctx.fillRect(x - ux * k2 - 0.5, y - uy * k2 - 0.5, 1, 1);
             }
             ctx.globalAlpha = 1;
-            if (p > 0.85) {
-              ctx.fillStyle = '#ffe46b';
-              ctx.fillRect(s.x2 - 2, s.y2, 5, 1);
-              ctx.fillRect(s.x2, s.y2 - 2, 1, 5);
-            }
+            ctx.glow(x, y, 4, '#ffe46b', 0.4);
             break;
           }
-          const dx = s.x2 - s.x1;
-          const dy = s.y2 - s.y1;
-          const len = Math.max(1, Math.hypot(dx, dy));
+          // 화살: 촉·살·깃 + 옅은 꼬리
+          ctx.globalAlpha = 0.25;
           ctx.fillStyle = '#f6f1e8';
-          ctx.fillRect(x, y, 1, 1);
+          ctx.fillRect(x - ux * 5 - 0.5, y - uy * 5 - 0.5, 1, 1);
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#f6f1e8';
+          ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
           ctx.fillStyle = '#8d5b3d';
-          ctx.fillRect(Math.round(x - (dx / len) * 2), Math.round(y - (dy / len) * 2), 1, 1);
+          ctx.fillRect(x - ux - 0.5, y - uy - 0.5, 1, 1);
+          ctx.fillRect(x - ux * 2 - 0.5, y - uy * 2 - 0.5, 1, 1);
           ctx.fillStyle = T.light;
-          ctx.fillRect(Math.round(x - (dx / len) * 3), Math.round(y - (dy / len) * 3), 1, 1);
+          ctx.fillRect(x - ux * 3 - 0.5, y - uy * 3 - 0.5, 1, 1);
           break;
         }
-        case 'mage':
+        case 'mage': {
+          // 빛나는 마법 구슬 + 불똥 꼬리
+          const pulse = 1 + 0.25 * Math.sin(this.t * 40 + s.spin);
+          ctx.glow(x, y, 5 * pulse, T.color, 0.55);
           ctx.fillStyle = T.color;
-          ctx.fillRect(x - 1, y - 1, 3, 3);
+          ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
           ctx.fillStyle = '#fff6e6';
-          ctx.fillRect(x, y, 1, 1);
+          ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
+          if (dt > 0 && this.parts.length < 400) this.parts.push({ x: x + rnd(-1, 1), y: y + rnd(-1, 1), vx: -ux * 8 + rnd(-6, 6), vy: -uy * 8 + rnd(-6, 6), g: 0, drag: 2, life: 0.25, max: 0.25, col: pick([T.light, T.color, '#ff9a3d']), size: 1, glow: 0 });
           break;
-        case 'frost':
+        }
+        case 'frost': {
+          // 얼음 결정: 빙글 돌며 반짝인다
+          const r = (this.t * 12 + s.spin) % 2 < 1;
+          ctx.glow(x, y, 4, '#a8ecff', 0.4);
+          ctx.fillStyle = '#e8fbff';
+          ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
           ctx.fillStyle = '#a8ecff';
-          ctx.fillRect(x - 1, y, 3, 1);
-          ctx.fillRect(x, y - 1, 1, 3);
+          if (r) {
+            ctx.fillRect(x - 1.5, y - 0.5, 3, 1);
+            ctx.fillRect(x - 0.5, y - 1.5, 1, 3);
+          } else {
+            ctx.fillRect(x - 1.5, y - 1.5, 1, 1);
+            ctx.fillRect(x + 0.5, y - 1.5, 1, 1);
+            ctx.fillRect(x - 1.5, y + 0.5, 1, 1);
+            ctx.fillRect(x + 0.5, y + 0.5, 1, 1);
+          }
           break;
-        case 'rogue':
+        }
+        case 'rogue': {
+          // 회전하며 날아가는 단검
+          const a = this.t * 36 + s.spin;
+          const cx = Math.cos(a);
+          const cy = Math.sin(a);
           ctx.fillStyle = s.crit ? '#ffe46b' : '#d3dbe6';
-          ctx.fillRect(x, y, 2, 1);
+          ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
+          ctx.fillRect(x + cx * 1.2 - 0.5, y + cy * 1.2 - 0.5, 1, 1);
+          ctx.fillStyle = s.crit ? '#ff9a3d' : '#8b97ab';
+          ctx.fillRect(x - cx * 1.2 - 0.5, y - cy * 1.2 - 0.5, 1, 1);
+          if (s.crit) ctx.glow(x, y, 3, '#ffe46b', 0.35);
           break;
+        }
         case 'knight':
           this.drawSlash(ctx, s, p, T);
+          if (!s.hit && p > 0.3) {
+            s.hit = true;
+            this.impact(s);
+          }
           break;
       }
     }
@@ -675,6 +1364,7 @@
         ctx.fillRect(Math.round(bx + nx * o), Math.round(by + ny * o), 1, 1);
       }
     }
+    if (!s.miss && thin > 0.3) ctx.glow(cx, cy, s.crit ? 9 : 7, s.crit ? '#ffe46b' : T.light, 0.3 * thin);
     // 칼이 표적을 지나는 순간(중반) 튀는 불꽃
     if (p > 0.25 && p < 0.7 && !s.miss) {
       const q = (p - 0.25) / 0.45;
@@ -708,40 +1398,62 @@
       const p = 1 - f.t / f.max;
       switch (f.k) {
         case 'ring': {
-          const r = Math.max(2, f.r * (0.4 + 0.6 * p));
+          const r = Math.max(2, f.r * (0.4 + 0.6 * ease.out(p)));
           const n = Math.max(10, Math.round(r * 1.6));
+          ctx.globalAlpha = Math.min(1, (1 - p) * 1.6);
           ctx.fillStyle = f.col;
           for (let j = 0; j < n; j++) {
             const a = (j / n) * Math.PI * 2;
-            ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y + Math.sin(a) * r), 1, 1);
+            ctx.fillRect(f.x + Math.cos(a) * r - 0.5, f.y + Math.sin(a) * r - 0.5, 1, 1);
           }
+          ctx.globalAlpha = 1;
+          if (f.glow) ctx.glow(f.x, f.y, r * 0.9, f.col, 0.18 * (1 - p));
           break;
         }
-        case 'puff': {
-          const r = (f.big ? 10 : 5) * p;
-          ctx.fillStyle = p < 0.5 ? '#fff6e6' : '#b8c2d3';
-          for (let j = 0; j < 6; j++) {
-            const a = j * 1.047 + f.x;
-            ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y - 3 + Math.sin(a) * r), 1, 1);
-          }
+        case 'pop': {
+          // 쓰러진 적: 하얗게 번쩍이며 부풀었다 사라진다
+          const spr = RS.SPR[f.name + '_w'];
+          if (!spr) break;
+          const k2 = 1 + 0.4 * ease.out(p);
+          ctx.globalAlpha = 1 - p;
+          ctx.sprite(spr, f.x, f.y, k2, k2 * 0.9, 0, false);
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case 'beam': {
+          // 소환·합성 빛줄기
+          const a = Math.sin(Math.PI * p);
+          const h2 = 30 * Math.min(1, p * 4);
+          ctx.globalAlpha = 0.5 * a;
+          ctx.fillStyle = f.col;
+          ctx.fillRect(f.x - 3, f.y - h2, 7, h2);
+          ctx.globalAlpha = 0.8 * a;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(f.x - 1, f.y - h2, 3, h2);
+          ctx.globalAlpha = 1;
+          ctx.glow(f.x, f.y - 8, 12, f.col, 0.35 * a);
           break;
         }
         case 'leak':
           ctx.fillStyle = `rgba(240,60,90,${0.6 * (1 - p)})`;
           ctx.fillRect(F.L - 9, F.T - 9, 18, 18);
+          ctx.glow(F.L, F.T, 14, '#e04a52', 0.5 * (1 - p));
           break;
         case 'star': {
-          const r = 4 + 10 * p;
+          const r = 4 + 10 * ease.out(p);
+          ctx.globalAlpha = 1 - p * 0.6;
           ctx.fillStyle = f.col;
           for (let j = 0; j < 8; j++) {
             const a = (j / 8) * Math.PI * 2 + p;
-            ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y + Math.sin(a) * r), 1, 1);
+            ctx.fillRect(f.x + Math.cos(a) * r - 0.5, f.y + Math.sin(a) * r - 0.5, 1, 1);
           }
+          ctx.globalAlpha = 1;
+          ctx.glow(f.x, f.y, 10, f.col, 0.3 * (1 - p));
           break;
         }
         case 'pillar': {
           // 시전 유닛 위로 솟는 빛기둥
-          const h = Math.round(26 * Math.min(1, p * 3));
+          const h = 26 * Math.min(1, p * 3);
           ctx.globalAlpha = 0.85 * (1 - p);
           ctx.fillStyle = f.col;
           ctx.fillRect(f.x - 2, f.y - h, 5, h + 4);
@@ -750,9 +1462,10 @@
           for (let j = 0; j < 6; j++) {
             const a = j * 1.047 + p * 5;
             ctx.fillStyle = f.col;
-            ctx.fillRect(Math.round(f.x + Math.cos(a) * (6 + 8 * p)), Math.round(f.y + Math.sin(a) * (6 + 8 * p)), 1, 1);
+            ctx.fillRect(f.x + Math.cos(a) * (6 + 8 * p) - 0.5, f.y + Math.sin(a) * (6 + 8 * p) - 0.5, 1, 1);
           }
           ctx.globalAlpha = 1;
+          ctx.glow(f.x, f.y - h / 2, 14, f.col, 0.45 * (1 - p));
           break;
         }
         case 'quake': {
@@ -762,12 +1475,13 @@
             const a = j * 0.785 + f.seed;
             const L = f.r * Math.min(1, p * 2.5);
             for (let d = 4; d < L; d += 1.5) {
-              const w = Math.sin(d * 0.7 + j) * 1.5;
+              const w2 = Math.sin(d * 0.7 + j) * 1.5;
               ctx.fillStyle = d < L * 0.6 ? '#fff6e6' : '#ffb0c0';
-              ctx.fillRect(Math.round(f.x + Math.cos(a) * d - Math.sin(a) * w), Math.round(f.y + Math.sin(a) * d + Math.cos(a) * w), 1, 1);
+              ctx.fillRect(Math.round(f.x + Math.cos(a) * d - Math.sin(a) * w2), Math.round(f.y + Math.sin(a) * d + Math.cos(a) * w2), 1, 1);
             }
           }
           ctx.globalAlpha = 1;
+          ctx.glow(f.x, f.y, f.r * 0.8, '#ffb0c0', 0.3 * (1 - p));
           break;
         }
         case 'shards': {
@@ -783,6 +1497,7 @@
             ctx.fillRect(px, py - hgt, 1, hgt + 1);
             ctx.fillStyle = '#a8ecff';
             ctx.fillRect(px - 1, py - 1, 3, 1);
+            ctx.glow(px, py - hgt / 2, 3, '#a8ecff', 0.3 * (1 - p));
           }
           ctx.globalAlpha = 1;
           break;
@@ -791,32 +1506,38 @@
           // 0~0.4: 불덩이가 떨어지고, 이후 폭발
           if (p < 0.4) {
             const q = p / 0.4;
-            const mx = Math.round(f.x + 30 * (1 - q));
-            const my = Math.round(f.y - 60 * (1 - q));
+            const mx = f.x + 30 * (1 - q);
+            const my = f.y - 60 * (1 - q);
+            ctx.glow(mx, my, 9, '#ff9a3d', 0.7);
             ctx.fillStyle = '#ffb347';
-            ctx.fillRect(mx - 2, my - 2, 5, 5);
+            ctx.fillRect(mx - 2.5, my - 2.5, 5, 5);
             ctx.fillStyle = '#fff6e6';
-            ctx.fillRect(mx - 1, my - 1, 3, 3);
+            ctx.fillRect(mx - 1.5, my - 1.5, 3, 3);
             ctx.fillStyle = '#ef4f6f';
-            ctx.fillRect(mx + 3, my - 4, 2, 2);
-            ctx.fillRect(mx + 6, my - 7, 1, 1);
+            ctx.fillRect(mx + 2.5, my - 4.5, 2, 2);
+            ctx.fillRect(mx + 5.5, my - 7.5, 1, 1);
+            if (dt > 0) this.emit(mx, my, 2, { sp: [5, 15], ang: -Math.PI / 4, spread: 1, life: [0.2, 0.4], cols: ['#ff9a3d', '#ffe46b', '#ef4f6f'], glow: 2 });
           } else {
             if (!f.hit) {
               f.hit = true;
               this.shake = Math.max(this.shake, 0.3);
               this.fxs.push({ k: 'flash', t: 0.2, max: 0.2, col: '#ff9a3d' });
+              this.emit(f.x, f.y, 24, { sp: [30, 90], life: [0.3, 0.7], cols: ['#ff9a3d', '#ffe46b', '#ef4f6f', '#fff6e6'], g: 60, drag: 2, glow: 3 });
             }
             const q = (p - 0.4) / 0.6;
             const r = Math.max(2, f.r * (0.3 + 0.7 * q));
             const n = Math.max(12, Math.round(r * 1.6));
+            ctx.globalAlpha = 1 - q * 0.7;
             for (let j = 0; j < n; j++) {
               const a = (j / n) * Math.PI * 2;
               ctx.fillStyle = j % 3 ? '#ff9a3d' : '#ffe46b';
-              ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y + Math.sin(a) * r), 1, 1);
+              ctx.fillRect(f.x + Math.cos(a) * r - 0.5, f.y + Math.sin(a) * r - 0.5, 1, 1);
             }
+            ctx.globalAlpha = 1;
+            ctx.glow(f.x, f.y, r, '#ff9a3d', 0.5 * (1 - q));
             if (q < 0.4) {
               ctx.fillStyle = '#fff6e6';
-              ctx.fillRect(f.x - 3, f.y - 3, 7, 7);
+              ctx.fillRect(f.x - 3.5, f.y - 3.5, 7, 7);
             }
           }
           break;
@@ -824,7 +1545,7 @@
         case 'flash':
           ctx.globalAlpha = 0.35 * (1 - p);
           ctx.fillStyle = f.col;
-          ctx.fillRect(0, 0, F.W, F.H);
+          ctx.fillRect(-4, -4, F.W + 8, F.H + 8);
           ctx.globalAlpha = 1;
           break;
         case 'riftHit': {
@@ -839,6 +1560,7 @@
     this.fxs.length = w;
   };
 
+  // 피해 숫자: 톡 튀어나오며 커졌다가 제자리 크기로, 위로 떠오르며 사라진다
   P.drawNums = function (ctx, dt) {
     let w = 0;
     for (let k = 0; k < this.nums.length; k++) {
@@ -846,8 +1568,15 @@
       n.t -= dt;
       if (n.t <= 0) continue;
       this.nums[w++] = n;
-      n.y = Math.max(6, n.y - dt * 14);
-      RS.drawNum(ctx, n.s, n.x, n.y, n.c);
+      const age = n.max - n.t;
+      n.vy = (n.vy || -14) * Math.max(0, 1 - dt * 3);
+      n.vx = (n.vx || 0) * Math.max(0, 1 - dt * 4);
+      n.x += n.vx * dt;
+      n.y = Math.max(6, n.y + n.vy * dt);
+      const sc = age < 0.1 ? (n.big || 1.4) - ((n.big || 1.4) - 1) * ease.out(age / 0.1) : 1;
+      ctx.globalAlpha = Math.min(1, n.t / 0.18);
+      RS.drawNum(ctx, n.s, n.x, n.y, n.c, sc);
+      ctx.globalAlpha = 1;
     }
     this.nums.length = w;
   };
@@ -856,9 +1585,13 @@
     this.shots.length = 0;
     this.fxs.length = 0;
     this.nums.length = 0;
+    this.parts.length = 0;
     this.sel = -1;
     this.drag = null;
     this.shake = 0;
+    this.atk.fill(0);
+    this.pop.fill(0);
+    this.face.fill(1);
     if (this.noReach) this.noReach.fill(0);
   };
 

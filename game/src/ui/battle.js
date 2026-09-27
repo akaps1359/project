@@ -133,8 +133,17 @@
     // 물리 픽셀 정수배로 맞춰 도트가 고르게. 다만 그 때문에 조금이라도(2% 넘게) 작아지면(보스 체력바가 생길 때 등)
     // 고해상도 화면에서는 그냥 가득 채운다 (2% 기준) (도트 차이가 눈에 띄지 않는다)
     if (phys >= 3 && (phys / dpr >= avail * 0.98 || dpr < 2)) scale = phys / dpr;
-    const w = Math.floor(F.W * scale) + 'px';
-    const hh = Math.floor(F.H * scale) + 'px';
+    // 캔버스는 화면의 실제 픽셀 크기로 만들고(렌더러가 논리 좌표를 기기 픽셀에 맞춰 그린다) CSS 크기는 그 1:1
+    const R = UI.G && UI.G.renderer;
+    let cw = Math.floor(F.W * scale);
+    let ch = Math.floor(F.H * scale);
+    if (R && R.resize) {
+      const sz = R.resize(scale, dpr);
+      cw = sz.w;
+      ch = sz.h;
+    }
+    const w = cw.toFixed(2) + 'px';
+    const hh = ch.toFixed(2) + 'px';
     if (cv.style.width !== w) cv.style.width = w;
     if (cv.style.height !== hh) cv.style.height = hh;
   };
