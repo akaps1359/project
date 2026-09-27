@@ -122,7 +122,7 @@
     // 4막
     spireShield: { name: '균열 방패병', hp: 7.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2, trait: '궁수·도적 피해 50%, 모든 물리 피해 20% 감소' },
     spireSpear: { name: '균열 창병', hp: 6, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 }, trait: '빠르고 주변 적을 가속' },
-    riftHeart: { name: '균열의 심장', hp: 28, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30, summon: { every: 6, type: 'imp', n: 2, hp: 0.5 }, trait: '1초에 최대 체력의 3%까지만 피해를 받는다. 임프를 부른다' },
+    riftHeart: { name: '균열의 핵', hp: 28, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30, summon: { every: 6, type: 'imp', n: 2, hp: 0.5 }, trait: '1초에 최대 체력의 3%까지만 피해를 받는다. 임프를 부른다' },
     riftLord: { name: '균열의 군주', hp: 10, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5, trait: '균열로 유닛을 기절시킨다. 체력 절반에서 가속' },
   };
 
@@ -161,7 +161,7 @@
     ],
     [
       {
-        id: 'heart', name: '균열의 심장부', boss: 'riftHeart', theme: 'heart',
+        id: 'heart', name: '균열의 중심부', boss: 'riftHeart', theme: 'heart',
         pool: [['imp', 3, 1], ['ghost', 3, 1], ['golem', 2, 1], ['shaman', 2, 1]],
         elites: ['spireShield', 'spireSpear'],
       },

@@ -8,7 +8,7 @@
   RS.addGold = function (run, g) {
     run.gold = Math.max(0, run.gold + g);
   };
-  // 피어남의 표식이 있으면 생명을 회복할 수 없다
+  // 시든 꽃의 낙인이 있으면 생명을 회복할 수 없다
   RS.canHeal = (run) => run.curses.indexOf('bloomMark') < 0;
   // 실제로 회복한 양을 돌려준다
   RS.heal = function (run, v) {
@@ -37,7 +37,7 @@
   RS.randomCurseId = function (rng) {
     return rng.pick(RS.CURSES.filter((c) => !c.permanent)).id;
   };
-  // 부적이 있으면 막는다. 실제로 받았으면 true
+  // 액막이 매듭이 있으면 막는다. 실제로 받았으면 true
   RS.addCurse = function (run, id) {
     const st = run.relicState.omamori;
     if (st && st.charges > 0) {
@@ -52,7 +52,7 @@
     return true;
   };
 
-  // 사라지는 저주(죄책감)의 수명은 저주 하나하나가 생긴 시점(그때까지 치른 전투 수)으로 센다.
+  // 사라지는 저주(찜찜함)의 수명은 저주 하나하나가 생긴 시점(그때까지 치른 전투 수)으로 센다.
   // 저주 목록은 여러 곳(제거 서비스, 정화 등)에서 직접 지워지므로, 쓸 때마다 개수를 맞춘다.
   // justFought: 방금 전투 수를 올렸지만 아직 나이를 세지 않았다 (battleUpkeep)
   function syncCurseTimers(run, justFought) {
@@ -127,7 +127,7 @@
     }
     return out;
   };
-  // 한 등급의 유닛을 모두 무작위 클래스의 다른 등급으로 (판도라의 상자)
+  // 한 등급의 유닛을 모두 무작위 클래스의 다른 등급으로 (뒤죽박죽 상자)
   RS.transformTier = function (run, from, to) {
     let n = 0;
     for (let i = 0; i < run.board.length; i++) {
@@ -140,7 +140,7 @@
     RS.grantUnits(run, to, n);
     return n;
   };
-  // 클래스는 그대로 두고 등급만 올린다 (신격화)
+  // 클래스는 그대로 두고 등급만 올린다 (빛의 세례)
   RS.promoteTier = function (run, from) {
     for (const s of run.board) if (s && s.tier === from) s.tier = from + 1;
   };
@@ -337,7 +337,7 @@
     }
     const all = [];
     floors.forEach((row, fi) => row.forEach((n) => n && all.push({ n, f: fi + 1 })));
-    // 막마다 엘리트 하나는 보장하고, 그중 하나가 '불타는 엘리트'(에메랄드 열쇠)
+    // 막마다 엘리트 하나는 보장하고, 그중 하나가 '성난 엘리트'(초록 봉인석)
     let elites = all.filter((x) => x.n.type === 'elite');
     if (!elites.length) {
       const cands = all.filter((x) => x.f >= 4 && x.f < H && x.n.type === 'combat');
@@ -359,7 +359,7 @@
     return { floors };
   };
 
-  // 4막: 휴식처 → 상점 → 엘리트 → 균열의 심장 (일직선)
+  // 4막: 휴식처 → 상점 → 엘리트 → 균열의 핵 (일직선)
   function genAct4Map() {
     const row = (type) => {
       const r = new Array(RS.MAP_W).fill(null);
@@ -386,7 +386,7 @@
     return out;
   };
 
-  // 날개 장화: 다음 층 아무 칸
+  // 축지 장화: 다음 층 아무 칸
   RS.wingChoices = function (run) {
     const st = run.relicState.wingBoots;
     if (!st || st.uses <= 0 || run.floor === 0 || run.floor >= run.map.floors.length) return [];
@@ -403,7 +403,7 @@
     const u = run.unknown;
     const M = RS.collectMods(run);
     u.count++;
-    // 작은 상자: 얻은 뒤부터 센다 (유물마다 따로 센다)
+    // 꼬마 궤짝: 얻은 뒤부터 센다 (유물마다 따로 센다)
     if (M.tinyChest) {
       const st = run.relicState.tinyChest || (run.relicState.tinyChest = { n: 0 });
       st.n++;
@@ -549,7 +549,7 @@
     run.stats.kills += st.kills;
     run.stats.dmg += st.dmg;
     for (const c of RS.CLASSES) run.stats.clsDmg[c] += st.clsDmg[c];
-    // 문지기의 탄식은 허수아비 시험에는 걸리지 않으니 횟수도 쓰지 않는다
+    // 졸음의 별은 허수아비 시험에는 걸리지 않으니 횟수도 쓰지 않는다
     if (run.lament > 0 && !trial) run.lament--;
     if (run.tax > 0) run.tax--;
     RS.battleUpkeep(run);
@@ -615,10 +615,10 @@
     if (type === 'boss') reward.relics = RS.rollRelics(run, 3, [3], [1]);
     if (stage.type === 'eventFight' && stage.spec.relic) reward.relics = RS.rollRelics(run, stage.spec.relicChoices || 1, stage.spec.relic, stage.spec.relic.map(() => 1));
     if (type === 'combat' && M.prayerWheel) {
-      // 기도 바퀴: 일반 전투 4번마다 증강 한 번 더
+      // 소원 물레: 일반 전투 4번마다 증강 한 번 더
       const st = (run.relicState.prayerWheel = run.relicState.prayerWheel || { n: 0 });
       st.n = (st.n || 0) + 1;
-      if (st.n % 4 === 0) RS.enqueue(run, { k: 'aug', w, title: '기도 바퀴' });
+      if (st.n % 4 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
     }
     run.phase = 'reward';
     run.pending = { reward };
@@ -635,7 +635,7 @@
     const M = RS.collectMods(run);
     return Math.round(BAL.skipGold[Math.min(3, run.act)] * (1 + (M.skipGoldMul || 0)));
   };
-  // 증강을 건너뛸 때의 공통 효과 (노래하는 그릇). 늘어난 최대 생명을 돌려준다
+  // 증강을 건너뛸 때의 공통 효과 (울림 사발). 늘어난 최대 생명을 돌려준다
   RS.skipAugBonus = function (run) {
     const M = RS.collectMods(run);
     if (!M.singingBowl) return 0;
@@ -755,7 +755,7 @@
   }
 
   // 플레이어가 대기열 선택을 그만두거나 건너뛸 때 (UI 가 popQueue 바로 앞에서 부른다).
-  // 값을 치른 서비스는 되돌려 주고, 증강 건너뛰기는 전투 보상과 같은 효과(노래하는 그릇)를 준다.
+  // 값을 치른 서비스는 되돌려 주고, 증강 건너뛰기는 전투 보상과 같은 효과(울림 사발)를 준다.
   RS.cancelChoice = function (run, item) {
     const out = { refund: 0, text: null };
     if (!item) return out;
@@ -810,7 +810,7 @@
       }
     } else if ((item.k === 'aug' || item.k === 'augList') && item.ids && item.ids.length) {
       const life = RS.skipAugBonus(run);
-      if (life) texts.push(`노래하는 그릇: 최대 생명 +${life}`);
+      if (life) texts.push(`울림 사발: 최대 생명 +${life}`);
     }
     out.text = texts.length ? texts.join(' ') : null;
     return out;
@@ -968,7 +968,7 @@
       RS.enqueue(run, { k: 'remove', title: '제거 서비스', undo });
     }
     if (RS.collectMods(run).courier && it.kind !== 'remove') {
-      // 택배원: 빈자리에 같은 종류의 새 물건
+      // 보부상: 빈자리에 같은 종류의 새 물건
       let fresh = null;
       if (it.kind === 'relic') {
         const ids = RS.rollRelics(run, 1, [1, 2], [65, 35], shop.list.filter((x) => x.kind === 'relic').map((x) => x.id));
@@ -1021,12 +1021,12 @@
     const dream = M.dreamCatcher ? ' · 증강 선택' : '';
     opts.push({
       id: 'heal', label: '휴식',
-      desc: bloom ? `회복할 수 없다 (피어남의 표식)${dream}` : `생명 +${RS.restHealAmount(run)}${dream}`,
-      off: M.noRestHeal ? '각성제 때문에 잠들 수 없다' : bloom && !M.dreamCatcher ? '피어남의 표식 때문에 회복할 수 없다' : null,
+      desc: bloom ? `회복할 수 없다 (시든 꽃의 낙인)${dream}` : `생명 +${RS.restHealAmount(run)}${dream}`,
+      off: M.noRestHeal ? '각성제 때문에 잠들 수 없다' : bloom && !M.dreamCatcher ? '시든 꽃의 낙인 때문에 회복할 수 없다' : null,
     });
-    opts.push({ id: 'train', label: '수련', desc: `클래스 하나 강화 +${RS.restTrainAmount(run)}`, off: M.noSmith ? '융합 망치 때문에 할 수 없다' : null });
+    opts.push({ id: 'train', label: '수련', desc: `클래스 하나 강화 +${RS.restTrainAmount(run)}`, off: M.noSmith ? '벼락 망치 때문에 할 수 없다' : null });
     const up = run.augments.some((id) => RS.canUpgradeAug(id));
-    opts.push({ id: 'smith', label: '연마', desc: '증강 하나를 연마 (효과 ×1.5)', off: M.noSmith ? '융합 망치 때문에 할 수 없다' : !up ? '연마할 수 있는 증강이 없다' : null });
+    opts.push({ id: 'smith', label: '연마', desc: '증강 하나를 연마 (효과 ×1.5)', off: M.noSmith ? '벼락 망치 때문에 할 수 없다' : !up ? '연마할 수 있는 증강이 없다' : null });
     if (M.peacePipe) opts.push({ id: 'toke', label: '명상', desc: '증강이나 저주 하나를 없앤다', off: RS.removableCount(run) ? null : '없앨 것이 없다' });
     if (M.shovel) opts.push({ id: 'dig', label: '발굴', desc: '유물 하나를 얻는다' });
     if (M.girya) {
@@ -1034,7 +1034,7 @@
       opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 +6% (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });
     }
     const candle = run.relicState.pumpkinCandle;
-    if (candle && candle.charges < 8) opts.push({ id: 'kindle', label: '불 붙이기', desc: `호박 양초를 다시 켠다 (남은 ${candle.charges}번 → 8번)` });
+    if (candle && candle.charges < 8) opts.push({ id: 'kindle', label: '불 붙이기', desc: `박 등잔을 다시 켠다 (남은 ${candle.charges}번 → 8번)` });
     if (run.quests && run.quests.egg) opts.push({ id: 'hatch', label: '부화', desc: '용의 알을 부화시킨다: 전설 유닛 1기 + 유물 [아기 용]' });
     const onRune = run.runes.some((r, i) => r === 'cloneR' && run.board[i]);
     if (onRune) {
@@ -1042,7 +1042,7 @@
       const s = ci >= 0 ? run.board[ci] : null;
       opts.push({ id: 'clone', label: '복제', desc: s ? `복제의 룬 위 유닛 1기를 복제 (${RS.TIER[s.tier].name} ${RS.CLASS[s.cls].name})` : '복제의 룬 위 유닛 1기를 복제', off: s ? null : '보드에 자리가 없다' });
     }
-    if (run.act <= 3 && !run.keys.ruby) opts.push({ id: 'recall', label: '회수', desc: '루비 열쇠를 얻는다 (휴식·수련 대신)' });
+    if (run.act <= 3 && !run.keys.ruby) opts.push({ id: 'recall', label: '회수', desc: '붉은 봉인석을 얻는다 (휴식·수련 대신)' });
     return opts;
   };
 
@@ -1052,7 +1052,7 @@
     switch (id) {
       case 'heal':
         RS.heal(run, RS.restHealAmount(run));
-        if (RS.collectMods(run).dreamCatcher) RS.enqueue(run, { k: 'aug', w: [0, 50, 42, 8], title: '드림캐처' });
+        if (RS.collectMods(run).dreamCatcher) RS.enqueue(run, { k: 'aug', w: [0, 50, 42, 8], title: '꿈 그물' });
         break;
       case 'train':
         run.classLv[arg] += RS.restTrainAmount(run);
@@ -1190,27 +1190,27 @@
     run.pending = { reward };
   };
 
-  // 모닥불 정령에 바친 유닛 등급에 따라 보상
+  // 도깨비 화롯불에 바친 유닛 등급에 따라 보상
   RS.sacrificeUnit = function (run, i) {
     const s = run.board[i];
     if (!s) return '';
     const tier = s.tier;
     RS.takeUnit(run.board, i);
     const bloom = !RS.canHeal(run);
-    if (tier === 0) return '정령들이 시큰둥하다. 아무 일도 없었다.';
+    if (tier === 0) return '도깨비들이 시큰둥하다. 아무 일도 없었다.';
     if (tier === 1) {
       const h = RS.heal(run, 5);
-      return bloom ? '정령들이 기뻐하지만, 피어남의 표식 때문에 회복하지 못했다.' : `정령들이 기뻐한다. 생명 +${h}`;
+      return bloom ? '도깨비들이 기뻐하지만, 시든 꽃의 낙인 때문에 회복하지 못했다.' : `도깨비들이 기뻐한다. 생명 +${h}`;
     }
     if (tier === 2) {
       RS.changeMaxLife(run, 5);
       RS.heal(run, run.maxLife);
-      return bloom ? '정령들이 춤춘다! 최대 생명 +5 (피어남의 표식 때문에 회복은 못 했다)' : '정령들이 춤춘다! 최대 생명 +5, 생명 모두 회복';
+      return bloom ? '도깨비들이 춤춘다! 최대 생명 +5 (시든 꽃의 낙인 때문에 회복은 못 했다)' : '도깨비들이 춤춘다! 최대 생명 +5, 생명 모두 회복';
     }
     RS.changeMaxLife(run, 10);
     RS.heal(run, 10);
     const id = RS.grantRandomRelic(run, [2]);
-    return `정령들이 환호한다! 최대 생명 +10${id ? `, 유물 [${RS.REL[id].name}]` : ''}`;
+    return `도깨비들이 환호한다! 최대 생명 +10${id ? `, 유물 [${RS.REL[id].name}]` : ''}`;
   };
 
   // 땜장이 공방: 직접 조립한 증강 (런마다 등록)
@@ -1234,17 +1234,17 @@
     run.customAugs = run.customAugs || {};
     const n = Object.keys(run.customAugs).length + 1;
     const id = 'tinker' + n;
-    run.customAugs[id] = { name: `땜장이의 작품 ${n}호`, desc: parts.join(', '), mods };
+    run.customAugs[id] = { name: `괴짜 발명품 ${n}호`, desc: parts.join(', '), mods };
     RS.registerCustomAugs(run);
     RS.pickAugment(run, id);
-    return `[땜장이의 작품 ${n}호] 완성! (${parts.join(', ')})`;
+    return `[괴짜 발명품 ${n}호] 완성! (${parts.join(', ')})`;
   };
 
   RS.wongoSpend = function (run, g) {
     run.stats.wongo = (run.stats.wongo || 0) + g;
   };
 
-  // 수정 구체: 9칸 중 정해진 횟수만큼 들여다본다
+  // 안개 구슬: 9칸 중 정해진 횟수만큼 들여다본다
   RS.initSphere = function (run, n) {
     run.pending.sphere = { left: n, pool: run.rng.shuffle(['gold', 'gold', 'gold', 'item', 'item', 'aug', 'relic', 'curse', 'empty']) };
   };
@@ -1259,15 +1259,15 @@
       text = `골드 +${40 * a}`;
     } else if (r === 'item') text = RS.addItem(run, RS.randomItemId(run.rng)) ? '소모품을 찾았다' : '소모품이 있었지만 가질 수 없었다';
     else if (r === 'aug') {
-      RS.enqueue(run, { k: 'aug', w: [0, 50, 40, 10], title: '수정 구체' });
+      RS.enqueue(run, { k: 'aug', w: [0, 50, 40, 10], title: '안개 구슬' });
       text = '증강의 환영이 보인다 (나중에 고른다)';
     } else if (r === 'relic') {
       const id = RS.grantRandomRelic(run, [1, 2]);
       text = `유물 [${id ? RS.REL[id].name : '먼지'}]!`;
-    } else if (r === 'curse') text = RS.addCurse(run, RS.randomCurseId(run.rng)) ? '저주가 튀어나왔다!' : '저주가 튀어나왔지만 부적이 막았다';
+    } else if (r === 'curse') text = RS.addCurse(run, RS.randomCurseId(run.rng)) ? '저주가 튀어나왔다!' : '저주가 튀어나왔지만 액막이 매듭이 막았다';
     else text = '아무것도 없다';
     if (s.left > 0 && s.pool.length) return { text, again: true };
-    return text + ' · 구체의 빛이 꺼졌다.';
+    return text + ' · 구슬 속에 다시 안개가 낀다.';
   };
 
   // ── 룬 (보드 칸에 새기는 인챈트) ──

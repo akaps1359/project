@@ -1,4 +1,4 @@
-// 모험 화면: 맵, 축복, 고대 존재, 선택 대기열, 보상, 상점, 이벤트, 휴식처, 보물, 결과
+// 모험 화면: 맵, 축복, 차원 방랑자, 선택 대기열, 보상, 상점, 이벤트, 휴식처, 보물, 결과
 (function (RS) {
   'use strict';
 
@@ -36,7 +36,7 @@
       box,
       h('p', { class: 'hint' },
         left > 0 ? h('span', { class: 'mapchip' }, left === 1 ? '다음은 보스' : `보스까지 ${left}층`) : null,
-        '반짝이는 칸을 누르면 설명, 한 번 더 누르면 이동합니다.' + (wings.length ? ` · 점선 칸은 날개 장화로 (${run.relicState.wingBoots.uses}회)` : '')),
+        '반짝이는 칸을 누르면 설명, 한 번 더 누르면 이동합니다.' + (wings.length ? ` · 점선 칸은 축지 장화로 (${run.relicState.wingBoots.uses}회)` : '')),
     ]);
     UI.show('scr-map');
     const W = RS.MAP_W;
@@ -133,7 +133,7 @@
               for (const el of inner.querySelectorAll('.node.armed')) el.classList.remove('armed');
               e.currentTarget.classList.add('armed');
               RS.sfx('click');
-              UI.tip(e.currentTarget, title, nodeDesc(n, run), wing ? '날개 장화를 한 번 씁니다' : null, { label: '여기로 이동', onClick: enter });
+              UI.tip(e.currentTarget, title, nodeDesc(n, run), wing ? '축지 장화를 한 번 씁니다' : null, { label: '여기로 이동', onClick: enter });
             } else {
               UI.tip(e.currentTarget, title, nodeDesc(n, run));
             }
@@ -149,7 +149,7 @@
   };
 
   function nodeDesc(n, run) {
-    if (n.burning) return '불타는 엘리트. 무작위 강화를 받은 엘리트가 나온다. 이기면 유물과 함께 에메랄드 열쇠.';
+    if (n.burning) return '성난 엘리트. 무작위 강화를 받은 엘리트가 나온다. 이기면 유물과 함께 초록 봉인석.';
     if (n.type === 'boss') {
       const act = RS.actDef(run);
       const def = RS.ENEMY[act.boss];
@@ -160,13 +160,13 @@
       elite: '마지막 웨이브에 엘리트 등장. 위험하지만 좋은 증강과 유물을 준다.',
       unknown: '들어가 봐야 안다. 대개 이벤트지만 전투·상점·보물일 수도 있다. 이벤트가 나올수록 다른 것이 나올 확률이 오른다.',
       shop: '유물·증강·소모품·용병을 사고, 증강·저주를 없애거나 룬을 새긴다.',
-      rest: '회복하거나 수련·연마한다. 열쇠를 회수할 수도 있다.',
-      treasure: '유물이 든 상자. 사파이어 열쇠를 대신 가져갈 수도 있다.',
+      rest: '회복하거나 수련·연마한다. 붉은 봉인석을 회수할 수도 있다.',
+      treasure: '유물이 든 상자. 푸른 봉인석을 대신 가져갈 수도 있다.',
       boss: '막의 보스. 제한 시간 안에 쓰러뜨리세요.',
     }[n.type];
   }
 
-  // ── 시작의 축복 (균열의 문지기): 고른 뒤 확정 ──
+  // ── 시작의 축복 (별점술사): 고른 뒤 확정 ──
   UI.showNeow = function () {
     const G = UI.G;
     const run = G.run;
@@ -175,7 +175,7 @@
     const sel = typeof UI.optSel === 'number' && list[UI.optSel] ? UI.optSel : null;
     const body = h('div', { class: 'event' },
       h('div', { class: 'event-art big' }, icon('shard', '', 6)),
-      h('p', { class: 'event-text' }, `균열 앞에 선 ${cmd.title} ${cmd.name}에게 문지기가 속삭인다. "올라가려는가? 그렇다면 하나를 골라라."`),
+      h('p', { class: 'event-text' }, `균열 앞에 선 ${cmd.title} ${cmd.name}에게 별점술사가 별자리 카드를 펼친다. "오호, 오늘 밤 네 별이 유난히 반짝이는구나. 점괘 하나를 골라 보렴."`),
       h('h2', null, '하나를 고르세요'),
     );
     const opts = h('div', { class: 'options' });
@@ -189,7 +189,7 @@
           UI.keepScroll = true;
           UI.showNeow();
         },
-      }, h('b', null, t.text), t.cost ? h('small', { class: 'cost' }, '대가 · ' + t.cost) : h('small', null, { small: '작은 축복', mid: '축복', big: '큰 축복', swap: '시작 유물 교환' }[b.kind]),
+      }, h('b', null, t.text), t.cost ? h('small', { class: 'cost' }, '대가 · ' + t.cost) : h('small', null, { small: '작은 별점', mid: '별점', big: '큰 별점', swap: '시작 유물 교환' }[b.kind]),
       // 고른 선택지에 저주가 있으면 무엇인지 바로 아래에 풀어 준다
       sel === k ? UI.curseNote(t.text + ' ' + (t.cost || '')) : null));
     });
@@ -204,12 +204,12 @@
       const gains = UI.diffGains(snap, run);
       UI.optSel = null;
       G.afterNeow();
-      UI.showGains('문지기의 축복', gains);
+      UI.showGains('오늘의 별점', gains);
     }, 'gold grow', sel == null)];
-    UI.page('균열의 문지기', null, body, footer);
+    UI.page('별점술사의 점괘', null, body, footer);
   };
 
-  // ── 막 시작 (+ 고대 존재): 고른 뒤 확정 ──
+  // ── 막 시작 (+ 차원 방랑자): 고른 뒤 확정 ──
   UI.showActStart = function () {
     const G = UI.G;
     const run = G.run;
@@ -494,7 +494,7 @@
             const gains = UI.diffGains(snap, run).filter((g) => g.k !== 'unit' || g.n > 0);
             RS.sfx('upgrade');
             done();
-            if (msg) UI.showGains('모닥불 정령', gains, null, msg);
+            if (msg) UI.showGains('도깨비 화롯불', gains, null, msg);
           }, ok == null));
         }
         break;
@@ -522,7 +522,7 @@
     const summary = r.gold ? [`골드 +${r.gold}`] : [];
     if (r.heal) summary.push(`생명 +${r.heal}`);
     if (r.item) summary.push(`소모품 [${RS.ITEM[r.item].name}]`);
-    if (r.key) body.appendChild(h('div', { class: 'keygot' }, icon('key_emerald', '', 4), h('b', null, '에메랄드 열쇠를 얻었다!')));
+    if (r.key) body.appendChild(h('div', { class: 'keygot' }, icon('key_emerald', '', 4), h('b', null, '초록 봉인석을 얻었다!')));
     const pickCard = (id) => {
       RS.sfx('click');
       UI.rewardSel = id;
@@ -550,7 +550,7 @@
       body.appendChild(list);
       const sg = Math.round(skipGoldOf(run));
       const bowl = !!RS.collectMods(run).singingBowl;
-      body.appendChild(h('p', { class: 'dim small center skipnote' }, `건너뛰면 골드 +${sg}${bowl ? ' · 노래하는 그릇: 최대 생명 +2' : ''}`));
+      body.appendChild(h('p', { class: 'dim small center skipnote' }, `건너뛰면 골드 +${sg}${bowl ? ' · 울림 사발: 최대 생명 +2' : ''}`));
       footer = [
         r.rerolls > 0 || r.hadRerolls ? btn(`새로고침 ${r.rerolls}`, () => {
           if (!(r.rerolls > 0)) return;
@@ -577,7 +577,7 @@
         }, 'gold grow', !sel),
       ];
     } else if (r.relics && r.relics.length && !r.relicDone) {
-      body.appendChild(h('h2', null, r.takeAll ? '검은 별: 유물을 모두 가져갑니다' : run.nodeType === 'boss' ? '보스 유물 · 하나를 고르세요 (강력하지만 대가가 있는 것이 많다)' : '유물 · 하나를 고르세요'));
+      body.appendChild(h('h2', null, r.takeAll ? '그믐 별: 유물을 모두 가져갑니다' : run.nodeType === 'boss' ? '보스 유물 · 하나를 고르세요 (강력하지만 대가가 있는 것이 많다)' : '유물 · 하나를 고르세요'));
       const list = h('div', { class: 'cards' });
       for (const id of r.relics) list.appendChild(UI.relicCard(id, sel === id || r.takeAll, () => pickCard(id)));
       body.appendChild(list);
@@ -768,7 +768,7 @@
       h('p', { class: 'event-text' }, '모닥불이 따뜻하게 타오른다. 한 가지만 할 수 있다.'),
     );
     let footer = null;
-    const DESC = { recall: '루비 열쇠를 얻는다 (휴식·수련 대신) · 세 열쇠를 모으면 4막이 열린다' };
+    const DESC = { recall: '붉은 봉인석을 얻는다 (휴식·수련 대신) · 세 봉인석을 모으면 4막이 열린다' };
     const SHOW_GAINS = { dig: '발굴', hatch: '부화', clone: '복제' };
     if (!UI.restTrain) {
       const opts = RS.restOptions(run);
@@ -790,7 +790,7 @@
           const snap = UI.snapGains(run);
           const said = RS.restDo(run, o.id);
           const gains = SHOW_GAINS[o.id] ? UI.diffGains(snap, run) : null;
-          if (o.id === 'recall') UI.toast('루비 열쇠를 얻었다!', 'good');
+          if (o.id === 'recall') UI.toast('붉은 봉인석을 얻었다!', 'good');
           else if (typeof said === 'string' && said) UI.toast(said, 'good');
           G.leaveNode();
           if (gains && gains.length) UI.showGains(SHOW_GAINS[o.id], gains);
@@ -838,7 +838,7 @@
         body.appendChild(h('h2', null, '상자 안'));
         body.appendChild(h('div', { class: 'cards relics' }, p.relics.map((id) => UI.relicCard(id, false, () => {}))));
       }
-      if (canKey) body.appendChild(h('p', { class: 'dim small keynote' }, '사파이어 열쇠를 가져가면 이 유물은 두고 갑니다. 루비·에메랄드·사파이어를 모두 모으면 3막 보스 뒤 숨겨진 4막이 열립니다.'));
+      if (canKey) body.appendChild(h('p', { class: 'dim small keynote' }, '푸른 봉인석을 가져가면 이 유물은 두고 갑니다. 붉은·초록·푸른 봉인석을 모두 모으면 3막 보스 뒤 숨겨진 4막이 열립니다.'));
       const open = (takeKey) => (e) => {
         UI.lockAll(e.currentTarget.closest('.page-foot'));
         RS.sfx('coin');
@@ -847,17 +847,17 @@
         UI.showTreasure();
       };
       footer = [
-        canKey ? btn('사파이어 열쇠 (유물 포기)', open(true), 'sm') : null,
+        canKey ? btn('푸른 봉인석 (유물 포기)', open(true), 'sm') : null,
         btn(p.relics && p.relics.length ? '유물 가져가기' : '상자를 연다', open(false), 'gold grow'),
       ];
     } else {
-      if (p.gotKey) body.appendChild(h('div', { class: 'keygot' }, icon('key_sapphire', '', 4), h('b', null, '사파이어 열쇠를 얻었다! (유물은 두고 간다)')));
+      if (p.gotKey) body.appendChild(h('div', { class: 'keygot' }, icon('key_sapphire', '', 4), h('b', null, '푸른 봉인석을 얻었다! (유물은 두고 간다)')));
       else {
         body.appendChild(h('h2', null, p.got && p.got.length ? '유물을 얻었다!' : '상자는 비어 있었다'));
         body.appendChild(h('div', { class: 'cards relics' }, (p.got || []).map((id) => UI.relicCard(id, false, () => {}))));
       }
       if (p.spoils) body.appendChild(h('p', { class: 'good' }, `보물 지도가 가리킨 곳이다! 골드 +${p.spoils}`));
-      if (p.curse) body.appendChild(h('p', { class: 'cost' }, `저주받은 열쇠: 저주 [${RS.CURSE[p.curse].name}]`));
+      if (p.curse) body.appendChild(h('p', { class: 'cost' }, `도굴꾼의 열쇠: 저주 [${RS.CURSE[p.curse].name}]`));
       footer = [btn('계속', (e) => { e.currentTarget.disabled = true; G.leaveNode(); }, 'gold grow')];
     }
     UI.page('보물', null, body, footer);
@@ -894,14 +894,14 @@
     const reason = run.pending && run.pending.reason === 'cap' ? '필드의 적이 상한에 도달했습니다.' : '생명이 모두 떨어졌습니다.';
     // 3막 보스를 쓰러뜨리고 4막에서 쓰러지면 클리어로 기록된다
     const heartFail = !victory && run.act >= 4;
-    const title = victory ? (run.act === 4 ? '균열의 심장을 부쉈다!' : '균열을 닫았다!') : heartFail ? '클리어 · 심장 도전 실패' : '쓰러졌다…';
+    const title = victory ? (run.act === 4 ? '균열의 핵을 부쉈다!' : '균열을 닫았다!') : heartFail ? '클리어 · 균열의 핵 도전 실패' : '쓰러졌다…';
     const sub = victory
-      ? (run.act === 4 ? '세 개의 열쇠로 균열의 심장부까지 올라 모든 것을 끝냈습니다.' : '균열의 군주를 쓰러뜨렸습니다.')
+      ? (run.act === 4 ? '세 개의 봉인석으로 균열의 중심부까지 올라 모든 것을 끝냈습니다.' : '균열의 군주를 쓰러뜨렸습니다.')
       : heartFail ? `3막 보스를 쓰러뜨려 클리어로 기록했어요. 4막 ${run.floor}층 · ${reason}` : `${run.act}막 ${run.floor}층 · ${reason}`;
     const miles = UI.chronicleMiles ? UI.chronicleMiles(G.meta) : [];
     const next = miles.find((m) => !m.done);
     append(scr, h('div', { class: 'page scroll end' },
-      h('p', { class: 'eyebrow' }, `${cmd.title} ${cmd.name} · 승천 ${run.asc}`),
+      h('p', { class: 'eyebrow' }, `${cmd.title} ${cmd.name} · 심연 ${run.asc}`),
       h('h1', { class: victory || heartFail ? 'good' : 'bad' }, title),
       h('p', { class: 'dim' }, sub),
       unlocks && unlocks.length ? h('div', { class: 'unlocks' }, unlocks.map((u) => h('p', { class: 'good' }, '해금 · ' + u))) : null,

@@ -171,10 +171,10 @@
       UI.toast(`보스전 · 마지막 웨이브에 ${RS.ENEMY[bossId].name} 등장`, 'warn');
     } else if (b.kind === 'elite') {
       const BUFF = { hp: '체력 +40%', fast: '속도 +30%', regen: '재생', armor: '받는 피해 -25%' };
-      UI.toast(run.burning ? `불타는 엘리트(${BUFF[st.spec && st.spec.burnBuff] || '강화'}) · 이기면 에메랄드 열쇠` : '엘리트전 · 마지막 웨이브에 강적 등장', 'warn');
+      UI.toast(run.burning ? `성난 엘리트(${BUFF[st.spec && st.spec.burnBuff] || '강화'}) · 이기면 초록 봉인석` : '엘리트전 · 마지막 웨이브에 강적 등장', 'warn');
     }
-    if (run.lament > 0) setTimeout(() => UI.toast('문지기의 탄식: 첫 웨이브 적 체력 1', 'good'), 900);
-    if (run.tax > 0) setTimeout(() => UI.toast(`문지기의 세금: 웨이브 골드 없음 (${run.tax}번 남음)`, 'warn'), 1400);
+    if (run.lament > 0) setTimeout(() => UI.toast('졸음의 별: 첫 웨이브 적 체력 1', 'good'), 900);
+    if (run.tax > 0) setTimeout(() => UI.toast(`빈 주머니 별: 웨이브 골드 없음 (${run.tax}번 남음)`, 'warn'), 1400);
   };
 
   // 전장에서 탭한 자리에 가장 가까운 적
@@ -402,10 +402,10 @@
       UI.toast('빈자리가 없어요. 합성하거나 판매하세요', 'warn');
     } else if (res.err === 'cap') {
       RS.sfx('error');
-      UI.toast('벨벳 초커: 이번 웨이브에는 더 소환할 수 없어요', 'warn');
+      UI.toast('비단 목띠: 이번 웨이브에는 더 소환할 수 없어요', 'warn');
     } else if (res.err === 'locked') {
       RS.sfx('error');
-      UI.toast('속삭이는 귀걸이: 준비 시간에는 소환할 수 없어요', 'warn');
+      UI.toast('홀림 귀고리: 준비 시간에는 소환할 수 없어요', 'warn');
     } else if (res.err) {
       RS.sfx('error');
     } else {
@@ -580,7 +580,7 @@
             const r = b.upgrade(c);
             if (r.err) {
               RS.sfx('error');
-              UI.toast(r.err === 'locked' ? '속삭이는 귀걸이: 준비 시간에는 강화할 수 없어요' : r.err === 'gold' ? '골드가 부족해요' : '지금은 강화할 수 없어요', 'warn');
+              UI.toast(r.err === 'locked' ? '홀림 귀고리: 준비 시간에는 강화할 수 없어요' : r.err === 'gold' ? '골드가 부족해요' : '지금은 강화할 수 없어요', 'warn');
             } else {
               RS.sfx('upgrade');
             }
@@ -678,7 +678,7 @@
     const run = G.run;
     const b = G.battle;
     const slots = RS.itemSlots(run);
-    // 칸이 많으면(물약 벨트·연금 솥·별) 칸과 버튼을 조금 줄인다
+    // 칸이 많으면(보급 허리띠·연금 솥·별) 칸과 버튼을 조금 줄인다
     UI.itemTight = slots + (b && b.M.stars ? 2 : 0) >= 6;
     bar.classList.toggle('tight', UI.itemTight);
     for (let k = 0; k < slots; k++) {

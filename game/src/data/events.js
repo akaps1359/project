@@ -14,7 +14,7 @@
   const hasRemovable = (run) => RS.removableCount(run) > 0;
   const hasTransformable = (run) => RS.transformableCount(run) > 0;
   const hasUnit = (run, maxTier) => run.board.some((s) => s && (maxTier == null || s.tier <= maxTier));
-  // 회복이 의미 있을 때만 (피어남의 표식이 없고, 다친 상태)
+  // 회복이 의미 있을 때만 (시든 꽃의 낙인이 없고, 다친 상태)
   const canHeal = (run) => RS.canHeal(run) && run.life < run.maxLife;
   const bagSpace = (run) => !RS.collectMods(run).noItems && run.items.length < RS.itemSlots(run);
   const runeSlot = (run) => run.runes.some((r) => !r || RS.RUNE[r].bad);
@@ -97,7 +97,7 @@
           label: '균열에 손을 넣는다', desc: '프리즘 증강 선택 · 저주 [균열 오염]',
           apply(run) {
             const got = RS.addCurse(run, 'riftTaint');
-            return { text: got ? '차가운 힘이 팔을 타고 오른다. 저주 [균열 오염]을 받았다.' : '부적이 저주를 막아 냈다!', augRarity: 3 };
+            return { text: got ? '차가운 힘이 팔을 타고 오른다. 저주 [균열 오염]을 받았다.' : '액막이 매듭이 저주를 막아 냈다!', augRarity: 3 };
           },
         },
       ],
@@ -119,13 +119,13 @@
       ],
     },
     {
-      id: 'duplicator', title: '거울의 방', art: 'mirror',
-      text: '끝없이 이어진 거울 속에서 당신의 병사들이 웃고 있다. 한 명쯤은 거울 밖으로 나올 것 같다.',
+      id: 'duplicator', title: '장난꾸러기 거울', art: 'mirror',
+      text: '금테 두른 거울이 킥킥 웃는다. "네 병사 하나만 빌려줘. 똑같이 하나 더 뽑아 줄게!"',
       options: [
         {
           label: '거울에 손을 댄다', desc: '영웅 이하 유닛 1기를 골라 복제', cond: (run) => hasUnit(run, 2) && RS.hasEmptySlot(run.board),
           apply(run) {
-            q(run, { k: 'unit', op: 'dup', maxTier: 2, title: '거울의 방' });
+            q(run, { k: 'unit', op: 'dup', maxTier: 2, title: '장난꾸러기 거울' });
             return '거울 표면이 물결친다.';
           },
         },
@@ -152,8 +152,8 @@
       ],
     },
     {
-      id: 'cleric', title: '떠돌이 성직자', art: 'heart',
-      text: '파란 모자를 쓴 성직자가 손을 내민다. "치유가 필요한가? 아니면… 정화?"',
+      id: 'cleric', title: '약초꾼 할멈', art: 'heart',
+      text: '약초 바구니를 멘 할멈이 손짓한다. "어디 다쳤나? 아니면… 떼어 낼 게 붙었나?"',
       options: [
         {
           label: '치유', desc: '골드 -35 · 생명 +8', cond: (run) => run.gold >= 35 && canHeal(run),
@@ -170,34 +170,34 @@
             const g = 50 * act(run);
             RS.addGold(run, -g);
             q(run, { k: 'remove', title: '정화', refund: g });
-            return '성직자가 조용히 기도문을 읊는다.';
+            return '할멈이 쑥 연기를 훅 불어 준다.';
           },
         },
         leave(),
       ],
     },
     {
-      id: 'serpent', title: '속삭이는 뱀', art: 'snake',
-      text: '"금화를 잔뜩 주지. 대신 작은 의심 하나만 품어 줘."',
+      id: 'serpent', title: '금화 뱀', art: 'snake',
+      text: '금화 더미 위에 똬리를 튼 뱀이 혀를 날름거린다. "다 가져가도 돼. 대신 머리가 좀 핑 돌 거야."',
       options: [
         {
-          label: '받아들인다', desc: (run) => `골드 +${100 * act(run)} · 저주 [의심]`,
+          label: '받아들인다', desc: (run) => `골드 +${100 * act(run)} · 저주 [현기증]`,
           apply(run) {
             RS.addGold(run, 100 * act(run));
-            return RS.addCurse(run, 'doubt') ? `골드 +${100 * act(run)}. 마음 한구석이 불안하다. 저주 [의심]` : `골드 +${100 * act(run)}. 부적이 저주를 막았다!`;
+            return RS.addCurse(run, 'doubt') ? `골드 +${100 * act(run)}. 눈앞이 빙글빙글 돈다. 저주 [현기증]` : `골드 +${100 * act(run)}. 액막이 매듭이 저주를 막았다!`;
           },
         },
         leave('거절한다'),
       ],
     },
     {
-      id: 'thief', title: '가면 쓴 도적단', art: 'mask',
-      text: '가면을 쓴 무리가 길을 막는다. "통행료를 내시지."',
+      id: 'thief', title: '너구리 산적단', art: 'mask',
+      text: '너구리 탈을 쓴 무리가 길을 막는다. "이 길은 우리 구역이다! 통행료를 내시지."',
       options: [
         {
           label: '맞서 싸운다', desc: '엘리트 전투 · 이기면 유물 + 골드',
           apply() {
-            return { text: '도적들이 무기를 뽑는다!', fight: { as: 'elite', elite: 'darkKnight', relic: [1, 2], relicChoices: 2 } };
+            return { text: '산적들이 몽둥이를 치켜든다!', fight: { as: 'elite', elite: 'darkKnight', relic: [1, 2], relicChoices: 2 } };
           },
         },
         {
@@ -205,27 +205,27 @@
           apply(run) {
             const g = Math.floor(run.gold);
             run.gold = 0;
-            return g > 0 ? `골드 ${g}을(를) 빼앗겼다.` : '빈 주머니를 보여 주자 도적들이 투덜대며 길을 비켰다.';
+            return g > 0 ? `골드 ${g}을(를) 빼앗겼다.` : '빈 주머니를 보여 주자 너구리들이 투덜대며 길을 비켰다.';
           },
         },
       ],
     },
     {
-      id: 'goldenIdol', title: '황금 우상', art: 'idol',
+      id: 'goldenIdol', title: '두꺼비 사당', art: 'idol',
       steps: [
         {
-          text: '제단 위에 황금 우상이 반짝인다. 주변 바닥에 수상한 홈이 파여 있다.',
+          text: '낡은 사당 안에 금두꺼비 상이 입에 동전을 물고 앉아 있다. 바닥에 수상한 홈이 파여 있다.',
           options: [
             {
-              label: '우상을 집는다', desc: '유물 [황금 우상] (함정이 있을지도)',
+              label: '두꺼비를 집는다', desc: '유물 [금두꺼비] (함정이 있을지도)',
               apply(run) {
                 let got = '';
                 if (!RS.hasRelic(run, 'goldIdol')) RS.addRelic(run, 'goldIdol');
                 else {
                   RS.addGold(run, 120);
-                  got = ' (이미 가진 우상이라 녹여서 골드 +120)';
+                  got = ' (이미 가진 두꺼비라 녹여서 골드 +120)';
                 }
-                return { text: `우상을 집어 드는 순간, 등 뒤에서 거대한 바위가 굴러온다!${got}`, next: 1 };
+                return { text: `두꺼비를 들어 올리는 순간, 사당이 흔들리며 거대한 바위가 굴러온다!${got}`, next: 1 };
               },
             },
             leave(),
@@ -234,7 +234,7 @@
         {
           text: '바위가 굴러온다! 어떻게 할까?',
           options: [
-            { label: '뛴다', desc: '저주 [연약함]', apply(run) { return RS.addCurse(run, 'fragile') ? '간신히 빠져나왔지만 발목을 다쳤다. 저주 [연약함]' : '부적 덕분에 다치지 않았다!'; } },
+            { label: '뛴다', desc: '저주 [연약함]', apply(run) { return RS.addCurse(run, 'fragile') ? '간신히 빠져나왔지만 발목을 다쳤다. 저주 [연약함]' : '액막이 매듭 덕분에 다치지 않았다!'; } },
             {
               label: '맞서서 부순다', desc: '생명 -25%(최대 기준)', cond: (run) => run.life > Math.ceil(run.maxLife * 0.25),
               apply(run) { return `바위를 부쉈다. ${hurt(run, Math.ceil(run.maxLife * 0.25))}`; },
@@ -245,30 +245,30 @@
       ],
     },
     {
-      id: 'wingStatue', title: '날개 달린 조각상', art: 'wing',
-      text: '거대한 날개 조각상. 발치에 오래된 기도문과 금화가 박힌 틈이 보인다.',
+      id: 'wingStatue', title: '깃털 석상', art: 'wing',
+      text: '온몸이 깃털로 조각된 새 석상. 부리 밑에 소원 쪽지가 끼워져 있고, 발치 틈새로 금화가 반짝인다.',
       options: [
         {
           label: '기도한다', desc: '생명 -4 · 증강이나 저주 하나 제거', cond: (run) => run.life > 4 && hasRemovable(run),
           apply(run) {
             const lost = RS.damageLife(run, 4);
-            q(run, { k: 'remove', title: '날개 달린 조각상', refundLife: lost });
-            return `날개가 희미하게 빛난다. 생명 -${lost}`;
+            q(run, { k: 'remove', title: '깃털 석상', refundLife: lost });
+            return `석상의 깃털이 희미하게 빛난다. 생명 -${lost}`;
           },
         },
         {
           label: '부순다', desc: '영웅 이상 유닛이 있으면 골드 +60×막', cond: (run) => run.board.some((s) => s && s.tier >= 2),
           apply(run) {
             RS.addGold(run, 60 * act(run));
-            return `강한 병사가 조각상을 부쉈다. 골드 +${60 * act(run)}`;
+            return `강한 병사가 석상을 부쉈다. 골드 +${60 * act(run)}`;
           },
         },
         leave(),
       ],
     },
     {
-      id: 'scrapOoze', title: '고철 슬라임', art: 'slime',
-      text: (run) => `고철 더미를 삼킨 슬라임. 뱃속에서 무언가 반짝인다. (다음 시도: 생명 -${run.pending.ooze ? run.pending.ooze.cost : 3}, 성공 확률 ${Math.round((run.pending.ooze ? run.pending.ooze.p : 0.25) * 100)}%)`,
+      id: 'scrapOoze', title: '먹보 슬라임', art: 'slime',
+      text: (run) => `뭐든 삼키는 먹보 슬라임이 트림을 한다. 말랑한 뱃속에서 무언가 반짝인다. (다음 시도: 생명 -${run.pending.ooze ? run.pending.ooze.cost : 3}, 성공 확률 ${Math.round((run.pending.ooze ? run.pending.ooze.p : 0.25) * 100)}%)`,
       options: [
         {
           label: '손을 넣는다', desc: '생명을 잃고 확률로 유물. 실패할수록 확률이 오른다', cond: (run) => run.life > (run.pending.ooze ? run.pending.ooze.cost : 3) && relicLeft(run, [1, 2]),
@@ -289,8 +289,8 @@
       ],
     },
     {
-      id: 'shiningLight', title: '빛나는 균열', art: 'sparkle',
-      text: '눈부신 빛이 쏟아지는 틈. 들어가면 뜨겁겠지만 무언가 달라질 것 같다.',
+      id: 'shiningLight', title: '빛기둥', art: 'sparkle',
+      text: '하늘에서 땅까지 곧게 내리꽂힌 빛기둥. 안은 뜨겁겠지만, 나오면 무언가 달라져 있을 것 같다.',
       options: [
         {
           label: '빛 속으로', desc: '생명 -20%(최대 기준) · 무작위 증강 2개 연마', cond: (run) => hasUpgradable(run) && run.life > Math.ceil(run.maxLife * 0.2),
@@ -309,26 +309,26 @@
       ],
     },
     {
-      id: 'livingWall', title: '살아 있는 벽', art: 'n_event',
-      text: '벽에 새겨진 세 개의 얼굴이 동시에 입을 연다. "잊을 것인가, 바꿀 것인가, 자랄 것인가."',
+      id: 'livingWall', title: '세 얼굴 석판', art: 'n_event',
+      text: '길가의 석판에 웃는 얼굴, 찡그린 얼굴, 조는 얼굴이 새겨져 있다. 셋이 한꺼번에 떠든다. "지울래? 바꿀래? 키울래?"',
       cond: hasRemovable,
       options: [
-        { label: '잊는다', desc: '증강이나 저주 하나 제거', cond: hasRemovable, apply(run) { q(run, { k: 'remove', title: '살아 있는 벽' }); return '기억 하나가 흐려진다.'; } },
-        { label: '바꾼다', desc: '증강 하나를 같은 등급의 다른 증강으로 변환 (즉시 효과 증강은 제외)', cond: hasTransformable, apply(run) { q(run, { k: 'transform', title: '살아 있는 벽' }); return '무언가가 뒤틀린다.'; } },
-        { label: '자란다', desc: '증강 하나 연마', cond: hasUpgradable, apply(run) { q(run, { k: 'upgrade', title: '살아 있는 벽' }); return '힘이 자라난다.'; } },
+        { label: '지운다', desc: '증강이나 저주 하나 제거', cond: hasRemovable, apply(run) { q(run, { k: 'remove', title: '세 얼굴 석판' }); return '기억 하나가 흐려진다.'; } },
+        { label: '바꾼다', desc: '증강 하나를 같은 등급의 다른 증강으로 변환 (즉시 효과 증강은 제외)', cond: hasTransformable, apply(run) { q(run, { k: 'transform', title: '세 얼굴 석판' }); return '무언가가 뒤틀린다.'; } },
+        { label: '키운다', desc: '증강 하나 연마', cond: hasUpgradable, apply(run) { q(run, { k: 'upgrade', title: '세 얼굴 석판' }); return '힘이 자라난다.'; } },
         leave(),
       ],
     },
     {
-      id: 'goldenShrine', title: '황금 제단', art: 'coins',
-      text: '금으로 도금된 작은 제단. 헌금함이 열려 있다.',
+      id: 'goldenShrine', title: '시주함', art: 'coins',
+      text: '길가 돌탑 옆의 낡은 시주함. 자물쇠가 헐겁게 달랑거린다.',
       options: [
-        { label: '기도한다', desc: '골드 +100', apply(run) { RS.addGold(run, 100); return '골드 +100'; } },
+        { label: '합장한다', desc: '골드 +100', apply(run) { RS.addGold(run, 100); return '돌탑 틈에서 누군가 두고 간 금화가 굴러 나왔다. 골드 +100'; } },
         {
-          label: '훼손한다', desc: '골드 +275 · 저주 [후회]',
+          label: '털어 간다', desc: '골드 +275 · 저주 [불면]',
           apply(run) {
             RS.addGold(run, 275);
-            return RS.addCurse(run, 'regret') ? '골드 +275. 마음이 무겁다. 저주 [후회]' : '골드 +275. 부적이 저주를 막았다!';
+            return RS.addCurse(run, 'regret') ? '골드 +275. 오늘 밤은 잠이 안 올 것 같다. 저주 [불면]' : '골드 +275. 액막이 매듭이 저주를 막았다!';
           },
         },
         leave(),
@@ -344,26 +344,26 @@
       ],
     },
     {
-      id: 'purifier', title: '정화의 샘', art: 'drop',
-      text: '맑은 물이 솟는 샘. 몸에 붙은 것들을 씻어 낼 수 있을 것 같다.',
+      id: 'purifier', title: '씻김 우물', art: 'drop',
+      text: '금줄이 둘린 오래된 우물. 두레박 물을 뒤집어쓰면 붙은 것들이 씻겨 나간다고 한다.',
       cond: hasRemovable,
       options: [
-        { label: '씻는다', desc: '증강이나 저주 하나 제거', cond: hasRemovable, apply(run) { q(run, { k: 'remove', title: '정화의 샘' }); return '물이 차갑고 맑다.'; } },
+        { label: '씻는다', desc: '증강이나 저주 하나 제거', cond: hasRemovable, apply(run) { q(run, { k: 'remove', title: '씻김 우물' }); return '물이 차갑고 맑다.'; } },
         leave(),
       ],
     },
     {
-      id: 'transmogrifier', title: '변환기', art: 'gear',
-      text: '톱니가 맞물린 기묘한 기계. 무언가를 넣으면 다른 것이 나온다.',
+      id: 'transmogrifier', title: '둔갑 기계', art: 'gear',
+      text: '굴뚝 달린 통에 톱니가 덕지덕지 붙은 기계. 무언가를 넣으면 전혀 다른 것으로 둔갑시켜 뱉어 낸다.',
       cond: hasTransformable,
       options: [
-        { label: '넣는다', desc: '증강 하나를 같은 등급의 다른 증강으로 변환 (즉시 효과 증강은 제외)', cond: hasTransformable, apply(run) { q(run, { k: 'transform', title: '변환기' }); return '기계가 덜컹거린다.'; } },
+        { label: '넣는다', desc: '증강 하나를 같은 등급의 다른 증강으로 변환 (즉시 효과 증강은 제외)', cond: hasTransformable, apply(run) { q(run, { k: 'transform', title: '둔갑 기계' }); return '기계가 덜컹거린다.'; } },
         leave(),
       ],
     },
     {
-      id: 'wheel', title: '운명의 바퀴', art: 'wheel',
-      text: '광대가 바퀴를 가리킨다. "한 번 돌려 봐! 공짜야, 아마도."',
+      id: 'wheel', title: '광대의 돌림판', art: 'wheel',
+      text: '방울 모자를 쓴 광대가 알록달록한 돌림판을 가리킨다. "한 번 돌려 봐! 공짜야, 아마도."',
       options: [
         {
           label: '돌린다', desc: '골드 · 유물 · 전부 회복 · 저주 · 증강 제거 · 생명 -10% 중 하나',
@@ -378,44 +378,44 @@
               return id ? `유물 [${RS.REL[id].name}]!` : '유물 칸이 나왔지만 상자는 비어 있었다.';
             }
             if (r === 2) {
-              if (!RS.canHeal(run)) return '회복 칸이 나왔지만 피어남의 표식이 빛을 튕겨 냈다.';
+              if (!RS.canHeal(run)) return '회복 칸이 나왔지만 시든 꽃의 낙인이 빛을 튕겨 냈다.';
               const h = RS.heal(run, run.maxLife);
               return h > 0 ? `생명을 모두 회복했다! 생명 +${h}` : '회복 칸! 하지만 이미 멀쩡하다.';
             }
             if (r === 3) {
               const id = RS.randomCurseId(rng);
-              return RS.addCurse(run, id) ? `저주 [${RS.CURSE[id].name}]을(를) 받았다…` : '저주가 나왔지만 부적이 막았다!';
+              return RS.addCurse(run, id) ? `저주 [${RS.CURSE[id].name}]을(를) 받았다…` : '저주가 나왔지만 액막이 매듭이 막았다!';
             }
             if (r === 4) {
               if (!hasRemovable(run)) return '제거 칸이 나왔지만 없앨 것이 없었다.';
-              q(run, { k: 'remove', title: '운명의 바퀴' });
+              q(run, { k: 'remove', title: '광대의 돌림판' });
               return '증강이나 저주 하나를 없앨 수 있다.';
             }
-            return `바퀴가 튕겨 나왔다! ${hurt(run, Math.ceil(run.maxLife * 0.1))}`;
+            return `돌림판 화살이 튕겨 나왔다! ${hurt(run, Math.ceil(run.maxLife * 0.1))}`;
           },
         },
         leave(),
       ],
     },
     {
-      id: 'bonfire', title: '모닥불 정령', art: 'flame',
-      text: '작은 정령들이 모닥불 주위를 맴돈다. "강한 전사를 바치면 큰 선물을 줄게!"',
+      id: 'bonfire', title: '도깨비 화롯불', art: 'flame',
+      text: '꼬마 도깨비들이 화롯불 주위에서 방망이를 두드린다. "센 녀석을 넣어 주면 큰 선물을 줄게!"',
       cond: (run) => hasUnit(run),
       options: [
         {
           label: '유닛 1기를 바친다', desc: '일반: 없음 · 희귀: 생명 +5 · 영웅: 최대 생명 +5, 전부 회복 · 전설: 유물 + 최대 생명 +10',
           cond: (run) => hasUnit(run),
           apply(run) {
-            q(run, { k: 'unit', op: 'sacrifice', title: '모닥불 정령' });
-            return '정령들이 기대에 찬 눈으로 바라본다.';
+            q(run, { k: 'unit', op: 'sacrifice', title: '도깨비 화롯불' });
+            return '도깨비들이 기대에 찬 눈으로 바라본다.';
           },
         },
         leave(),
       ],
     },
     {
-      id: 'deadAdventurer', title: '죽은 모험가', art: 'skull',
-      text: (run) => `쓰러진 모험가의 짐이 널려 있다. 근처에서 무언가 숨 쉬는 소리가 들린다. (습격 확률 ${Math.round((run.pending.dead ? run.pending.dead.p : 0.25) * 100)}%)`,
+      id: 'deadAdventurer', title: '쓰러진 원정대', art: 'skull',
+      text: (run) => `먼저 균열에 들어간 원정대의 짐이 흩어져 있다. 근처에서 무언가 숨 쉬는 소리가 들린다. (습격 확률 ${Math.round((run.pending.dead ? run.pending.dead.p : 0.25) * 100)}%)`,
       options: [
         {
           label: '짐을 뒤진다', desc: '골드·유물을 찾지만, 뒤질수록 엘리트에게 습격당할 확률이 오른다',
@@ -437,8 +437,8 @@
       ],
     },
     {
-      id: 'mushrooms', title: '버섯 군락', art: 'n_event', acts: [1, 2],
-      text: '형광 버섯이 빽빽하다. 건드리면 무언가 튀어나올 것 같다.',
+      id: 'mushrooms', title: '형광 버섯밭', art: 'n_event', acts: [1, 2],
+      text: '발목까지 오는 형광 버섯이 빽빽하다. 구수한 냄새가 나지만, 건드리면 무언가 튀어나올 것 같다.',
       options: [
         {
           label: '짓밟는다', desc: '전투 · 이기면 유물',
@@ -447,11 +447,11 @@
           },
         },
         {
-          label: '먹는다', desc: '생명 25% 회복 · 저주 [기생충]',
+          label: '먹는다', desc: '생명 25% 회복 · 저주 [곰팡이 포자]',
           apply(run) {
             const h = RS.heal(run, Math.ceil(run.maxLife * 0.25));
-            const ht = !RS.canHeal(run) ? ' (피어남의 표식 때문에 회복하지 못했다)' : h > 0 ? ` 생명 +${h}.` : '';
-            return RS.addCurse(run, 'parasite') ? `배가 부르다…${ht} 뭔가 꿈틀댄다. 저주 [기생충]` : `배가 부르다.${ht} 부적이 저주를 막았다!`;
+            const ht = !RS.canHeal(run) ? ' (시든 꽃의 낙인 때문에 회복하지 못했다)' : h > 0 ? ` 생명 +${h}.` : '';
+            return RS.addCurse(run, 'parasite') ? `배가 부르다…${ht} 몸에서 곰팡이 냄새가 난다. 저주 [곰팡이 포자]` : `배가 부르다.${ht} 액막이 매듭이 저주를 막았다!`;
           },
         },
         leave(),
@@ -513,10 +513,10 @@
       ],
     },
     {
-      id: 'tinker', title: '땜장이의 공방', art: 'gear',
+      id: 'tinker', title: '괴짜 공방', art: 'gear',
       steps: [
         {
-          text: '"네 입맛대로 하나 만들어 주지. 먼저 뼈대를 골라."',
+          text: '고글을 쓴 괴짜 발명가가 스패너를 돌린다. "네 입맛대로 하나 만들어 주지. 먼저 뼈대를 골라."',
           options: [
             { label: '날카로운 뼈대', desc: '모든 유닛 피해 +15%', apply(run) { run.pending.tinker = { base: 'dmg' }; return { text: '좋아, 날카롭게.', next: 1 }; } },
             { label: '가벼운 뼈대', desc: '모든 유닛 공격 속도 +12%', apply(run) { run.pending.tinker = { base: 'aspd' }; return { text: '좋아, 가볍게.', next: 1 }; } },
@@ -534,36 +534,36 @@
       ],
     },
     {
-      id: 'wongo', title: '웡고의 가게', art: 'bag',
-      text: '"어서 와! 웡고 포인트는 모험이 끝나도 쌓인다고!" 수상한 상인이 손을 비빈다.',
+      id: 'wongo', title: '퉁퉁이네 가게', art: 'bag',
+      text: '배가 불룩한 상인 퉁퉁이가 주판을 튕긴다. "어서 와! 퉁퉁 포인트는 모험이 끝나도 쌓인다고!"',
       options: [
         { label: '일반 유물', desc: '골드 -100', cond: (run) => run.gold >= 100 && relicLeft(run, [1]), apply(run) { RS.addGold(run, -100); RS.wongoSpend(run, 100); const id = RS.grantRandomRelic(run, [1]); return `[${relicName(id)}]을(를) 샀다.`; } },
         { label: '희귀 유물', desc: '골드 -200', cond: (run) => run.gold >= 200 && relicLeft(run, [2]), apply(run) { RS.addGold(run, -200); RS.wongoSpend(run, 200); const id = RS.grantRandomRelic(run, [2]); return `[${relicName(id)}]을(를) 샀다.`; } },
         {
-          label: '웡고 티켓', desc: '골드 -300 · 전투 5번 뒤 유물 3개', cond: (run) => run.gold >= 300 && !(run.quests && run.quests.wongo),
+          label: '퉁퉁 쿠폰', desc: '골드 -300 · 전투 5번 뒤 유물 3개', cond: (run) => run.gold >= 300 && !(run.quests && run.quests.wongo),
           apply(run) {
             RS.addGold(run, -300);
             RS.wongoSpend(run, 300);
             run.quests = run.quests || {};
             run.quests.wongo = { left: 5 };
-            return '티켓을 받았다. 전투 5번 뒤에 유물 3개!';
+            return '쿠폰을 받았다. 전투 5번 뒤에 유물 3개!';
           },
         },
         {
           label: '그냥 나간다', desc: '연마된 증강 하나가 원래대로 돌아간다',
           apply(run, rng) {
             const up = run.augments.map((id, i) => i).filter((i) => RS.isUpgraded(run.augments[i]));
-            if (!up.length) return '웡고가 투덜거린다.';
+            if (!up.length) return '퉁퉁이가 투덜거린다.';
             const i = rng.pick(up);
             run.augments[i] = run.augments[i].slice(0, -1);
-            return `웡고가 투덜거리며 [${RS.augDef(run.augments[i]).name}]의 연마를 떼어 갔다.`;
+            return `퉁퉁이가 투덜거리며 [${RS.augDef(run.augments[i]).name}]의 연마를 떼어 갔다.`;
           },
         },
       ],
     },
     {
-      id: 'trial', title: '재판', art: 'crest',
-      text: '"피고인은 앞으로!" 법정 한가운데 당신이 서 있다. 무슨 사건인지는 아무도 모른다.',
+      id: 'trial', title: '엉터리 재판', art: 'crest',
+      text: '"피고인은 앞으로!" 부엉이 판사가 망치를 두드린다. 무슨 사건인지는 판사도 모르는 눈치다.',
       options: [
         {
           label: '재판을 받는다', desc: '무작위 판결: 저주 하나와 함께 큰 보상',
@@ -573,17 +573,17 @@
               const got = RS.addCurse(run, 'regret');
               const ids = [RS.grantRandomRelic(run, [1, 2]), RS.grantRandomRelic(run, [1, 2])].filter(Boolean);
               const loot = ids.length ? `압수품 유물 ${ids.length}개([${ids.map((id) => RS.REL[id].name).join('], [')}])를 챙겼다.` : '압수품 창고는 비어 있었다.';
-              return got ? `유죄! 저주 [후회]. 대신 ${loot}` : `유죄! 하지만 부적이 저주를 막았다. ${loot}`;
+              return got ? `유죄! 저주 [불면]. 대신 ${loot}` : `유죄! 하지만 액막이 매듭이 저주를 막았다. ${loot}`;
             }
             if (r === 1) {
               const got = RS.addCurse(run, 'doubt');
               RS.addGold(run, 150 * act(run));
-              return got ? `무죄! 배상금 골드 +${150 * act(run)}. 하지만 저주 [의심]이 남았다.` : `무죄! 배상금 골드 +${150 * act(run)}. 부적 덕분에 뒤끝도 없다.`;
+              return got ? `무죄! 배상금 골드 +${150 * act(run)}. 하지만 저주 [현기증]이 남았다.` : `무죄! 배상금 골드 +${150 * act(run)}. 액막이 매듭 덕분에 뒤끝도 없다.`;
             }
             const got = RS.addCurse(run, 'guilt');
             const n = Math.min(2, upgradableCount(run));
-            for (let k = 0; k < n; k++) q(run, { k: 'upgrade', title: '재판' });
-            const head = got ? '판결 보류. 저주 [죄책감](전투 5번 뒤 사라짐).' : '판결 보류. 부적이 저주를 막았다.';
+            for (let k = 0; k < n; k++) q(run, { k: 'upgrade', title: '엉터리 재판' });
+            const head = got ? '판결 보류. 저주 [찜찜함](전투 5번 뒤 사라짐).' : '판결 보류. 액막이 매듭이 저주를 막았다.';
             return `${head} ${n ? `증강 ${n}개를 연마할 수 있다.` : '연마할 증강은 없었다.'}`;
           },
         },
@@ -597,32 +597,32 @@
       ],
     },
     {
-      id: 'crystalSphere', title: '수정 구체', art: 'orb',
+      id: 'crystalSphere', title: '안개 구슬', art: 'orb',
       steps: [
         {
-          text: '흐릿한 수정 구체 속에 보물과 저주가 섞여 떠다닌다. 들여다볼수록 더 많이 보인다.',
+          text: '뿌연 안개가 소용돌이치는 유리구슬. 안개 사이로 보물과 저주가 번갈아 비친다. 들여다볼수록 더 많이 보인다.',
           options: [
-            { label: '값을 치른다', desc: (run) => `골드 -${60 * act(run)} · 3번 들여다본다`, cond: (run) => run.gold >= 60 * act(run), apply(run) { RS.addGold(run, -60 * act(run)); RS.initSphere(run, 3); return { text: '구체가 빛나기 시작한다.', next: 1 }; } },
+            { label: '값을 치른다', desc: (run) => `골드 -${60 * act(run)} · 3번 들여다본다`, cond: (run) => run.gold >= 60 * act(run), apply(run) { RS.addGold(run, -60 * act(run)); RS.initSphere(run, 3); return { text: '구슬 속 안개가 걷히기 시작한다.', next: 1 }; } },
             {
               label: '빚을 진다', desc: '저주 [빚] · 6번 들여다본다',
               apply(run) {
                 const got = RS.addCurse(run, 'debt');
                 RS.initSphere(run, 6);
-                return { text: got ? '구체가 탐욕스럽게 빛난다. 저주 [빚]' : '구체가 탐욕스럽게 빛난다. 부적이 빚을 막았다!', next: 1 };
+                return { text: got ? '구슬이 탐욕스럽게 빛난다. 저주 [빚]' : '구슬이 탐욕스럽게 빛난다. 액막이 매듭이 빚을 막았다!', next: 1 };
               },
             },
             leave(),
           ],
         },
         {
-          text: (run) => `구체 속을 들여다본다. (남은 횟수 ${run.pending.sphere ? run.pending.sphere.left : 0})`,
+          text: (run) => `구슬 속을 들여다본다. (남은 횟수 ${run.pending.sphere ? run.pending.sphere.left : 0})`,
           options: [
             {
               label: '들여다본다', desc: '골드·소모품·증강·유물… 저주도 숨어 있다',
               cond: (run) => run.pending.sphere && run.pending.sphere.left > 0,
               apply(run) { return RS.revealSphere(run); },
             },
-            leave('그만둔다', '구체의 빛이 사그라든다.'),
+            leave('그만둔다', '구슬 속에 다시 안개가 낀다.'),
           ],
         },
       ],
@@ -659,8 +659,8 @@
       ],
     },
     {
-      id: 'wellspring', title: '맑은 샘', art: 'drop',
-      text: '이끼 사이로 맑은 물이 솟는다. 물병을 채울 수도, 몸을 씻을 수도 있다.',
+      id: 'wellspring', title: '이끼 샘터', art: 'drop',
+      text: '이끼 낀 바위 틈에서 물이 퐁퐁 솟는다. 물병을 채울 수도, 몸을 씻을 수도 있다.',
       options: [
         {
           label: '물병을 채운다', desc: '무작위 소모품 1개', cond: bagSpace,
@@ -670,21 +670,21 @@
           },
         },
         {
-          label: '몸을 씻는다', desc: '증강이나 저주 하나 제거 · 저주 [죄책감](전투 5번 뒤 사라짐)', cond: hasRemovable,
+          label: '몸을 씻는다', desc: '증강이나 저주 하나 제거 · 저주 [찜찜함](전투 5번 뒤 사라짐)', cond: hasRemovable,
           apply(run) {
             const charm = !!(run.relicState.omamori && run.relicState.omamori.charges > 0);
             const got = RS.addCurse(run, 'guilt');
-            // 제거를 그만두면 죄책감도(부적이 막았다면 부적 횟수도) 되돌린다
-            q(run, { k: 'remove', title: '맑은 샘', undoCurse: got ? 'guilt' : null, undoCharm: !got && charm ? 1 : 0 });
-            return got ? '물이 차갑다. 마음 한편이 무겁다. 저주 [죄책감]' : '물이 차갑다. 부적이 죄책감을 막았다!';
+            // 제거를 그만두면 찜찜함도(액막이 매듭이 막았다면 그 횟수도) 되돌린다
+            q(run, { k: 'remove', title: '이끼 샘터', undoCurse: got ? 'guilt' : null, undoCharm: !got && charm ? 1 : 0 });
+            return got ? '물이 차갑다. 어쩐지 개운하지가 않다. 저주 [찜찜함]' : '물이 차갑다. 액막이 매듭이 찜찜함을 막았다!';
           },
         },
         leave(),
       ],
     },
     {
-      id: 'morphicGrove', title: '변형의 숲', art: 'flower',
-      text: '나무들이 천천히 모양을 바꾼다. 금빛 열매가 달려 있다.',
+      id: 'morphicGrove', title: '뒤바뀌는 숲', art: 'flower',
+      text: '눈을 깜박일 때마다 나무 모양이 바뀌는 숲. 가지 끝에 금빛 열매가 달려 있다.',
       cond: (run) => run.gold >= 100,
       options: [
         {
@@ -694,8 +694,8 @@
             run.gold = 0;
             const n = Math.min(2, RS.transformableCount(run));
             // 첫 변환을 그만두면 바친 골드를 돌려받고 둘째 변환도 취소된다
-            q(run, { k: 'transform', title: '변형의 숲', refund: paid, group: 'morphicGrove' });
-            if (n > 1) q(run, { k: 'transform', title: '변형의 숲', group: 'morphicGrove' });
+            q(run, { k: 'transform', title: '뒤바뀌는 숲', refund: paid, group: 'morphicGrove' });
+            if (n > 1) q(run, { k: 'transform', title: '뒤바뀌는 숲', group: 'morphicGrove' });
             return n > 1 ? '금화가 흙 속으로 스며든다. 증강 2개를 바꿀 수 있다.' : '금화가 흙 속으로 스며든다. 바꿀 수 있는 증강은 하나뿐이다.';
           },
         },
@@ -703,16 +703,16 @@
       ],
     },
     {
-      id: 'cheese', title: '치즈가 가득한 방', art: 'berry',
-      text: '방 안이 치즈로 가득하다. 쥐들이 무언가를 지키고 있다.',
+      id: 'cheese', title: '생쥐 곳간', art: 'berry',
+      text: '곳간 가득 치즈가 쌓여 있다. 생쥐들이 치즈 더미 사이에서 무언가를 지키고 있다.',
       options: [
-        { label: '치즈를 고른다', desc: '은빛 증강 6개 중 2개를 고른다', apply(run) { q(run, { k: 'augList', ids: RS.rollAugments(run, 6, [0, 1, 0, 0]), left: 2, title: '치즈가 가득한 방' }); return '냄새가 지독하지만 쓸 만한 것들이 보인다.'; } },
+        { label: '치즈를 고른다', desc: '은빛 증강 6개 중 2개를 고른다', apply(run) { q(run, { k: 'augList', ids: RS.rollAugments(run, 6, [0, 1, 0, 0]), left: 2, title: '생쥐 곳간' }); return '냄새가 지독하지만 쓸 만한 것들이 보인다.'; } },
         {
-          label: '쥐들을 쫓아낸다', desc: '생명 -5 · 유물 [치즈 조각] (전투에서 이기면 최대 생명 +1)', cond: (run) => run.life > 5 && !RS.hasRelic(run, 'cheese'),
+          label: '쥐들을 쫓아낸다', desc: '생명 -5 · 유물 [쥐구멍 치즈] (전투에서 이기면 최대 생명 +1)', cond: (run) => run.life > 5 && !RS.hasRelic(run, 'cheese'),
           apply(run) {
             RS.damageLife(run, 5);
             RS.addRelic(run, 'cheese');
-            return '쥐에게 물렸지만 커다란 치즈 조각을 얻었다.';
+            return '생쥐에게 물렸지만 구멍이 숭숭 난 커다란 치즈를 얻었다.';
           },
         },
       ],
@@ -720,8 +720,8 @@
 
     // ── 2막 이후 ──
     {
-      id: 'knowingSkull', title: '해골 지식인', art: 'skull', acts: [2, 3],
-      text: (run) => `말하는 해골이 거래를 제안한다. "원하는 걸 말해. 대가는 네 생명이다." (현재 대가: 생명 -${run.pending.skull || 2})`,
+      id: 'knowingSkull', title: '수다쟁이 해골', art: 'skull', acts: [2, 3],
+      text: (run) => `쉬지 않고 떠드는 해골이 턱을 딱딱거린다. "원하는 걸 말해 봐. 값은 네 생명으로 받지." (현재 대가: 생명 -${run.pending.skull || 2})`,
       options: [
         {
           label: '부를 원한다', desc: (run) => `골드 +${45 * act(run)}`, cond: (run) => run.life > (run.pending.skull || 2),
@@ -754,17 +754,17 @@
             return { text: `${g && g.placed ? '희귀 유닛이 합류했다' : `보드에 자리가 없어 골드 +${g ? g.gold : 0}`}, 생명 -${c}`, again: true };
           },
         },
-        { label: '떠난다', desc: '생명 -2', apply(run) { return `해골이 낄낄 웃는다. ${hurt(run, 2)}`; } },
+        { label: '떠난다', desc: '생명 -2', apply(run) { return `해골이 말을 끊었다고 삐졌다. ${hurt(run, 2)}`; } },
       ],
     },
     {
-      id: 'library', title: '도서관', art: 'scroll', acts: [2, 3],
-      text: '먼지 쌓인 서가 사이로 따뜻한 햇살이 든다.',
+      id: 'library', title: '먼지 서고', art: 'scroll', acts: [2, 3],
+      text: '먼지가 소복한 옛 마법사의 서고. 책장 사이로 따뜻한 햇살이 든다.',
       options: [
         {
           label: '책을 읽는다', desc: '증강 10개 중 하나를 고른다',
           apply(run) {
-            q(run, { k: 'augList', ids: RS.rollAugments(run, 10, [0, 40, 42, 18]), title: '도서관' });
+            q(run, { k: 'augList', ids: RS.rollAugments(run, 10, [0, 40, 42, 18]), title: '먼지 서고' });
             return '흥미로운 책들이 눈에 띈다.';
           },
         },
@@ -772,8 +772,8 @@
       ],
     },
     {
-      id: 'designer', title: '균열 설계자', art: 'lens', acts: [2, 3],
-      text: '"이 보드, 조금만 손보면 훨씬 좋아지겠는데?" 설계자가 줄자를 꺼낸다.',
+      id: 'designer', title: '참견쟁이 목수', art: 'lens', acts: [2, 3],
+      text: '"이 보드, 조금만 손보면 훨씬 좋아지겠는데?" 묻지도 않았는데 목수가 대패를 꺼낸다.',
       options: [
         {
           label: '조정', desc: (run) => `골드 -${40 * act(run)} · 증강 하나 연마`,
@@ -781,8 +781,8 @@
           apply(run) {
             const g = 40 * act(run);
             RS.addGold(run, -g);
-            q(run, { k: 'upgrade', title: '균열 설계자', refund: g });
-            return '설계자가 도면을 고친다.';
+            q(run, { k: 'upgrade', title: '참견쟁이 목수', refund: g });
+            return '목수가 콧노래를 부르며 대패질을 한다.';
           },
         },
         {
@@ -792,21 +792,21 @@
             const g = 75 * act(run);
             RS.addGold(run, -g);
             // 제거를 그만두면 골드를 돌려받고 연마도 취소된다
-            q(run, { k: 'remove', title: '균열 설계자', refund: g, group: 'designer' });
-            if (hasUpgradable(run)) q(run, { k: 'upgrade', title: '균열 설계자', group: 'designer' });
-            return '설계자가 소매를 걷어붙인다.';
+            q(run, { k: 'remove', title: '참견쟁이 목수', refund: g, group: 'designer' });
+            if (hasUpgradable(run)) q(run, { k: 'upgrade', title: '참견쟁이 목수', group: 'designer' });
+            return '목수가 소매를 걷어붙인다.';
           },
         },
-        { label: '쫓아낸다', desc: '생명 -3', apply(run) { return `설계자가 발길질을 하고 도망쳤다. ${hurt(run, 3)}`; } },
+        { label: '쫓아낸다', desc: '생명 -3', apply(run) { return `목수가 망치로 발등을 찍고 도망쳤다. ${hurt(run, 3)}`; } },
       ],
     },
     {
-      id: 'vampires', title: '흡혈귀 무리', art: 'fang', acts: [2],
-      text: '창백한 무리가 다가온다. "우리의 피를 나누자. 네 병사들은 더 강해질 거야."',
+      id: 'vampires', title: '창백한 연회', art: 'fang', acts: [2],
+      text: '촛불이 늘어선 긴 식탁에 창백한 귀족들이 앉아 있다. "한 잔 나누지 않겠나? 네 병사들은 더 강해질 거야."',
       cond: (run) => hasUnit(run, 0),
       options: [
         {
-          label: '피를 나눈다', desc: '최대 생명 -30% · 보드의 일반 유닛이 모두 같은 클래스의 희귀 유닛이 된다',
+          label: '잔을 받는다', desc: '최대 생명 -30% · 보드의 일반 유닛이 모두 같은 클래스의 희귀 유닛이 된다',
           apply(run) {
             RS.changeMaxLife(run, -Math.ceil(run.maxLife * 0.3));
             RS.promoteTier(run, 0);
@@ -817,8 +817,8 @@
       ],
     },
     {
-      id: 'council', title: '유령 의회', art: 'ghost', acts: [2],
-      text: '반투명한 유령들이 둘러싼다. "몸을 조금 내어 주면, 우리처럼 스쳐 지나가는 법을 알려 주지."',
+      id: 'council', title: '유령 무도회', art: 'ghost', acts: [2],
+      text: '반투명한 유령들이 빙글빙글 춤을 춘다. "한 곡 추고 가! 몸을 조금 내어 주면, 우리처럼 스쳐 지나가는 법을 알려 주지."',
       options: [
         {
           label: '받아들인다', desc: '최대 생명 -40% · 소모품 [유령 망토] 3개 (소모품 칸 +1)', cond: (run) => !RS.collectMods(run).noItems,
@@ -834,10 +834,10 @@
       ],
     },
     {
-      id: 'cursedTome', title: '저주받은 책', art: 'scroll', acts: [2, 3],
+      id: 'cursedTome', title: '물어뜯는 책', art: 'scroll', acts: [2, 3],
       steps: [
         {
-          text: '가죽 표지의 책이 저절로 펼쳐진다.',
+          text: '이빨 달린 가죽 책이 으르렁거리며 저절로 펼쳐진다.',
           options: [
             { label: '읽는다', desc: '생명 -1', cond: (run) => run.life > 1, apply(run) { RS.damageLife(run, 1); return { text: '글자가 꿈틀거린다. 생명 -1', next: 1 }; } },
             leave('덮는다'),
@@ -867,8 +867,8 @@
       ],
     },
     {
-      id: 'colosseum', title: '콜로세움', art: 'sword', acts: [2],
-      text: '함성이 쏟아지는 경기장. "도전자! 두 챔피언을 꺾으면 큰 상을 주마!"',
+      id: 'colosseum', title: '균열 투기장', art: 'sword', acts: [2],
+      text: '균열 틈새에 지어진 투기장에 함성이 쏟아진다. "도전자! 두 챔피언을 꺾으면 큰 상을 주마!"',
       options: [
         {
           label: '도전한다', desc: '강화된 엘리트 둘과 전투 · 이기면 희귀 유물 3개 중 1개',
@@ -882,38 +882,38 @@
 
     // ── 3막 ──
     {
-      id: 'mindBloom', title: '마음의 개화', art: 'flower', acts: [3],
-      text: '머릿속에서 목소리가 울린다. "원하는 걸 떠올려 봐. 그대로 이루어질 테니."',
+      id: 'mindBloom', title: '소원의 꽃', art: 'flower', acts: [3],
+      text: '사람 키만 한 꽃이 꽃잎을 펼치자 달콤한 향기가 머릿속을 채운다. "소원을 하나만 떠올려 봐. 그대로 피워 줄게."',
       options: [
         {
-          label: '나는 전쟁이다', desc: '강해진 1막 보스(슬라임 킹)와 싸운다 · 이기면 프리즘 증강 선택 + 희귀 유물',
+          label: '싸움을 바란다', desc: '강해진 1막 보스(슬라임 킹)와 싸운다 · 이기면 프리즘 증강 선택 + 희귀 유물',
           apply() {
             return { text: '눈앞에 거대한 슬라임이 나타난다!', fight: { as: 'boss', boss: 'slimeKing', hpMul: 2, relic: [2], relicChoices: 1 } };
           },
         },
         {
-          label: '나는 깨어났다', desc: '모든 증강 연마 · 저주 [피어남의 표식] (생명 회복 불가, 없앨 수 없다)', cond: hasUpgradable,
+          label: '깨달음을 바란다', desc: '모든 증강 연마 · 저주 [시든 꽃의 낙인] (생명 회복 불가, 없앨 수 없다)', cond: hasUpgradable,
           apply(run) {
             let n = 0;
             for (let i = 0; i < run.augments.length; i++) if (RS.upgradeAug(run, i)) n++;
             if (run.curses.indexOf('bloomMark') < 0) run.curses.push('bloomMark');
-            return `세상이 선명해진다. 증강 ${n}개 연마. 대신 상처가 더는 아물지 않는다.`;
+            return `세상이 선명해진다. 증강 ${n}개 연마. 대신 꽃이 시들며 상처가 더는 아물지 않는다.`;
           },
         },
         {
-          label: '나는 부자다', desc: '골드 +400 · 저주 [세금] 2개',
+          label: '금화를 바란다', desc: '골드 +400 · 저주 [세금] 2개',
           apply(run) {
             RS.addGold(run, 400);
             const n = [RS.addCurse(run, 'taxed'), RS.addCurse(run, 'taxed')].filter(Boolean).length;
-            const tail = n === 2 ? ', 저주 [세금] 2개' : n === 1 ? ', 저주 [세금] 1개 (하나는 부적이 막았다)' : ' (부적이 세금을 모두 막았다)';
+            const tail = n === 2 ? ', 저주 [세금] 2개' : n === 1 ? ', 저주 [세금] 1개 (하나는 액막이 매듭이 막았다)' : ' (액막이 매듭이 세금을 모두 막았다)';
             return `금화가 쏟아진다. 골드 +400${tail}`;
           },
         },
       ],
     },
     {
-      id: 'secretPortal', title: '비밀 통로', art: 'shard', acts: [3],
-      text: '벽 너머로 보스의 기척이 느껴지는 좁은 통로가 있다.',
+      id: 'secretPortal', title: '숨은 샛길', art: 'shard', acts: [3],
+      text: '덩굴에 가려진 좁은 샛길. 그 끝에서 보스의 기척이 느껴진다.',
       cond: (run) => run.floor < RS.bossFloor(run) - 2,
       options: [
         {
@@ -936,11 +936,11 @@
       ],
     },
     {
-      id: 'mysteriousSphere', title: '신비한 구체', art: 'orb', acts: [3],
-      text: '떠 있는 구체를 두 수호자가 지키고 있다.',
+      id: 'mysteriousSphere', title: '떠도는 보주', art: 'orb', acts: [3],
+      text: '허공을 천천히 떠도는 보주를 돌 수호자 둘이 지키고 있다.',
       options: [
         {
-          label: '구체를 연다', desc: '엘리트 전투 · 이기면 희귀 유물',
+          label: '보주를 깨뜨린다', desc: '엘리트 전투 · 이기면 희귀 유물',
           apply() {
             return { text: '수호자들이 깨어난다!', fight: { as: 'elite', elites: 2, relic: [2], relicChoices: 1 } };
           },
