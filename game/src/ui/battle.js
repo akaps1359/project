@@ -65,14 +65,6 @@
         UI.tutDone('upgrade');
       }
     });
-    $('#b-arrange').addEventListener('click', () => {
-      const G = UI.G;
-      if (!G.battle) return;
-      RS.sfx('click');
-      G.battle.arrange();
-      UI.select(-1);
-      UI.toast('근접은 바깥, 원거리는 안쪽으로 정리했어요');
-    });
     $('#b-speed').addEventListener('click', () => {
       RS.sfx('click');
       UI.G.setSpeed(UI.G.speed >= 3 ? 1 : UI.G.speed + 1);
@@ -699,7 +691,7 @@
       refs.reach = reach;
       refs.dps.classList.toggle('bad', !reach);
       refs.desc.classList.toggle('bad', !reach);
-      refs.desc.textContent = reach ? refs.baseDesc : '사거리가 길에 닿지 않아요 · 바깥 칸으로 옮기거나 [정리]';
+      refs.desc.textContent = reach ? refs.baseDesc : '사거리가 길에 닿지 않아요 · 끌어서 바깥 칸으로 옮기세요';
     }
     if (refs.sell && !refs.sell.classList.contains('arm')) {
       const t = `판매 +${UI.sellValueAt(b, i)}`;

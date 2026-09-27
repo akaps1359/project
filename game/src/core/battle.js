@@ -1095,7 +1095,7 @@
       const list = this.enemiesNear(c.x, c.y, r);
       if (list.length) {
         for (const e of list) {
-          this.damage(e, st.dmg * 3, cls, false);
+          this.damage(e, st.dmg * 2, cls, false);
           if (!e.dead && !e.boss) e.stunT = Math.max(e.stunT, 0.8);
         }
         this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r, cx: c.x, cy: c.y });
@@ -1104,9 +1104,9 @@
     } else if (cls === 'archer') {
       const list = this.enemies.filter(alive);
       if (list.length) {
-        for (let k = 0; k < 8 && list.length; k++) {
+        for (let k = 0; k < 6 && list.length; k++) {
           const e = list.splice(this.rng.int(list.length), 1)[0];
-          this.damage(e, st.dmg * 1.5, cls, false);
+          this.damage(e, st.dmg * 1.3, cls, false);
           if (this.fxOn) this.fx.push({ k: 'shot', cls, tier: 4, slot: -1, u: 0, x1: e.x - 6 + this.rng.next() * 12, y1: e.y - 44, x2: e.x, y2: e.y, crit: false, rain: true });
         }
         this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: 0, cx: c.x, cy: c.y });
@@ -1125,7 +1125,7 @@
             best = e;
           }
         }
-        this.splash(best.x, best.y, 28, st.dmg * 5, cls, null, false);
+        this.splash(best.x, best.y, 28, st.dmg * 3.5, cls, null, false);
         this.emit({ k: 'mythic', cls, x: best.x, y: best.y, r: 28, cx: c.x, cy: c.y });
         ok = true;
       }
@@ -1133,10 +1133,10 @@
       const list = this.enemiesNear(c.x, c.y, st.range);
       if (list.length) {
         for (const e of list) {
-          this.damage(e, st.dmg * 2, cls, false);
+          this.damage(e, st.dmg * 1.5, cls, false);
           if (e.dead) continue;
           if (e.boss) this.applySlow(e, 0.6, 2);
-          else e.stunT = Math.max(e.stunT, 1.5);
+          else e.stunT = Math.max(e.stunT, 1.2);
         }
         this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: st.range, cx: c.x, cy: c.y });
         ok = true;
@@ -1147,7 +1147,7 @@
   };
   // 도적 신화: 약해진 일반 적은 한 번에 처치, 치명타는 가까운 다른 적에게 이어진다
   P.shadowExecute = function (i, st, e, c, crit, dmg) {
-    if (!e.dead && !e.boss && !e.elite && e.hp <= e.maxHp * 0.15) {
+    if (!e.dead && !e.boss && !e.elite && e.hp <= e.maxHp * 0.1) {
       this.damage(e, e.hp * 20 + 1, 'rogue', true);
       this.emit({ k: 'mythic', cls: 'rogue', x: e.x, y: e.y, r: 6, quiet: true });
     }
@@ -1503,11 +1503,6 @@
     this.statsDirty = true;
   };
 
-  P.arrange = function () {
-    RS.autoArrange(this.run.board, this.run.runes);
-    for (let i = 0; i < F.SIZE; i++) this.resetCd(i);
-    this.statsDirty = true;
-  };
 
   P.upgradeCost = function (cls) {
     return Math.max(1, RS.upgradeCost(this.run, cls, this.M));

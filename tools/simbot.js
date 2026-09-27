@@ -11,7 +11,7 @@
 //   random : 모든 선택을 무작위로
 // 게임 코드는 공개 함수만 쓴다: RS.saveString/loadString/attachRng, eventOptions/eventChoose/optionEnabled,
 // shopBuy, restOptions/restDo, pickAugment/addRelic/applyBlessing/applyAncient, unitStats, 전투의
-// summon/merge/mergeOptions/upgrade/upgradeCost/summonCost/summonLimit/useItem/arrange/starfall/canStarfall 등.
+// summon/merge/mergeOptions/upgrade/upgradeCost/summonCost/summonLimit/useItem/swap/starfall/canStarfall 등.
 // 있으면 쓰는 것: RS.cancelChoice(건너뛴 대기열 항목 환불), RS.skipGoldAmount(건너뛰기 골드), b.starMax.
 'use strict';
 
@@ -68,6 +68,29 @@ const ANC_SCORE = {
   rewindSand: 5, forgottenShelf: 5, forbiddenIndex: 5, upgrade2: 5, runes2: 5, gold400: 5, goldenEgg: 5,
   sealOfGold: 5, warHammerA: 5, bloodPactCup: 5, lordParasol: 4, loomingFruit: 4, maxLife15: 4, cleanse: 3, relicPair: 5,
 };
+
+// 사람이 손으로 하듯 한 번에 한 칸만 옮긴다 (자동 정리는 게임에 없다).
+// 1) 서로 자리를 바꾸면 둘 다 나아지는 근접·원거리 짝  2) 더 좋은 빈칸이 있는 가장 높은 등급 유닛
+function tidyOne(RS, b) {
+  const board = b.run.board;
+  const rank = (s, i) => RS.slotOrder(s.cls).indexOf(i);
+  let best = null;
+  for (let i = 0; i < board.length; i++) {
+    const s = board[i];
+    if (!s || s.sealed) continue;
+    for (let j = 0; j < board.length; j++) {
+      if (j === i) continue;
+      const o = board[j];
+      if (o && o.sealed) continue;
+      const gainA = rank(s, i) - rank(s, j);
+      const gainB = o ? rank(o, j) - rank(o, i) : 0;
+      if (gainA < 3 || gainB < 0) continue;
+      const score = (gainA + gainB) * (1 + s.tier);
+      if (!best || score > best.score) best = { i, j, score };
+    }
+  }
+  if (best) b.swap(best.i, best.j);
+}
 
 function makeBasicBot(RS, kind, rng, opts) {
   const random = kind === 'random';
@@ -248,7 +271,7 @@ function makeBasicBot(RS, kind, rng, opts) {
         }
         break;
       }
-      if (!random && b.t % 5 < 0.25) b.arrange();
+      if (!random && b.t % 5 < 0.25) tidyOne(RS, b);
     },
   };
   return bot;
@@ -986,7 +1009,7 @@ function makeSmartBot(RS, rng, opts) {
       if (b.canStarfall() && (danger || b.boss || b.stars >= starMax || b.enemies.length > b.cap * 0.4)) b.starfall();
       if (run.items.length) useItems(b, danger);
       spend(b, danger);
-      if (b.t % 5 < 0.25) b.arrange();
+      if (b.t % 5 < 0.25) tidyOne(RS, b);
     },
 
     // ── 보상 화면 ──

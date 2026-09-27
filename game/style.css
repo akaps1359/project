@@ -466,7 +466,7 @@ img { max-width: 100%; }
 .endstats span { color: var(--dim); font-size: 11px; }
 .endstats b { font-weight: normal; font-size: 16px; font-variant-numeric: tabular-nums; }
 .dmgbars { display: flex; flex-direction: column; gap: 6px; }
-.dmgrow { display: grid; grid-template-columns: 30px 56px 1fr 40px; align-items: center; gap: 6px; text-align: left; }
+.dmgrow { display: grid; grid-template-columns: 30px 56px 1fr 52px; align-items: center; gap: 6px; text-align: left; }
 .dmgrow .uimg { width: 28px; height: 28px; }
 .dmgrow .bar { height: 10px; background: var(--bg2); box-shadow: 0 0 0 1px var(--line); }
 .dmgrow .bar i { display: block; height: 100%; background: var(--gold); }

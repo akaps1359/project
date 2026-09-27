@@ -904,7 +904,7 @@
       unitImg(c, 0),
       h('span', null, RS.CLASS[c].name),
       h('div', { class: 'bar' }, h('i', { style: `width:${((100 * st.clsDmg[c]) / tot).toFixed(1)}%` })),
-      h('b', null, pct(st.clsDmg[c] / tot)),
+      h('b', null, RS.fmtNum(st.clsDmg[c])),
     )));
     const reason = run.pending && run.pending.reason === 'cap' ? '필드의 적이 상한에 도달했습니다.' : '생명이 모두 떨어졌습니다.';
     // 3막 보스를 쓰러뜨리고 4막에서 쓰러지면 클리어로 기록된다
@@ -928,7 +928,7 @@
         h('div', null, h('span', null, '합성'), h('b', null, fmt(st.merges))),
         h('div', null, h('span', null, '전투'), h('b', null, fmt(st.battles))),
       ),
-      h('h2', null, '클래스별 피해'),
+      h('h2', null, `클래스별 피해 · 합계 ${RS.fmtNum(tot)}`),
       bars,
       h('h2', null, `증강 ${run.augments.length} · 유물 ${run.relics.length}`),
       h('div', { class: 'strip wrap' },

@@ -12,7 +12,7 @@
     rareChance: 0.05, // 소환 시 희귀 등급 기본 확률
     epicChance: 0.005,
     hpBase: 64, // 웨이브 레벨 0의 슬라임 체력 (첫 몇 레벨은 60%부터 완만하게)
-    hpGrowth: [0, 1.1495, 1.107, 1.0904, 1.0523], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
+    hpGrowth: [0, 1.1472, 1.1048, 1.0882, 1.0523], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
     waveTime: 16, // 다음 웨이브까지 시간(초)
     prepTime: 5,
     spawnGap: 0.55,
@@ -81,17 +81,17 @@
     { name: '희귀', color: '#4f8fe6', dark: '#2b5aa6', light: '#94c1f7', dmg: 3.5, spd: 0.93 },
     { name: '영웅', color: '#a65ee8', dark: '#6a33a3', light: '#d3a0f7', dmg: 12, spd: 0.86 },
     { name: '전설', color: '#f2a531', dark: '#b1680f', light: '#ffd98a', dmg: 40, spd: 0.8 },
-    // 신화: 전설 4기를 합성해야 나온다 (전설 4기 합보다 약 20% 강하다)
-    { name: '신화', color: '#ef4f6f', dark: '#9e2340', light: '#ffb0c0', dmg: 175, spd: 0.74 },
+    // 신화: 전설 4기를 합성해야 나온다 (기본 공격은 전설 4기와 비슷하고, 힘은 신화 스킬과 봉인 면역에서 나온다)
+    { name: '신화', color: '#ef4f6f', dark: '#9e2340', light: '#ffb0c0', dmg: 150, spd: 0.74 },
   ];
   RS.TOP_TIER = RS.TIER.length - 1;
   // 신화 등급 전용 스킬 (cd: 초마다 발동, 없으면 늘 켜져 있는 효과). 같은 칸에 여러 기면 각자 발동한다
   RS.MYTHIC = {
-    knight: { name: '대지 가르기', cd: 5, short: '5초마다 주변 모든 적 300% 피해·기절', desc: '5초마다 사거리 안 모든 적에게 300% 피해, 보스가 아닌 적은 0.8초 기절' },
-    archer: { name: '화살비', cd: 4, short: '4초마다 필드의 적 8명에게 150% 화살', desc: '4초마다 필드 위 무작위 적 8명에게 화살 (각 150% 피해, 사거리 무시)' },
-    mage: { name: '운석 낙하', cd: 6, short: '6초마다 적이 몰린 곳에 운석 500%', desc: '6초마다 적이 가장 많이 모인 곳에 운석 (넓은 범위 500% 피해)' },
-    rogue: { name: '그림자 처형', short: '체력 15% 이하 일반 적 즉사 · 치명타 연쇄', desc: '체력 15% 이하인 일반 적을 한 번에 처치. 치명타가 나면 가까운 다른 적도 한 번 더 벤다' },
-    frost: { name: '절대 영도', cd: 7, short: '7초마다 주변 적 1.5초 빙결 + 200%', desc: '7초마다 사거리 안 모든 적을 1.5초 얼리고 200% 피해 (보스는 2초 동안 60% 둔화)' },
+    knight: { name: '대지 가르기', cd: 5, short: '5초마다 주변 모든 적 200% 피해·기절', desc: '5초마다 사거리 안 모든 적에게 200% 피해, 보스가 아닌 적은 0.8초 기절' },
+    archer: { name: '화살비', cd: 4, short: '4초마다 필드의 적 6명에게 130% 화살', desc: '4초마다 필드 위 무작위 적 6명에게 화살 (각 130% 피해, 사거리 무시)' },
+    mage: { name: '운석 낙하', cd: 6, short: '6초마다 적이 몰린 곳에 운석 350%', desc: '6초마다 적이 가장 많이 모인 곳에 운석 (넓은 범위 350% 피해)' },
+    rogue: { name: '그림자 처형', short: '체력 10% 이하 일반 적 즉사 · 치명타 연쇄', desc: '체력 10% 이하인 일반 적을 한 번에 처치. 치명타가 나면 가까운 다른 적도 한 번 더 벤다' },
+    frost: { name: '절대 영도', cd: 7, short: '7초마다 주변 적 1.2초 빙결 + 150%', desc: '7초마다 사거리 안 모든 적을 1.2초 얼리고 150% 피해 (보스는 2초 동안 60% 둔화)' },
   };
   // 합성에 필요한 수: 전설부터는 4기
   RS.mergeNeed = (tier) => (tier >= 3 ? 4 : 3);
@@ -114,18 +114,18 @@
     imp: { name: '임프', hp: 0.8, speed: 36, gold: 1, leak: 1, countMul: 1.1 },
     shaman: { name: '고블린 주술사', hp: 1.5, speed: 24, gold: 2, leak: 1, countMul: 0.5, gap: 0.9, heal: { every: 3, pct: 0.06, r: 32 }, trait: '주변 적 체력 회복' },
     // 엘리트
-    ogre: { name: '오우거', hp: 9, speed: 20, gold: 8, leak: 3, elite: true },
-    darkKnight: { name: '흑기사', hp: 7, speed: 22, gold: 8, leak: 3, elite: true, armorLight: 0.5, trait: '궁수·도적 피해 50% 감소' },
-    witch: { name: '마녀', hp: 6, speed: 26, gold: 8, leak: 3, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, trait: '주변 적 가속' },
-    bigSlime: { name: '왕슬라임', hp: 6, speed: 20, gold: 8, leak: 3, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, trait: '죽으면 분열' },
+    ogre: { name: '오우거', hp: 12, speed: 20, gold: 8, leak: 4, elite: true },
+    darkKnight: { name: '흑기사', hp: 9.5, speed: 22, gold: 8, leak: 4, elite: true, armorLight: 0.5, trait: '궁수·도적 피해 50% 감소' },
+    witch: { name: '마녀', hp: 8, speed: 26, gold: 8, leak: 4, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, trait: '주변 적 가속' },
+    bigSlime: { name: '왕슬라임', hp: 8, speed: 20, gold: 8, leak: 4, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, trait: '죽으면 분열' },
     // 보스
     slimeKing: {
-      name: '슬라임 킹', hp: 8, speed: 13, gold: 40, leak: 6, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 3, splitHp: 0.5,
+      name: '슬라임 킹', hp: 11, speed: 13, gold: 40, leak: 8, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 3, splitHp: 0.5,
       skills: [{ k: 'glue', name: '끈적한 점액', every: 9, warn: 1.1, dur: 4, amt: 0.5, size: 2 }],
       trait: '체력이 줄 때마다 슬라임을 뱉고, 점액을 뿌려 2×2 칸의 공격을 4초 동안 절반으로 늦춘다',
     },
     lich: {
-      name: '리치', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
+      name: '리치', hp: 9.5, speed: 14, gold: 40, leak: 8, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
       skills: [{ k: 'shield', name: '뼈 방벽', every: 13, pct: 0.12 }],
       feed: { r: 44, pct: 0.012 },
       phase2: { at: 0.4, speed: 1.2, cd: 0.7, msg: '리치가 죽음의 힘을 끌어올린다! (더 빨라지고 방벽을 자주 친다)' },
@@ -135,12 +135,12 @@
     frog: { name: '늪 개구리', hp: 0.9, speed: 24, gold: 1, leak: 1, hop: { every: 3.5, dist: 26 }, trait: '가끔 앞으로 크게 뛴다' },
     crab: { name: '철갑 게', hp: 2, speed: 19, gold: 2, leak: 1, armorLight: 0.5, countMul: 0.7, gap: 0.7, trait: '궁수·도적 피해 50% 감소' },
     bogQueen: {
-      name: '늪의 여왕', hp: 8, speed: 14, gold: 40, leak: 6, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.04 },
+      name: '늪의 여왕', hp: 11, speed: 14, gold: 40, leak: 8, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.04 },
       skills: [{ k: 'glue', name: '늪 진흙', every: 11, warn: 1.1, dur: 3.5, amt: 0.45, size: 2 }],
       trait: '개구리를 부르고, 물속에 잠겨 공격받지 않으며 체력 4%를 회복한다. 진흙으로 칸의 공격을 늦춘다',
     },
     captain: {
-      name: '해골 선장', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
+      name: '해골 선장', hp: 9.5, speed: 14, gold: 40, leak: 8, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
       skills: [{ k: 'rally', name: '럼 한 모금', every: 12, pct: 0.35, dur: 3 }, { k: 'plunder', name: '약탈', every: 14, pct: 0.15, max: 40 }],
       trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다. 12초마다 모든 적이 3초 동안 35% 빨라지고, 14초마다 가진 골드의 15%(최대 40)를 약탈한다',
     },
@@ -171,7 +171,7 @@
       trait: '고대의 몸: 1초에 최대 체력의 2.8%까지만 피해를 받는다. 17초마다 4.5초 동안 깊은 잠에 빠져 제자리에 멈추고 초당 1%씩 회복하지만, 그동안은 초당 4.2%까지 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 체력 절반에서 완전히 깨어난다',
     },
     riftLord: {
-      name: '균열의 군주', hp: 10.5, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
+      name: '균열의 군주', hp: 14, speed: 14, gold: 40, leak: 8, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
       skills: [{ k: 'blink', at: [0.7, 0.4], dist: 0.2 }, { k: 'shield', name: '균열 장막', every: 16, pct: 0.1 }, { k: 'shuffle', name: '차원 뒤섞기', every: 15, n: 3, first: 9 }],
       trait: '균열로 유닛을 기절시키고 16초마다 장막을 두르며, 15초마다 유닛 3기의 자리를 뒤섞는다. 체력 70%·40%에서 앞으로 순간이동, 절반부터 가속',
     },

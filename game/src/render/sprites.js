@@ -833,6 +833,8 @@
   };
 
   RS.fmtNum = function (v) {
+    if (v >= 1e12) return (v / 1e12).toFixed(v >= 1e13 ? 0 : 1) + 't';
+    if (v >= 1e9) return (v / 1e9).toFixed(v >= 1e10 ? 0 : 1) + 'b';
     if (v >= 1e6) return (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'm';
     if (v >= 1e4) return Math.round(v / 1e3) + 'k';
     if (v >= 1e3) return (v / 1e3).toFixed(1) + 'k';
