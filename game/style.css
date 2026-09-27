@@ -166,6 +166,7 @@ img { max-width: 100%; }
 
 /* ── 맵 ── */
 .mapbox { flex: 1; min-height: 0; position: relative; }
+.mapchip.trait { color: var(--gold); cursor: pointer; }
 .mapchip { display: inline-block; margin: 0 6px 2px 0; padding: 1px 7px; font-size: 11px; color: var(--pink); background: var(--panel); box-shadow: var(--px); white-space: nowrap; }
 .mapinner { position: relative; width: 100%; }
 .maplines { position: absolute; inset: 0; pointer-events: none; }
@@ -250,13 +251,13 @@ img { max-width: 100%; }
 }
 #bossbar {
   position: relative;
-  margin: 6px 8px 0;
+  margin: 3px 8px 0;
   z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 8px;
-  min-height: 22px;
+  padding: 2px 8px;
+  min-height: 20px;
   background: rgba(21, 17, 29, 0.88);
   box-shadow: var(--px);
   font-size: 11px;
@@ -618,3 +619,10 @@ img { max-width: 100%; }
 .cursepool p { margin: 2px 0; font-size: 11px; line-height: 1.45; }
 .cursepool b { color: var(--red); font-weight: normal; }
 .btn.option.cursed b::after { content: ' · 저주'; color: var(--red); font-size: 11px; }
+
+/* 빌드 목록 정렬 */
+.sortbar { display: flex; gap: 6px; justify-content: flex-end; margin: 0 0 8px; }
+.upnote { margin-top: 4px; padding: 3px 6px; background: rgba(245, 196, 74, 0.08); box-shadow: inset 2px 0 0 var(--gold); text-align: left; }
+.upnote p, p.upnote { margin: 0; font-size: 11px; line-height: 1.45; color: #e8dcc0; }
+.upnote b { color: var(--gold); font-weight: normal; font-size: 11px; }
+.upnote em { color: var(--gold); font-style: normal; }

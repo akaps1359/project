@@ -2,11 +2,17 @@
 (function (RS) {
   'use strict';
 
-  // 막마다 10층(9층 + 보스). 진행도 d = (막-1)×10 + 층 (1~40)
+  // 진행도 d: 한 막을 10으로 보는 눈금. d = (막-1)×10 + 막 안에서 오른 비율×10 (1~40)
+  // 막의 층 수(nF, 보스 포함)가 늘어도 막 끝의 난이도는 같고, 그 사이가 촘촘해진다
   // 웨이브 레벨 L = 3×(d-1) + 웨이브 번호
   RS.FLOORS_PER_ACT = 10;
-  RS.depth = (act, floor) => (act - 1) * RS.FLOORS_PER_ACT + floor;
-  RS.waveLevel = (act, floor, k) => 3 * (RS.depth(act, floor) - 1) + k;
+  RS.depth = (act, floor, nF) => {
+    if (act >= 4) return 30 + floor;
+    const n = nF || RS.FLOORS_PER_ACT;
+    // 1층 → 1, 보스 층(n) → 10 으로 고르게 편다 (n = 10 이면 예전과 같다)
+    return (act - 1) * RS.FLOORS_PER_ACT + 1 + ((Math.max(1, floor) - 1) * (RS.FLOORS_PER_ACT - 1)) / Math.max(1, n - 1);
+  };
+  RS.waveLevel = (act, floor, k, nF) => 3 * (RS.depth(act, floor, nF) - 1) + k;
 
   // 막마다 성장률이 다르므로 레벨 L 까지 곱해 나간다 (한 막 = 30레벨)
   RS.levelHp = function (L) {
@@ -46,14 +52,15 @@
     spec = spec || {};
     const act = run.act;
     const floor = run.floor;
-    const d = RS.depth(act, floor);
+    const nF = run.map && run.map.floors ? run.map.floors.length : RS.FLOORS_PER_ACT;
+    const d = RS.depth(act, floor, nF);
     const A = RS.actDef(run);
     const M = RS.collectMods(run);
     const kind = type === 'eventFight' ? spec.as || 'elite' : type;
     const pool = A.pool.filter((p) => d >= p[2]);
     const waves = [];
     if (spec.trial) {
-      const L = RS.waveLevel(act, floor, 0);
+      const L = RS.waveLevel(act, floor, 0, nF);
       return {
         type, act, floor, d, spec, seed: rng.seed32(), prep: 4,
         waves: [{ L, list: [{ type: 'dummy', L, gap: 1, hpMul: [0, 10, 22, 45][spec.trial] }] }],
@@ -61,7 +68,7 @@
     }
     const nW = RS.BAL.wavesPerStage;
     for (let k = 0; k < nW; k++) {
-      const L = RS.waveLevel(act, floor, k);
+      const L = RS.waveLevel(act, floor, k, nF);
       const eliteWave = kind === 'elite' && k === nW - 1;
       const bossWave = kind === 'boss' && k === nW - 1;
       const baseCount = 7 + Math.floor(Math.min(d, 30) * 0.42) + k + M.extraEnemies;

@@ -36,6 +36,7 @@
       box,
       h('p', { class: 'hint' },
         left > 0 ? h('span', { class: 'mapchip' }, left === 1 ? '다음은 보스' : `보스까지 ${left}층`) : null,
+        RS.mapTrait(run) ? h('span', { class: 'mapchip trait', onclick: (e) => UI.tip(e.currentTarget, `지형 · ${RS.mapTrait(run).name}`, RS.mapTrait(run).desc) }, RS.mapTrait(run).name) : null,
         '반짝이는 칸을 누르면 설명, 한 번 더 누르면 이동합니다.' + (wings.length ? ` · 점선 칸은 축지 장화로 (${run.relicState.wingBoots.uses}회)` : '')),
     ]);
     UI.show('scr-map');
@@ -421,7 +422,7 @@
         run.augments.forEach((id, i) => {
           if (up ? !RS.canUpgradeAug(id) : !!RS.augDef(id).onPick) return;
           valid.push(i);
-          list.appendChild(UI.augCard(id, sel === i, () => pickSel(i)));
+          list.appendChild(UI.augCard(id, sel === i, () => pickSel(i), up ? UI.upgradeView(id) : null));
         });
         const ok = valid.indexOf(sel) >= 0 ? sel : null;
         body = h('div', null, h('h2', null, up ? '연마할 증강을 고르세요 (이로운 효과 ×1.5)' : '다른 증강으로 바꿀 증강을 고르세요 (같은 등급)'), valid.length ? list : h('p', { class: 'dim center' }, '고를 수 있는 증강이 없습니다.'));

@@ -130,7 +130,9 @@
     const avail = Math.min(box.clientWidth / F.W, box.clientHeight / F.H);
     let scale = avail;
     const phys = Math.floor(avail * dpr);
-    if (phys >= 3) scale = phys / dpr; // 물리 픽셀 정수배로 맞춰 도트가 고르게
+    // 물리 픽셀 정수배로 맞춰 도트가 고르게. 다만 그 때문에 조금이라도(2% 넘게) 작아지면(보스 체력바가 생길 때 등)
+    // 고해상도 화면에서는 그냥 가득 채운다 (2% 기준) (도트 차이가 눈에 띄지 않는다)
+    if (phys >= 3 && (phys / dpr >= avail * 0.98 || dpr < 2)) scale = phys / dpr;
     const w = Math.floor(F.W * scale) + 'px';
     const hh = Math.floor(F.H * scale) + 'px';
     if (cv.style.width !== w) cv.style.width = w;

@@ -146,6 +146,24 @@
   UI.openPause = UI.openMenu;
 
   // ── 빌드 ──
+  // 빌드 목록: 희귀도순(높은 것부터) / 얻은 순서 전환. 고른 방식은 기억해 둔다
+  UI.buildSort = UI.buildSort || 'rarity';
+  function sortable(ids, rank, row) {
+    const box = h('div');
+    const draw = () => {
+      box.innerHTML = '';
+      const list = UI.buildSort === 'rarity' ? ids.map((id, i) => ({ id, i })).sort((x, y) => rank(y.id) - rank(x.id) || x.i - y.i).map((x) => x.id) : ids;
+      append(box, [
+        h('div', { class: 'sortbar' },
+          UI.btn('희귀도순', () => { UI.buildSort = 'rarity'; draw(); }, 'sm' + (UI.buildSort === 'rarity' ? ' gold' : '')),
+          UI.btn('얻은 순서', () => { UI.buildSort = 'time'; draw(); }, 'sm' + (UI.buildSort === 'time' ? ' gold' : ''))),
+        list.map(row),
+      ]);
+    };
+    draw();
+    return box;
+  }
+
   UI.openBuild = function (onClose) {
     const run = UI.G.run;
     if (!run) return;
@@ -159,11 +177,13 @@
     UI.modal('빌드', UI.tabs([
       {
         name: `증강 ${run.augments.length}`,
-        render: () => (Object.keys(counts).length ? Object.keys(counts).map((id) => UI.augRow(id, counts[id])) : h('p', { class: 'dim' }, '아직 증강이 없습니다. 전투에서 이기면 고를 수 있어요.')),
+        render: () => (Object.keys(counts).length
+          ? sortable(Object.keys(counts), (id) => RS.augDef(id).rarity + (RS.isUpgraded(id) ? 0.5 : 0), (id) => UI.augRow(id, counts[id]))
+          : h('p', { class: 'dim' }, '아직 증강이 없습니다. 전투에서 이기면 고를 수 있어요.')),
       },
       {
         name: `유물 ${run.relics.length}`,
-        render: () => (run.relics.length ? run.relics.map(UI.relicRow) : h('p', { class: 'dim' }, '유물은 엘리트·보스·보물·상점에서 얻습니다.')),
+        render: () => (run.relics.length ? sortable(run.relics.slice(), (id) => RS.REL[id].rarity, UI.relicRow) : h('p', { class: 'dim' }, '유물은 엘리트·보스·보물·상점에서 얻습니다.')),
       },
       {
         name: '진행',
@@ -245,7 +265,7 @@
         li('골드', '처치·웨이브 시작 때 들어옵니다. 보유 골드 10당 이자 1(최대 5).'),
         li('엘리트', '마지막 웨이브에 강적. 위험하지만 유물을 줍니다.'),
         li('보스', `각 막의 끝. ${RS.BAL.bossTime}초 안에 못 쓰러뜨리면 폭주: 속도 ×1.8, 잃는 생명 ×2.`),
-        li('맵', '막마다 9층 + 보스. 칸을 한 번 누르면 설명, 한 번 더 누르면 이동합니다. ? 칸은 들어가 봐야 압니다.'),
+        li('맵', '막마다 14층 + 보스. 막마다 지형(장터 길·격전지 등)이 달라 방 비율이 바뀌어요. 칸을 한 번 누르면 설명, 한 번 더 누르면 이동합니다. ? 칸은 들어가 봐야 압니다.'),
         li('증강', '전투 보상으로 고르는 영구 효과(모험 내내 유지). 휴식처 [연마]로 효과 ×1.5. 상점·이벤트에서 없애거나 바꿀 수 있습니다.'),
         li('유물', '모험 내내 유지되는 지속 효과. 엘리트·보스·보물·상점·이벤트에서 얻습니다. 빨간 글씨는 대가입니다.'),
         li('소모품', '전투 화면 아래 칸(기본 3개). 눌러서 [사용]. 상점·보상에서 얻습니다.'),

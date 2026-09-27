@@ -264,7 +264,19 @@
 
   // ── 맵 (슬레이 더 스파이어식: 경로 6개를 겹쳐 그린다) ──
   RS.MAP_W = 5;
-  RS.MAP_FLOORS = 9; // + 보스 층
+  RS.MAP_FLOORS = 14; // + 보스 층 (막마다 15층)
+  RS.ELITE_FLOOR = 5; // 엘리트·휴식처가 나오기 시작하는 층
+
+  // 막마다 무작위로 정해지는 지형: 방 종류의 비율이 달라져 막마다 길의 성격이 바뀐다
+  RS.MAP_TRAITS = [
+    { id: 'plain', name: '평범한 길', desc: '특별한 것 없는 길', mul: {} },
+    { id: 'market', name: '장터 길', desc: '상점이 자주 나와요', mul: { shop: 2.4, unknown: 0.9 } },
+    { id: 'camp', name: '야영지 숲', desc: '휴식처가 자주 나와요', mul: { rest: 1.8, elite: 1.2 } },
+    { id: 'fog', name: '안개 낀 길', desc: '? 칸이 자주 나와요', mul: { unknown: 1.9, combat: 0.8 } },
+    { id: 'war', name: '격전지', desc: '엘리트가 자주 나와요 (보상도 많아요)', mul: { elite: 2, combat: 1.1, rest: 1.2 } },
+    { id: 'hoard', name: '보물 사냥터', desc: '보물 칸이 곳곳에 있어요', mul: { treasure: 1 } },
+    { id: 'quiet', name: '고요한 길', desc: '전투가 적고 이벤트가 많아요', mul: { combat: 0.7, unknown: 1.5, rest: 1.2 } },
+  ];
 
   RS.NODE_INFO = {
     combat: { name: '전투', icon: 'n_combat' },
@@ -277,11 +289,13 @@
     boss: { name: '보스', icon: 'n_boss' },
   };
 
-  function roomWeights(run, f) {
+  function roomWeights(run, f, H, trait) {
     const w = [['combat', 45], ['unknown', 22], ['shop', 5]];
-    if (f >= 4) w.push(['elite', run.asc >= 1 ? 13 : 8]);
-    if (f >= 4 && f !== RS.MAP_FLOORS - 1) w.push(['rest', 12]);
-    return w;
+    if (f >= RS.ELITE_FLOOR) w.push(['elite', run.asc >= 1 ? 13 : 8]);
+    if (f >= RS.ELITE_FLOOR && f < H - 1) w.push(['rest', 10]);
+    if (trait && trait.mul.treasure && f >= 3) w.push(['treasure', 4]);
+    const mul = (trait && trait.mul) || {};
+    return w.map((x) => [x[0], x[1] * (x[0] === 'treasure' ? 1 : mul[x[0]] || 1)]);
   }
 
   RS.genMap = function (run) {
@@ -289,6 +303,10 @@
     const rng = run.rng;
     const W = RS.MAP_W;
     const H = RS.MAP_FLOORS;
+    // 지형은 막마다 무작위 (1막에는 격전지가 나오지 않는다)
+    const trait = rng.pick(RS.MAP_TRAITS.filter((t) => run.act >= 2 || t.id !== 'war'));
+    // 보물 층도 막마다 6~9층 사이 어딘가
+    const tFloor = 6 + rng.int(4);
     const floors = [];
     for (let f = 0; f < H; f++) floors.push(new Array(W).fill(null));
     const edge = {};
@@ -311,13 +329,13 @@
     }
     for (const row of floors) for (const n of row) if (n) n.next.sort((a, b) => a - b);
     const parents = (f, c) => (f <= 1 ? [] : floors[f - 2].filter((p) => p && p.next.indexOf(c) >= 0));
-    // 방 종류: 1층 전투, 5층 보물, 마지막 층 휴식처. 나머지는 가중치 + 연속 금지 규칙
+    // 방 종류: 1층 전투(2막부터는 ?도), 보물 층(6~9층 중 하나), 마지막 층 휴식처. 나머지는 가중치(지형 반영) + 연속 금지 규칙
     for (let f = 1; f <= H; f++) {
       for (let c = 0; c < W; c++) {
         const n = floors[f - 1][c];
         if (!n) continue;
-        if (f === 1) n.type = 'combat';
-        else if (f === 5) n.type = 'treasure';
+        if (f === 1) n.type = run.act >= 2 && rng.chance(0.3) ? 'unknown' : 'combat';
+        else if (f === tFloor) n.type = 'treasure';
         else if (f === H) n.type = 'rest';
         else {
           const ps = parents(f, c);
@@ -330,7 +348,8 @@
               if (sib && sib !== n && sib.type && sib.type !== 'combat') banned[sib.type] = true;
             }
           }
-          const w = roomWeights(run, f).filter((x) => !banned[x[0]]);
+          if (f === tFloor - 1 || f === tFloor + 1) banned.treasure = true;
+          const w = roomWeights(run, f, H, trait).filter((x) => !banned[x[0]]);
           n.type = rng.weighted(w.length ? w : [['combat', 1]], (x) => x[1])[0];
         }
       }
@@ -340,7 +359,7 @@
     // 막마다 엘리트 하나는 보장하고, 그중 하나가 '성난 엘리트'(초록 봉인석)
     let elites = all.filter((x) => x.n.type === 'elite');
     if (!elites.length) {
-      const cands = all.filter((x) => x.f >= 4 && x.f < H && x.n.type === 'combat');
+      const cands = all.filter((x) => x.f >= RS.ELITE_FLOOR && x.f < H && x.n.type === 'combat');
       if (cands.length) {
         rng.pick(cands).n.type = 'elite';
         elites = all.filter((x) => x.n.type === 'elite');
@@ -349,15 +368,24 @@
     if (elites.length) rng.pick(elites).n.burning = true;
     // 상점이 하나도 없으면 하나 만든다
     if (!all.some((x) => x.n.type === 'shop')) {
-      const cands = all.filter((x) => x.f >= 3 && x.f < H && (x.n.type === 'combat' || x.n.type === 'unknown'));
+      const cands = all.filter((x) => x.f >= 3 && x.f < H && x.f !== tFloor && (x.n.type === 'combat' || x.n.type === 'unknown'));
       if (cands.length) rng.pick(cands).n.type = 'shop';
+    }
+    // 긴 막이라 중간 휴식처도 몇 개는 둔다 (마지막 층 제외)
+    let rests = all.filter((x) => x.n.type === 'rest' && x.f < H).length;
+    for (let tries = 0; rests < 2 && tries < 20; tries++) {
+      const cands = all.filter((x) => x.f >= 7 && x.f <= H - 3 && x.f !== tFloor && x.n.type === 'combat');
+      if (!cands.length) break;
+      rng.pick(cands).n.type = 'rest';
+      rests++;
     }
     for (const n of floors[H - 1]) if (n) n.next = [2];
     const bossRow = new Array(W).fill(null);
     bossRow[2] = { type: 'boss', next: [], visited: false };
     floors.push(bossRow);
-    return { floors };
+    return { floors, trait: trait.id, treasureFloor: tFloor };
   };
+  RS.mapTrait = (run) => RS.MAP_TRAITS.find((t) => run.map && t.id === run.map.trait) || null;
 
   // 4막: 휴식처 → 상점 → 엘리트 → 균열의 핵 (일직선)
   function genAct4Map() {
@@ -413,8 +441,12 @@
     const combat = M.juzu ? 0 : u.combat;
     if (r < combat) {
       u.combat = 0.1;
+      // 가끔은 엘리트가 숨어 있다 (1막 5층 이후)
+      if (!M.juzu && run.floor >= RS.ELITE_FLOOR && run.rng.chance(run.act >= 2 ? 0.25 : 0.15)) return 'elite';
       return 'combat';
     }
+    // 숨은 야영지: 드물게 휴식처
+    if (r > 0.96 && run.floor < RS.bossFloor(run) - 1) return 'rest';
     if (r < combat + u.shop) {
       u.shop = 0.03;
       return 'shop';
@@ -1115,7 +1147,7 @@
         if (extra) p.got.push(extra);
       }
     }
-    if (M.cursedKey && !takeKey && run.floor !== 5) {
+    if (M.cursedKey && !takeKey && run.floor !== (run.map.treasureFloor || 5)) {
       const c = RS.randomCurseId(run.rng);
       if (RS.addCurse(run, c)) p.curse = c;
     }

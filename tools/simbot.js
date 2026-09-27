@@ -605,7 +605,7 @@ function makeSmartBot(RS, rng, opts) {
         if (L < maxLife * 0.6) L = Math.min(maxLife, L + Math.ceil(maxLife * BAL.restHealPct));
         continue;
       }
-      if (f === 5) continue; // 보물 층
+      if (f === (run.map.treasureFloor || 5)) continue; // 보물 층
       surv *= (1 - 0.62 * hazard('combat', a, L, sc)) * (1 - 0.13 * hazard('elite', a, L, sc));
       L -= 0.62 * LOSS_C[a] + 0.13 * LOSS_E[a];
     }

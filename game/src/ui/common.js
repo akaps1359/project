@@ -230,6 +230,52 @@
     ));
   };
 
+  // ── 연마 미리보기: 연마하면 어떤 수치가 얼마로 바뀌는지 ──
+  const MOD_LABEL = {
+    dmgPct: '모든 유닛 피해', aspdPct: '공격 속도', rangeAdd: ['사거리', 'n'], critChance: '치명타 확률', critMult: ['치명타 배율', 'x'],
+    killGoldPct: '처치 골드', waveGoldPct: '웨이브 골드', interestCap: ['이자 한도', 'n'], interestBonus: ['이자', 'n'],
+    rareChance: '희귀 소환 확률', twinChance: '한 기 더 소환 확률', mergeRefund: '재료 반환 확률', mergeDouble: '2단계 상승 확률',
+    mergeMirror: '결과 2기 확률', enemySpeedPct: ['적 이동 속도', 'neg'], eliteDmgPct: '엘리트·보스에게 피해', firstStrike: '첫 공격 피해',
+    shrapnel: '파편 피해', freezeChance: '빙결 확률', diversity: '조건 충족 시 피해', purity: '조건 충족 시 피해', eliteSquad: '조건 충족 시 피해',
+    rich: '골드 100 이상일 때 피해', legendAura: '전설 1기당 피해', demonForm: '웨이브마다 쌓이는 피해', noxious: '초당 독안개 피해',
+    poison: '독 피해', eliteKillHeal: ['엘리트 처치 시 회복', 'n'], sellPct: '판매 가격', summonCostPct: '소환 비용', upgradeCostPct: '강화 비용',
+  };
+  const CLS_LABEL = { dmg: '피해', aspd: '공격 속도', range: ['사거리', 'n'], crit: '치명타 확률', splash: ['폭발 범위', 'n'], slow: '둔화' };
+  function fmtMod(v, kind) {
+    if (kind === 'n') return (v >= 0 ? '+' : '') + Math.round(v * 10) / 10;
+    if (kind === 'x') return '+' + Math.round(v * 100) / 100 + '배';
+    if (kind === 'neg') return '-' + Math.round(v * 1000 + 1e-6) / 10 + '%';
+    const p = Math.round(v * 1000 + (v >= 0 ? 1e-6 : -1e-6)) / 10;
+    return (p >= 0 ? '+' : '') + p + '%';
+  }
+  // [{ label, from, to }] (바뀌는 수치만)
+  UI.upgradeLines = function (id) {
+    const def = RS.augDef(id);
+    const up = RS.upgradeScale(def.mods || {}, 1.5);
+    if (!up) return [];
+    const out = [];
+    const add = (lab, a, b) => {
+      if (a === b) return;
+      const [name, kind] = Array.isArray(lab) ? lab : [lab, '%'];
+      out.push({ label: name, from: fmtMod(a, kind), to: fmtMod(b, kind) });
+    };
+    for (const k in def.mods) {
+      if (k === 'cls') {
+        for (const c in def.mods.cls) for (const s in def.mods.cls[c]) if (CLS_LABEL[s]) {
+          const lab = CLS_LABEL[s];
+          add(Array.isArray(lab) ? [`${RS.CLASS[c].name} ${lab[0]}`, lab[1]] : `${RS.CLASS[c].name} ${lab}`, def.mods.cls[c][s], up.cls[c][s]);
+        }
+      } else if (MOD_LABEL[k] && typeof def.mods[k] === 'number') add(MOD_LABEL[k], def.mods[k], up[k]);
+    }
+    return out;
+  };
+  UI.upgradeView = function (id, done) {
+    const lines = UI.upgradeLines(id);
+    if (!lines.length) return h('p', { class: 'upnote' }, done ? '연마됨: 이로운 효과 ×1.5' : '연마하면 이로운 효과 ×1.5');
+    return h('div', { class: 'upnote' }, h('b', null, done ? '연마됨' : '연마하면'),
+      lines.map((l) => h('p', null, done ? `${l.label} ${l.to}` : `${l.label} ${l.from} → `, done ? null : h('em', null, l.to))));
+  };
+
   // ── 카드·칩 ──
   UI.relicTitle = (r) => `${r.name} · ${RS.RARITY_NAME.relic[r.rarity]} 유물`;
 
@@ -257,7 +303,8 @@
       UI.icon(a.icon, 'cic', 4),
       h('div', { class: 'cbody' },
         h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.aug[a.rarity]), h('b', null, a.name + (up ? '+' : '')), a.unique ? null : h('small', { class: 'stack' }, '중첩 가능')),
-        h('p', null, a.desc + (up ? ' (연마: 효과 ×1.5)' : '')),
+        h('p', null, a.desc),
+        up ? UI.upgradeView(id, true) : null,
         a.cost ? h('p', { class: 'cost' }, '대가 · ' + a.cost) : null,
         a.cost ? UI.curseNote(a.cost) : null,
         extra || null,
@@ -417,7 +464,7 @@
     const a = RS.augDef(id);
     const up = RS.isUpgraded(id);
     return h('div', { class: `lrow r${a.rarity}` }, UI.icon(a.icon, '', 3),
-      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc + (up ? ' (연마: ×1.5)' : '')), a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
+      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc), up ? UI.upgradeView(id, true) : null, a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
   };
   UI.relicRow = function (id) {
     const r = RS.REL[id];
