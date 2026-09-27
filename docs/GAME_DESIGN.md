@@ -3,7 +3,7 @@
 > 메이플 랜덤 디펜스식 **랜덤 소환·합성 디펜스**에 슬레이 더 스파이어(이하 슬더스) 1·2의 **로그라이크 모험**을 합친 모바일 웹 게임.
 > 아이폰 사파리 세로 화면 기준, 도트 그래픽.
 
-- 플레이: `docs/index.html` 한 파일 (설치·서버 불필요). GitHub Pages로 올리면 `https://akaps1359.github.io/project/` 주소로 어디서나 접속 (8장)
+- 플레이: `docs/index.html` 한 파일 (설치·서버 불필요). Cloudflare Pages로 `https://randomspire.pages.dev` 주소에서 어디서나 접속 (8장)
 - 한 판: 3막 × 18층(17층 + 보스), 전투 약 45~55회. ×1 속도로 30분 안팎, 배속을 쓰면 15분 안팎
 - 숨은 4막: 세 개의 봉인석을 모으면 3막 보스 뒤에 열린다
 
@@ -704,15 +704,21 @@ docs/
   GAME_DESIGN.md        이 문서
 ```
 
-## 8. 배포 — 주소 하나로 어디서나 접속 (GitHub Pages)
+## 8. 배포 — 주소 하나로 어디서나 접속 (Cloudflare Pages)
 
-`docs/index.html` 은 외부 파일이 필요 없는 한 파일이라 정적 호스팅이면 어디든 올릴 수 있다. 저장소에 이미 들어 있으므로 GitHub Pages가 가장 간단하다.
+`docs/index.html` 은 외부 파일이 필요 없는 한 파일이라 정적 호스팅이면 어디든 올릴 수 있다.
 
-지금 **https://akaps1359.github.io/project/** 에서 서비스 중이다. 처음 켤 때 한 일:
+지금 **https://randomspire.pages.dev** 에서 서비스 중이다(Cloudflare Pages, 무료). GitHub 주소가 드러나지 않고, 저장소를 비공개로 돌려도 계속 배포된다. 켤 때 한 일:
+
+1. dash.cloudflare.com → Compute → Workers & Pages → Create → 맨 아래 **Continue to Pages** → Import an existing Git repository → GitHub 연결(저장소 접근 허용)
+2. 저장소 `project` 선택 → Project name `randomspire` → Production branch `claude/sweet-pasteur-006yat` → Framework None, Build command 비움, Build output directory `docs` → Save and Deploy
+3. 이후 이 브랜치에 푸시할 때마다 자동으로 다시 배포된다
+
+예전에는 GitHub Pages(`akaps1359.github.io/project/`)로 올렸다. 방법은 아래와 같다(무료 요금제는 공개 저장소만 가능):
 
 1. GitHub 무료 요금제는 **공개(public) 저장소에서만** Pages를 쓸 수 있다. 저장소 → Settings → General → 맨 아래 Danger Zone → Change visibility → Public (비공개를 유지하려면 GitHub Pro 이상)
 2. Settings → Pages → Build and deployment → Source: **Deploy from a branch** → Branch: `claude/sweet-pasteur-006yat`, 폴더: `/docs` → Save
-3. 1~2분 뒤 **https://akaps1359.github.io/project/** 로 접속. 이후 이 브랜치에 푸시할 때마다 자동으로 갱신된다
+3. 1~2분 뒤 **https://akaps1359.github.io/project/** 로 접속. 이후 이 브랜치에 푸시할 때마다 자동으로 갱신된다 (GitHub 주소를 숨기려면 Settings → Pages에서 끄고, 저장소를 비공개로 돌린다)
 4. 아이폰 사파리에서 공유 → 홈 화면에 추가하면 앱처럼 전체 화면으로 실행된다
 
 저장소를 공개하고 싶지 않다면 Netlify(폴더 끌어다 놓기)·Cloudflare Pages·Vercel도 무료로 비공개 저장소를 연결해 같은 방식으로 올릴 수 있다. `docs/.nojekyll` 은 GitHub Pages가 Jekyll 변환 없이 파일을 그대로 올리게 한다. 저장은 브라우저 localStorage라 기기마다 따로 남는다.

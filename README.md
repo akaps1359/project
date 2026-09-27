@@ -3,7 +3,7 @@
 랜덤 소환·합성 디펜스(메이플 랜덤 디펜스 스타일)에 슬레이 더 스파이어 1·2식 로그라이크 모험을 합친 모바일 웹 게임입니다. 아이폰 사파리 세로 화면에 맞춰 만들었고, 그래픽은 전부 도트입니다.
 
 - **플레이**: `docs/index.html` 을 브라우저로 열기 (파일 하나, 설치·서버 불필요)
-- **온라인 주소**: https://akaps1359.github.io/project/ (GitHub Pages, 이 브랜치에 푸시하면 자동 갱신)
+- **온라인 주소**: https://randomspire.pages.dev (Cloudflare Pages, 이 브랜치에 푸시하면 자동 갱신)
 - **기획서**: [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) — 규칙, 슬더스 1·2 대응표, 지휘관·차원 방랑자·룬·이벤트 표, 밸런스 시뮬레이션 결과
 
 ## 주요 내용
@@ -25,7 +25,7 @@
 1. 저장소 Settings → General → Danger Zone → Change visibility → **Public**
    (GitHub 무료 요금제는 공개 저장소에서만 Pages 사용 가능. 비공개 유지는 GitHub Pro 이상)
 2. Settings → Pages → Source: **Deploy from a branch** → Branch `claude/sweet-pasteur-006yat`, 폴더 **`/docs`** → Save
-3. 1~2분 뒤 https://akaps1359.github.io/project/ 접속. 이 브랜치에 푸시할 때마다 자동 갱신
+3. 1~2분 뒤 접속. 이 브랜치에 푸시할 때마다 자동 갱신 (지금은 Cloudflare Pages https://randomspire.pages.dev 로 서비스한다 → GAME_DESIGN 8장)
 
 저장소를 공개하기 싫다면 Netlify · Cloudflare Pages · Vercel 에 `docs` 폴더를 올려도 됩니다.
 
