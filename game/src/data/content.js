@@ -78,7 +78,7 @@
     A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +60%, 범위 +5 (서리술사는 영웅 등급부터)', {
       cls: { mage: { dmg: 0.6, splash: 5 }, frost: { dmg: 0.6, splash: 5 } },
     }, { unique: true }),
-    A('glassCannon', '유리 대포', 3, 'cannon', '모든 유닛 피해 +80%', { dmgPct: 0.8, leakMult: 2 }, {
+    A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +80%', { dmgPct: 0.8, leakMult: 2 }, {
       unique: true, cost: '적이 한 바퀴 돌 때 잃는 생명 2배',
     }),
     A('lastStand', '배수의 진', 3, 'skull', '모든 유닛 피해 +50%, 공격 속도 +20%', { dmgPct: 0.5, aspdPct: 0.2 }, {
@@ -86,25 +86,25 @@
       onPick(run) { RS.changeMaxLife(run, -Math.floor(run.maxLife / 2)); },
     }),
     // ── 슬레이 더 스파이어의 '파워' 카드에서 착안 ──
-    A('demonForm', '악마의 형상', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +12% (누적)', { demonForm: 0.12 }, { unique: true }),
-    A('echoForm', '메아리 형상', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1 }, { unique: true }),
-    A('apotheosis', '신격화', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 된다', {}, {
+    A('demonForm', '분노의 뿔', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +12% (누적)', { demonForm: 0.12 }, { unique: true }),
+    A('echoForm', '산울림', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1 }, { unique: true }),
+    A('apotheosis', '빛의 세례', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 된다', {}, {
       onPick(run) { RS.promoteTier(run, 0); },
     }),
-    A('wraithForm', '망령 형상', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
+    A('wraithForm', '혼령 빙의', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
       unique: true, cost: '필드 상한 60 → 50',
     }),
-    A('corruption', '타락', 3, 'corrupt', '강화 비용 -55%', { upgradeCostPct: -0.55, summonCostPct: 0.1 }, {
+    A('corruption', '검은 풀무', 3, 'corrupt', '강화 비용 -55%', { upgradeCostPct: -0.55, summonCostPct: 0.1 }, {
       unique: true, cost: '소환 비용 +10%',
     }),
-    A('creativeAI', '창조적 AI', 2, 'chip', '웨이브가 시작될 때 30% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.3 }, { unique: true }),
-    A('noxious', '유독 가스', 2, 'gas', '모든 적이 초당 최대 체력의 0.9% 피해 (보스는 0.3%)', { noxious: 0.009 }, { unique: true }),
+    A('creativeAI', '태엽 소환기', 2, 'chip', '웨이브가 시작될 때 30% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.3 }, { unique: true }),
+    A('noxious', '독안개', 2, 'gas', '모든 적이 초당 최대 체력의 0.9% 피해 (보스는 0.3%)', { noxious: 0.009 }, { unique: true }),
     A('poisonBlade', '맹독 칼날', 2, 'vial', '도적 공격이 독을 건다 (피해의 50%를 3초간, 5번까지 중첩, 방어 무시)', { poison: 0.5 }, { unique: true }),
-    A('offering', '제물', 2, 'altar', '즉시 희귀 유닛 3기 소환', {}, {
+    A('offering', '피의 헌납', 2, 'altar', '즉시 희귀 유닛 3기 소환', {}, {
       cost: '최대 생명 -3',
       onPick(run) { RS.changeMaxLife(run, -3); RS.grantUnits(run, 1, 3); },
     }),
-    A('limitBreak', '한계 돌파', 2, 'fist', '강화할 때 레벨이 2씩 오른다', { upgradeDouble: 1, upgradeCostPct: 0.6 }, {
+    A('limitBreak', '곱절 단련', 2, 'fist', '강화할 때 레벨이 2씩 오른다', { upgradeDouble: 1, upgradeCostPct: 0.6 }, {
       unique: true, cost: '강화 비용 +60%',
     }),
   ];
@@ -126,13 +126,13 @@
     { id: 'riftTaint', name: '균열 오염', icon: 'curse', desc: '매 웨이브 적 +2', mods: { extraEnemies: 2 } },
     { id: 'unlucky', name: '불운', icon: 'curse', desc: '합성할 때 8% 확률로 실패', mods: { mergeFail: 0.08 } },
     { id: 'fragile', name: '연약함', icon: 'curse', desc: '한 바퀴를 돈 적에게 잃는 생명 +1', mods: { leakAdd: 1 } },
-    { id: 'regret', name: '후회', icon: 'curse', desc: '전투를 시작할 때 생명 -1', mods: { battleStartLifeLoss: 1 } },
-    { id: 'doubt', name: '의심', icon: 'curse', desc: '첫 웨이브 동안 무작위 칸 2곳이 기절한다', mods: { doubt: 2 } },
-    { id: 'parasite', name: '기생충', icon: 'curse', desc: '최대 생명 -3 (얻을 때 적용)', mods: {}, onGain(run) { RS.changeMaxLife(run, -3); } },
-    { id: 'ascBurden', name: '승천자의 짐', icon: 'curse', desc: '모든 유닛 피해 -10%. 없앨 수 없다', mods: { dmgPct: -0.1 }, permanent: true },
-    { id: 'guilt', name: '죄책감', icon: 'curse', desc: '전투를 시작할 때 생명 -1. 전투 5번 뒤 저절로 사라진다', mods: { battleStartLifeLoss: 1 }, fades: 5 },
+    { id: 'regret', name: '불면', icon: 'curse', desc: '전투를 시작할 때 생명 -1', mods: { battleStartLifeLoss: 1 } },
+    { id: 'doubt', name: '현기증', icon: 'curse', desc: '첫 웨이브 동안 무작위 칸 2곳이 기절한다', mods: { doubt: 2 } },
+    { id: 'parasite', name: '곰팡이 포자', icon: 'curse', desc: '최대 생명 -3 (얻을 때 적용)', mods: {}, onGain(run) { RS.changeMaxLife(run, -3); } },
+    { id: 'ascBurden', name: '심연의 짐', icon: 'curse', desc: '모든 유닛 피해 -10%. 없앨 수 없다', mods: { dmgPct: -0.1 }, permanent: true },
+    { id: 'guilt', name: '찜찜함', icon: 'curse', desc: '전투를 시작할 때 생명 -1. 전투 5번 뒤 저절로 사라진다', mods: { battleStartLifeLoss: 1 }, fades: 5 },
     { id: 'debt', name: '빚', icon: 'curse', desc: '웨이브가 시작될 때마다 골드 -5', mods: { debt: 5 } },
-    { id: 'bloomMark', name: '피어남의 표식', icon: 'curse', desc: '생명을 회복할 수 없다. 없앨 수 없다', mods: {}, permanent: true },
+    { id: 'bloomMark', name: '시든 꽃의 낙인', icon: 'curse', desc: '생명을 회복할 수 없다. 없앨 수 없다', mods: {}, permanent: true },
   ];
 
   const index = (list) => {
@@ -144,7 +144,7 @@
   RS.ITEM = index(RS.ITEMS);
   RS.CURSE = index(RS.CURSES);
 
-  RS.RARITY_NAME = { aug: ['', '은빛', '황금', '프리즘'], relic: ['', '일반', '희귀', '보스', '고대', '시작', '이벤트'] };
+  RS.RARITY_NAME = { aug: ['', '은빛', '황금', '프리즘'], relic: ['', '일반', '희귀', '보스', '방랑자', '시작', '이벤트'] };
 
   RS.randomItemId = function (rng) {
     return rng.pick(RS.ITEMS).id;

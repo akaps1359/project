@@ -55,7 +55,7 @@
     for (const c of RS.COMMANDERS) {
       if (RS.commanderUnlocked(c, m) && before.cmds.indexOf(c.id) < 0) out.push(`지휘관 ${c.title} ${c.name}`);
     }
-    if ((m.maxAsc || 0) > before.asc) out.push(`승천 ${m.maxAsc}`);
+    if ((m.maxAsc || 0) > before.asc) out.push(`심연 ${m.maxAsc}`);
     return out;
   }
   // 클리어 기록: 3막 보스를 쓰러뜨리면(4막에 들어서면) 그 자리에서 센다

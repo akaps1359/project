@@ -74,12 +74,12 @@ p('| 지휘관 | 시작 유물 | 특징 | 해금 |');
 p('|---|---|---|---|');
 for (const c of RS.COMMANDERS) p(`| ${c.title} ${c.name} | ${RS.REL[c.relic].name}: ${RS.REL[c.relic].desc} | ${c.desc} | ${c.unlock ? c.unlock.text : '처음부터'} |`);
 
-p('\n### 고대 존재 (2·3막 시작)\n');
-p('| 존재 | 막 | 선택지 풀 1 | 풀 2 | 풀 3 |');
+p('\n### 차원 방랑자 (2·3막 시작)\n');
+p('| 방랑자 | 막 | 선택지 풀 1 | 풀 2 | 풀 3 |');
 p('|---|---|---|---|---|');
 const boon = (id) => {
   const b = RS.ancientBoon(id);
-  return `${b.name.replace(' (고대 유물)', '')}: ${b.desc}${b.cost ? ` (대가: ${b.cost})` : ''}`;
+  return `${b.name.replace(' (방랑자 유물)', '')}: ${b.desc}${b.cost ? ` (대가: ${b.cost})` : ''}`;
 };
 for (const a of RS.ANCIENTS) p(`| ${a.name} | ${a.acts.join('·')} | ${a.pools.map((pool) => pool.map(boon).join('<br>')).join(' | ')} |`);
 
@@ -88,7 +88,7 @@ p('| 룬 | 효과 |');
 p('|---|---|');
 for (const r of RS.RUNES) p(`| ${r.name} | ${r.desc} |`);
 
-p('\n### 승천\n');
+p('\n### 심연\n');
 p('| 단계 | 추가 효과 |');
 p('|---:|---|');
 RS.ASCENSION.forEach((t, i) => i && p(`| ${i} | ${t} |`));

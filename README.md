@@ -4,13 +4,13 @@
 
 - **플레이**: `docs/index.html` 을 브라우저로 열기 (파일 하나, 설치·서버 불필요)
 - **온라인 주소**: https://akaps1359.github.io/project/ (GitHub Pages, 이 브랜치에 푸시하면 자동 갱신)
-- **기획서**: [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) — 규칙, 슬더스 1·2 대응표, 지휘관·고대 존재·룬·이벤트 표, 밸런스 시뮬레이션 결과
+- **기획서**: [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) — 규칙, 슬더스 1·2 대응표, 지휘관·차원 방랑자·룬·이벤트 표, 밸런스 시뮬레이션 결과
 
 ## 주요 내용
 
-- 지휘관 7명 · 승천 10단계 · 연대기(해금)
-- 막마다 10층 갈림길 맵, 1·2막은 두 지역 중 무작위, 2·3막 시작에 고대 존재
-- 균열의 문지기 축복, 불타는 엘리트, 열쇠 3개로 여는 4막 균열의 심장
+- 지휘관 7명 · 심연 10단계 · 연대기(해금)
+- 막마다 10층 갈림길 맵, 1·2막은 두 지역 중 무작위, 2·3막 시작에 차원 방랑자
+- 별점술사의 점괘, 성난 엘리트, 봉인석 3개로 여는 4막 균열의 핵
 - 증강 54 · 유물 101 · 이벤트 45 · 룬 9 · 소모품 8 · 저주 12
 - v2.1: 적대적 검증(확정 93건 + 2차 27건) 반영, 첫 전투 코치·연타 방지·환불 등 UI 개선, 강화까지 쓰는 봇 기준으로 재밸런스
 - v2.2: 상황별 배경 음악(타이틀·지도·전투·보스·상점·휴식·이벤트·결과, 켜고 끄기 가능)·클래스별 공격 효과음, 전사 베기 이펙트, 지도에서 갈 수 있는 길 강조, 결과 화면 버튼 고정
@@ -34,8 +34,8 @@ npx http-server game -p 8765
 node tools/sim.js 280 smart --cmd=all          # 잘 하는 봇 (강화·길 계획·이벤트 미리 굴려 보기), 지휘관 7명 번갈아
 node tools/sim.js 280 basic --cmd=all          # 강화를 거의 안 쓰는 예전 봇 (초보자 기준)
 node tools/sim.js 280 random --cmd=all
-node tools/sim.js 200 smart --asc=10           # 승천 10
-node tools/sim.js 200 smart --keys             # 열쇠·4막을 노리는 봇
+node tools/sim.js 200 smart --asc=10           # 심연 10
+node tools/sim.js 200 smart --keys             # 봉인석·4막을 노리는 봇
 node tools/sim.js 200 smart --bp=banAugs='["corruption"]'   # 봇 조정값 (tools/simbot.js 의 SMART_DEFAULTS)
 node tools/sim.js 300 smart --set 'hpGrowth=[0,1.11,1.0775,1.0654,1.0523]'   # 밸런스 상수 바꿔 보기
 
@@ -47,7 +47,7 @@ node tools/build.js
 node tools/tables.js
 ```
 
-밸런스 상수는 `game/src/data/units.js` 의 `RS.BAL`, 증강·소모품·저주는 `content.js`, 유물은 `relics.js`, 고대 존재는 `ancients.js`, 지휘관·승천·축복은 `meta.js`, 이벤트는 `events.js` 에 있습니다.
+밸런스 상수는 `game/src/data/units.js` 의 `RS.BAL`, 증강·소모품·저주는 `content.js`, 유물은 `relics.js`, 차원 방랑자는 `ancients.js`, 지휘관·심연·별점은 `meta.js`, 이벤트는 `events.js` 에 있습니다.
 
 ## 폰트
 

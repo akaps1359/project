@@ -1,4 +1,4 @@
-// 지휘관(캐릭터), 승천 단계, 시작의 축복
+// 지휘관(캐릭터), 심연 단계, 시작의 축복
 (function (RS) {
   'use strict';
 
@@ -51,7 +51,7 @@
     return false;
   };
 
-  // 승천: 클리어할 때마다 한 단계씩 열린다. 높은 단계는 낮은 단계 효과를 모두 포함
+  // 심연: 클리어할 때마다 한 단계씩 열린다. 높은 단계는 낮은 단계 효과를 모두 포함
   RS.ASCENSION = [
     '기본 난이도',
     '엘리트가 더 자주 나오고 체력 +15%',
@@ -62,26 +62,26 @@
     '최대 생명 -4로 시작',
     '보스 체력 +15%',
     '강화 비용 +20%',
-    '저주 [승천자의 짐]을 안고 시작 (모든 유닛 피해 -10%, 없앨 수 없다)',
+    '저주 [심연의 짐]을 안고 시작 (모든 유닛 피해 -10%, 없앨 수 없다)',
     '3막 보스가 둘이 된다 (균열의 군주 + 리치, 둘 다 온전한 체력)',
   ];
   RS.MAX_ASC = RS.ASCENSION.length - 1;
 
-  // ── 시작의 축복: 균열의 문지기 (슬레이 더 스파이어의 네오) ──
+  // ── 시작의 축복: 별점술사 (슬레이 더 스파이어의 네오) ──
   // 네 줄: 작은 축복 / 중간 축복 / 대가를 치르는 큰 축복 / 시작 유물을 보스 유물로
   const SMALL = [
     { id: 'maxLife', text: '최대 생명 +4', apply(run) { RS.changeMaxLife(run, 4); RS.heal(run, 4); } },
     { id: 'gold', text: '골드 +80', apply(run) { RS.addGold(run, 80); } },
     { id: 'items', text: '무작위 소모품 2개', apply(run) { RS.addItem(run, RS.randomItemId(run.rng)); RS.addItem(run, RS.randomItemId(run.rng)); } },
     { id: 'rareUnit', text: '희귀 유닛 1기', apply(run) { RS.grantUnits(run, 1, 1); } },
-    { id: 'lament', text: '문지기의 탄식: 다음 3번의 전투에서 첫 웨이브 적의 체력이 1', apply(run) { run.lament = 3; } },
+    { id: 'lament', text: '졸음의 별: 다음 3번의 전투에서 첫 웨이브 적의 체력이 1', apply(run) { run.lament = 3; } },
   ];
   const MID = [
-    { id: 'aug', text: '증강 하나 선택 (황금 등급 위주)', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 20, 70, 10], title: '문지기의 축복' }); } },
+    { id: 'aug', text: '증강 하나 선택 (황금 등급 위주)', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 20, 70, 10], title: '별점술사의 점괘' }); } },
     { id: 'rareUnits', text: '희귀 유닛 2기', apply(run) { RS.grantUnits(run, 1, 2); } },
     { id: 'relic', text: '무작위 일반 유물', apply(run) { RS.grantRandomRelic(run, [1]); } },
     { id: 'train', text: '모든 클래스 강화 +1', apply(run) { for (const c of RS.CLASSES) run.classLv[c]++; } },
-    { id: 'rune', text: '보드 한 칸에 무작위 룬 새기기', apply(run) { RS.enqueue(run, { k: 'rune', rune: RS.randomRune(run.rng), title: '문지기의 축복' }); } },
+    { id: 'rune', text: '보드 한 칸에 무작위 룬 새기기', apply(run) { RS.enqueue(run, { k: 'rune', rune: RS.randomRune(run.rng), title: '별점술사의 점괘' }); } },
   ];
   const COSTS = [
     { id: 'loseMax', text: '최대 생명 -3', apply(run) { RS.changeMaxLife(run, -3); } },
@@ -92,7 +92,7 @@
   const BIG = [
     { id: 'rareRelic', text: '무작위 희귀 유물', apply(run) { RS.grantRandomRelic(run, [2]); } },
     { id: 'gold', text: '골드 +200', apply(run) { RS.addGold(run, 200); } },
-    { id: 'prism', text: '프리즘 증강 하나 선택', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 0, 0, 1], title: '문지기의 축복' }); } },
+    { id: 'prism', text: '프리즘 증강 하나 선택', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 0, 0, 1], title: '별점술사의 점괘' }); } },
     { id: 'epic', text: '영웅 유닛 1기', apply(run) { RS.grantUnits(run, 2, 1); } },
     { id: 'maxLife', text: '최대 생명 +8', clash: 'loseMax', apply(run) { RS.changeMaxLife(run, 8); RS.heal(run, 8); } },
   ];

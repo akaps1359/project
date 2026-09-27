@@ -40,7 +40,7 @@
             e.currentTarget.textContent = RS.isBgmOff() ? '음악 꺼짐' : '음악 켜짐';
           }, 'sm'),
         ),
-        h('p', { class: 'record' }, meta.runs ? `모험 ${meta.runs}회 · 클리어 ${meta.wins}회 · 최고 ${meta.bestAct}막 ${meta.bestFloor}층 · 승천 ${meta.maxAsc || 0}` : '3막 꼭대기의 균열의 군주를 쓰러뜨리세요'),
+        h('p', { class: 'record' }, meta.runs ? `모험 ${meta.runs}회 · 클리어 ${meta.wins}회 · 최고 ${meta.bestAct}막 ${meta.bestFloor}층 · 심연 ${meta.maxAsc || 0}` : '3막 꼭대기의 균열의 군주를 쓰러뜨리세요'),
       ),
     ]);
     UI.show('scr-title');
@@ -53,7 +53,7 @@
     });
   };
 
-  // ── 지휘관 선택 + 승천 ──
+  // ── 지휘관 선택 + 심연 ──
   UI.showCommanders = function () {
     const G = UI.G;
     RS.bgm('title');
@@ -94,12 +94,12 @@
       UI.showCommanders();
     };
     const ascBox = h('div', { class: 'ascbox' },
-      h('p', { class: 'dim small' }, maxAsc ? `승천 ${UI.pickAsc} · 클리어할 때마다 다음 단계가 열립니다. 높은 단계는 아래 효과를 모두 포함` : '한 번 클리어하면 승천(추가 난이도)이 열립니다'),
+      h('p', { class: 'dim small' }, maxAsc ? `심연 ${UI.pickAsc} · 클리어할 때마다 다음 단계가 열립니다. 높은 단계는 아래 효과를 모두 포함` : '한 번 클리어하면 심연(추가 난이도)이 열립니다'),
       UI.pickAsc > 0 ? h('ol', { class: 'asclist' }, RS.ASCENSION.slice(1, UI.pickAsc + 1).map((t) => h('li', null, t))) : null,
     );
     const ascCtl = h('div', { class: 'ascctl' + (maxAsc ? '' : ' off') },
       btn('−', () => setAsc(UI.pickAsc - 1), 'sm', !maxAsc || UI.pickAsc <= 0),
-      h('b', null, `승천 ${UI.pickAsc}`),
+      h('b', null, `심연 ${UI.pickAsc}`),
       btn('+', () => setAsc(UI.pickAsc + 1), 'sm', !maxAsc || UI.pickAsc >= maxAsc),
     );
     append(scr, [
@@ -155,7 +155,7 @@
     const quests = [];
     if (run.quests.egg) quests.push('용의 알: 휴식처에서 [부화]');
     if (run.quests.spoilsAct) quests.push(`보물 지도: ${run.quests.spoilsAct}막 첫 보물 상자에서 골드 +400`);
-    if (run.quests.wongo) quests.push(`웡고 티켓: 전투 ${run.quests.wongo.left}번 뒤 유물 3개`);
+    if (run.quests.wongo) quests.push(`퉁퉁 쿠폰: 전투 ${run.quests.wongo.left}번 뒤 유물 3개`);
     UI.modal('빌드', UI.tabs([
       {
         name: `증강 ${run.augments.length}`,
@@ -168,7 +168,7 @@
       {
         name: '진행',
         render: () => [
-          h('p', { class: 'dim' }, `${cmd.title} ${cmd.name} · 승천 ${run.asc} · ${RS.actDef(run).name}`),
+          h('p', { class: 'dim' }, `${cmd.title} ${cmd.name} · 심연 ${run.asc} · ${RS.actDef(run).name}`),
           h('div', { class: 'lvgrid' }, RS.CLASSES.map((c) => h('div', { class: 'lvcell' }, unitImg(c, 0), h('b', null, RS.CLASS[c].name), h('span', null, `Lv ${run.classLv[c]} · +${Math.round(run.classLv[c] * RS.BAL.upgradePct * 100)}%`)))),
           run.permDmg ? h('p', null, `단련: 모든 유닛 피해 +${Math.round(run.permDmg * 100)}%`) : null,
           h('h3', null, '룬'),
@@ -196,8 +196,8 @@
       { name: '룬', sub: '보드 칸에 새겨 그 칸 유닛에게 적용', render: () => RS.RUNES.map((r) => h('div', { class: 'lrow', style: `--rune:${r.color}` }, h('span', { class: 'runeic' }, '◆'), h('div', null, h('b', null, r.name), h('p', null, r.desc)))) },
       { name: '적', sub: '체력 배율 · 이동 속도 · 한 바퀴당 잃는 생명', render: () => Object.keys(RS.ENEMY).filter((k) => k !== 'dummy').map(enemyRow) },
       {
-        name: '고대 존재',
-        sub: '2·3막을 시작할 때 만나는 존재. 셋 중 하나를 준다',
+        name: '차원 방랑자',
+        sub: '2·3막을 시작할 때 차원 틈새에서 나타나는 방랑자. 셋 중 하나를 준다',
         render: () => RS.ANCIENTS.map((a) => h('div', { class: 'lrow' }, icon(a.icon, '', 3), h('div', null, h('b', null, `${a.name} · ${a.acts.join('·')}막`), h('p', null, a.text), h('p', { class: 'dim small' }, a.pools.map((p) => p.map((b) => RS.ancientBoon(b).name).join(' / ')).join(' | '))))),
       },
     ]), typeof onClose === 'function' ? onClose : null);
@@ -209,17 +209,17 @@
       { done: meta.runs >= 1, text: '첫 모험을 떠난다', reward: '—' },
       { done: meta.bestAct >= 2, text: '1막 보스를 쓰러뜨린다', reward: '지휘관 엘라(대현자)' },
       { done: meta.bestAct >= 3, text: '2막 보스를 쓰러뜨린다', reward: '지휘관 카이(사냥꾼)' },
-      { done: meta.wins >= 1, text: '3막 보스를 쓰러뜨린다', reward: '지휘관 미라(연금술사) · 승천 1' },
+      { done: meta.wins >= 1, text: '3막 보스를 쓰러뜨린다', reward: '지휘관 미라(연금술사) · 심연 1' },
       { done: meta.wins >= 2, text: '두 번 클리어한다', reward: '지휘관 아스트라(별의 섭정)' },
-      { done: !!meta.heart, text: '세 열쇠로 4막 균열의 심장을 부순다', reward: '진 엔딩' },
-      { done: (meta.maxAsc || 0) >= 10, text: '승천 10에 도전한다', reward: '최고 난이도' },
+      { done: !!meta.heart, text: '세 봉인석으로 4막 균열의 핵을 부순다', reward: '진 엔딩' },
+      { done: (meta.maxAsc || 0) >= 10, text: '심연 10에 도전한다', reward: '최고 난이도' },
     ];
   };
   UI.openChronicle = function () {
     const meta = UI.G.meta;
     const miles = UI.chronicleMiles(meta);
     UI.modal('연대기', h('div', { class: 'chron' },
-      h('p', { class: 'dim' }, `모험 ${meta.runs}회 · 클리어 ${meta.wins}회 · 웡고 포인트 ${meta.wongo || 0}`),
+      h('p', { class: 'dim' }, `모험 ${meta.runs}회 · 클리어 ${meta.wins}회 · 퉁퉁 포인트 ${meta.wongo || 0}`),
       miles.map((m) => h('div', { class: 'lrow' + (m.done ? ' done' : '') }, h('span', { class: 'check' }, m.done ? '✓' : '·'), h('div', null, h('b', null, m.text), h('p', { class: 'dim small' }, '해금 · ' + m.reward)))),
       h('div', { class: 'row2' }, btn('모든 지휘관 해금 (체험용)', () => {
         meta.unlockAll = true;
@@ -251,10 +251,10 @@
         li('소모품', '전투 화면 아래 칸(기본 3개). 눌러서 [사용]. 상점·보상에서 얻습니다.'),
         li('저주', '해로운 지속 효과. 상점 [제거]나 일부 이벤트로 없앱니다.'),
         li('룬', '보드 칸에 새기는 인챈트. 그 칸에 선 유닛에게 효과가 붙습니다.'),
-        li('열쇠', '루비(휴식처 회수)·에메랄드(불타는 엘리트)·사파이어(보물 대신)를 모으면 3막 뒤 4막이 열립니다.'),
-        li('고대 존재', '2·3막을 시작할 때 강력한 선택 3개 중 하나를 골라야 합니다.'),
+        li('봉인석', '붉은(휴식처 회수)·초록(성난 엘리트)·푸른(보물 대신) 봉인석을 모두 모으면 3막 뒤 4막이 열립니다.'),
+        li('차원 방랑자', '2·3막을 시작할 때 강력한 선택 3개 중 하나를 골라야 합니다.'),
         li('상성', '돌골렘·철갑 게·흑기사는 궁수·도적 피해 절반. 유령·리치는 물리 피해에 강합니다.'),
-        li('승천', '클리어하면 열리는 추가 난이도. 단계마다 불리한 규칙이 더해집니다.'),
+        li('심연', '클리어하면 열리는 추가 난이도. 단계마다 불리한 규칙이 더해집니다.'),
         li('저장', '칸을 옮길 때마다 자동 저장. 전투 도중 나가면 그 전투를 처음부터 다시 합니다.'),
       ),
     ), typeof onClose === 'function' ? onClose : null);

@@ -199,7 +199,7 @@
       r.random ? h('p', null, h('b', null, '무작위 저주'), ` 1개: ${RANDOM_POOL().map((c) => c.name).join('·')} 중 하나`) : null,
     );
   };
-  // 툴팁용 글: '저주 [후회]' → '저주 [후회: 전투를 시작할 때 생명 -1]'
+  // 툴팁용 글: '저주 [불면]' → '저주 [불면: 전투를 시작할 때 생명 -1]'
   UI.curseText = function (text) {
     if (!text) return text;
     return text.replace(/저주 \[([^\]]+)\]/g, (all, name) => {
@@ -218,7 +218,7 @@
     UI.modal('저주 확인', h('div', { class: 'confirm' },
       h('p', null, `[${label}] 을(를) 고르면 아래 저주를 받습니다.`),
       h('div', { class: 'cards' }, cards), pool,
-      h('p', { class: 'dim small' }, '저주는 상점의 [제거]나 일부 이벤트로 없앨 수 있어요' + (r.list.some((c) => c.permanent) ? ' (없앨 수 없는 것 제외)' : '') + '. 부적이 있으면 막아 줘요.'),
+      h('p', { class: 'dim small' }, '저주는 상점의 [제거]나 일부 이벤트로 없앨 수 있어요' + (r.list.some((c) => c.permanent) ? ' (없앨 수 없는 것 제외)' : '') + '. 액막이 매듭이 있으면 막아 줘요.'),
       h('div', { class: 'row2' },
         UI.btn('취소', () => UI.closeModal()),
         UI.btn('그래도 고른다', () => {
@@ -287,11 +287,11 @@
     const one = (name, has, label) => h('span', { class: 'keyic' + (has ? ' on' : ''), title: label }, UI.icon(name, '', 2));
     return h('button', {
       class: 'keys',
-      'aria-label': '열쇠',
+      'aria-label': '봉인석',
       onclick(e) {
-        UI.tip(e.currentTarget, '균열의 열쇠', '루비(휴식처에서 회수), 에메랄드(불타는 엘리트 처치), 사파이어(보물 상자에서 유물 대신) 세 개를 모으면 3막 보스 뒤에 4막이 열린다.');
+        UI.tip(e.currentTarget, '균열의 봉인석', '붉은(휴식처에서 회수)·초록(성난 엘리트 처치)·푸른(보물 상자에서 유물 대신) 봉인석 세 개를 모으면 3막 보스 뒤에 4막이 열린다.');
       },
-    }, one('key_ruby', k.ruby, '루비'), one('key_emerald', k.emerald, '에메랄드'), one('key_sapphire', k.sapphire, '사파이어'));
+    }, one('key_ruby', k.ruby, '붉은 봉인석'), one('key_emerald', k.emerald, '초록 봉인석'), one('key_sapphire', k.sapphire, '푸른 봉인석'));
   };
 
   UI.topbar = function (run, title) {
@@ -507,7 +507,7 @@
     if (Math.round(b.gold) !== Math.round(a.gold)) out.push({ k: 'gold', n: Math.round(b.gold - a.gold) });
     return out;
   };
-  const KEY_NAME = { ruby: '루비', emerald: '에메랄드', sapphire: '사파이어' };
+  const KEY_NAME = { ruby: '붉은', emerald: '초록', sapphire: '푸른' };
   UI.gainsView = function (list) {
     const sign = (n) => (n > 0 ? '+' + n : String(n));
     return h('div', { class: 'gains' }, list.map((g) => {
@@ -529,7 +529,7 @@
       if (g.k === 'unit') {
         return h('div', { class: 'grow-line' + (g.n < 0 ? ' lost' : '') }, UI.unitImg(g.cls, g.tier), h('span', { class: 'tier' + g.tier }, `${RS.TIER[g.tier].name} ${RS.CLASS[g.cls].name} ${sign(g.n)}`));
       }
-      if (g.k === 'key') return h('div', { class: 'grow-line' }, UI.icon('key_' + g.id, '', 3), h('span', { class: 'good' }, `${KEY_NAME[g.id]} 열쇠`));
+      if (g.k === 'key') return h('div', { class: 'grow-line' }, UI.icon('key_' + g.id, '', 3), h('span', { class: 'good' }, `${KEY_NAME[g.id]} 봉인석`));
       if (g.k === 'lv') return h('p', { class: g.n > 0 ? 'good' : 'bad' }, g.cls ? `${RS.CLASS[g.cls].name} 강화 ${sign(g.n)}` : `모든 클래스 강화 ${sign(g.n)}`);
       if (g.k === 'maxLife') return h('p', { class: g.n > 0 ? 'good' : 'bad' }, `최대 생명 ${sign(g.n)}`);
       if (g.k === 'life') return h('p', { class: g.n > 0 ? 'good' : 'bad' }, `생명 ${sign(g.n)}`);

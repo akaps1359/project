@@ -77,7 +77,7 @@
         second = buildGroup(other, c2, L);
       }
       let list = interleave(buildGroup(main, cnt, L), second);
-      // 일반 전투 성격의 이벤트 전투(버섯 군락 등)는 spec.hpMul 을 모든 적에게. 엘리트·보스전은 아래에서 엘리트·보스에게만
+      // 일반 전투 성격의 이벤트 전투(형광 버섯밭 등)는 spec.hpMul 을 모든 적에게. 엘리트·보스전은 아래에서 엘리트·보스에게만
       if (kind === 'combat' && spec.hpMul) list = list.map((sp) => Object.assign({}, sp, { hpMul: (sp.hpMul || 1) * spec.hpMul }));
       if (eliteWave) {
         const n = spec.elites || (act >= 2 ? 2 : 1);
@@ -92,10 +92,10 @@
       }
       if (bossWave) {
         list.push({ type: spec.boss || A.boss, L, gap: 1, hpMul: spec.hpMul || 1 });
-        // 승천 10: 3막 보스가 둘
+        // 심연 10: 3막 보스가 둘
         if (act === 3 && (run.asc || 0) >= 10 && type === 'boss') list.push({ type: 'lich', L, gap: 1, hpMul: 1 });
       }
-      // 문지기의 탄식: 첫 웨이브 적 체력 1
+      // 졸음의 별: 첫 웨이브 적 체력 1
       if (k === 0 && run.lament > 0) list = list.map((sp) => Object.assign({}, sp, { one: true }));
       waves.push({ L, list });
     }
