@@ -149,6 +149,12 @@
     win: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'square', 0.1, null, i * 0.1)); },
     lose: () => { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.22, 'triangle', 0.14, null, i * 0.14)); },
     error: () => tone(140, 0.08, 'square', 0.08),
+    // 보스 기술
+    heartbeat: () => { tone(70, 0.14, 'sine', 0.35, 45); tone(62, 0.16, 'sine', 0.3, 40, 0.18); },
+    glue: () => { tone(220, 0.18, 'triangle', 0.14, 90); noise(0.12, 0.06, 'lowpass', 600, 200, 0.02); },
+    shield: () => { tone(520, 0.1, 'triangle', 0.1, 780); tone(780, 0.16, 'sine', 0.08, 1040, 0.08); },
+    shieldBreak: () => { noise(0.22, 0.16, 'bandpass', 3000, 600, 0, 0.8); tone(900, 0.12, 'square', 0.06, 300, 0.02); },
+    blink: () => { tone(1200, 0.12, 'sine', 0.1, 300); tone(300, 0.14, 'sine', 0.08, 1200, 0.1); },
   };
   const GAP = { kill: 0.06, leak: 0.12, coin: 0.05, summon: 0.04 };
 

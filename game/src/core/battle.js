@@ -43,6 +43,10 @@
       this.slotStats.push(null);
     }
     this.slotStun = new Float32Array(F.SIZE);
+    // 보스 기술로 느려진 칸 (남은 시간, 공격 속도 감소 비율, 종류: glue 점액 / pulse 고동)
+    this.slotSlowT = new Float32Array(F.SIZE);
+    this.slotSlowAmt = new Float32Array(F.SIZE);
+    this.slotSlowKind = new Array(F.SIZE).fill(null);
     this.riftWarn = [];
     this.bosses = [];
     this.boss = null;
@@ -278,13 +282,32 @@
   };
 
   P.updateRift = function (dt) {
-    for (let i = 0; i < F.SIZE; i++) if (this.slotStun[i] > 0 && this.slotStun[i] < 100) this.slotStun[i] -= dt;
+    for (let i = 0; i < F.SIZE; i++) {
+      if (this.slotStun[i] > 0 && this.slotStun[i] < 100) this.slotStun[i] -= dt;
+      if (this.slotSlowT[i] > 0) {
+        this.slotSlowT[i] -= dt;
+        if (this.slotSlowT[i] <= 0) {
+          this.slotSlowAmt[i] = 0;
+          this.slotSlowKind[i] = null;
+        }
+      }
+    }
     if (!this.riftWarn.length) return;
     for (const w of this.riftWarn) {
       w.t -= dt;
       if (w.t <= 0) {
-        for (const c of w.cells) this.slotStun[c] = Math.max(this.slotStun[c], w.stun);
-        this.emit({ k: 'rift', cells: w.cells });
+        if (w.slow) {
+          // 느려지는 칸: 기절 대신 공격 속도가 떨어진다
+          for (const c of w.cells) {
+            this.slotSlowT[c] = Math.max(this.slotSlowT[c], w.dur);
+            this.slotSlowAmt[c] = Math.max(this.slotSlowAmt[c], w.slow);
+            this.slotSlowKind[c] = w.kind;
+          }
+          this.emit({ k: 'slowCells', cells: w.cells, kind: w.kind });
+        } else {
+          for (const c of w.cells) this.slotStun[c] = Math.max(this.slotStun[c], w.stun);
+          this.emit({ k: 'rift', cells: w.cells });
+        }
       }
     }
     this.riftWarn = this.riftWarn.filter((w) => w.t > 0);
@@ -335,7 +358,8 @@
       }
       const def = e.def;
       // 기절·빙결 중에는 기술 타이머도 멈춘다
-      if (e.stunT <= 0 && (def.heal || def.haste || def.summon || def.rift || def.hop || def.submerge || def.anchor)) this.enemySkill(e, def, dt);
+      if (e.stunT <= 0 && (def.heal || def.haste || def.summon || def.rift || def.hop || def.submerge || def.anchor || def.skills)) this.enemySkill(e, def, dt);
+      if (def.phase2 && !e.p2 && e.hp < e.maxHp * def.phase2.at) this.bossPhase2(e, def);
       if (e.subT > 0) e.subT -= dt;
       if (e.stunT > 0) continue;
       let sp = e.speed * globalSpeed * (1 - e.slow) * (1 + e.hasteP);
@@ -355,6 +379,7 @@
 
   P.enemySkill = function (e, def, dt) {
     e.timer += dt;
+    if (def.skills) this.bossSkills(e, def, dt);
     // 개구리: 가끔 앞으로 크게 뛴다
     if (def.hop) {
       if (e.hopT === undefined) e.hopT = this.rng.next() * def.hop.every;
@@ -370,7 +395,9 @@
       if (e.subTimer >= def.submerge.every) {
         e.subTimer = 0;
         e.subT = def.submerge.dur;
-        this.emit({ k: 'msg', text: `${def.name}이(가) 물속으로 숨었다!` });
+        // 물속에서 상처를 조금 회복한다
+        if (def.submerge.heal) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * def.submerge.heal);
+        this.emit({ k: 'msg', text: `${def.name}이(가) 물속으로 숨었다!${def.submerge.heal ? ' (체력 회복)' : ''}` });
       }
     }
     // 해골 선장: 닻을 던져 한 열을 기절
@@ -422,6 +449,107 @@
     }
   };
 
+  // ── 보스 기술 (def.skills): 기술마다 따로 대기 시간을 센다. 2단계(phase2)에서는 더 자주 쓴다 ──
+  P.bossSkills = function (e, def, dt) {
+    const st = e.sk || (e.sk = def.skills.map((s, k) => (s.first != null ? s.first : s.every * (0.55 + 0.1 * k))));
+    const cdMul = e.p2 && def.phase2 ? def.phase2.cd || 1 : 1;
+    for (let k = 0; k < def.skills.length; k++) {
+      const s = def.skills[k];
+      if (s.k === 'blink') {
+        this.skillBlink(e, s);
+        continue;
+      }
+      st[k] -= dt;
+      if (st[k] > 0) continue;
+      st[k] = s.every * cdMul;
+      this.castBossSkill(e, s);
+    }
+  };
+  P.castBossSkill = function (e, s) {
+    const said = (id) => this.emit({ k: 'bossSkill', id, x: e.x, y: e.y, name: s.name, boss: e.def.name });
+    switch (s.k) {
+      case 'glue': {
+        // 무작위 칸 묶음의 공격 속도를 떨어뜨린다 (경고 후)
+        const n = s.size || 2;
+        const c0 = this.rng.int(F.COLS - n + 1);
+        const r0 = this.rng.int(F.ROWS - n + 1);
+        const cells = [];
+        for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) cells.push((r0 + r) * F.COLS + c0 + c);
+        this.riftWarn.push({ cells, t: s.warn, total: s.warn, slow: s.amt, dur: s.dur, kind: 'glue' });
+        said('glue');
+        break;
+      }
+      case 'pulse': {
+        // 모든 칸의 공격 속도를 잠깐 떨어뜨린다
+        const cells = [];
+        for (let i = 0; i < F.SIZE; i++) cells.push(i);
+        this.riftWarn.push({ cells, t: s.warn, total: s.warn, slow: s.amt, dur: s.dur, kind: 'pulse' });
+        said('pulse');
+        break;
+      }
+      case 'shield':
+        e.shield = Math.max(e.shield || 0, e.maxHp * s.pct);
+        e.shieldMax = Math.max(e.shieldMax || 0, e.maxHp * s.pct);
+        said('shield');
+        break;
+      case 'spawn':
+        for (let k = 0; k < s.n; k++) this.queueSpawn(s.type, e.L, e.d - 8 * (k + 1), e.nextLap, s.hp);
+        this.emit({ k: 'summonFx', x: e.x, y: e.y });
+        if (s.name) said('spawn');
+        break;
+      case 'rift': {
+        const c0 = this.rng.int(F.COLS - 1);
+        const r0 = this.rng.int(F.ROWS - 1);
+        const cells = [r0 * F.COLS + c0, r0 * F.COLS + c0 + 1, (r0 + 1) * F.COLS + c0, (r0 + 1) * F.COLS + c0 + 1];
+        this.riftWarn.push({ cells, t: s.warn, total: s.warn, stun: s.stun });
+        break;
+      }
+      case 'rally':
+        // 모든 적이 잠깐 빨라진다
+        for (const o of this.enemies) {
+          if (o.dead) continue;
+          o.hasteP = Math.max(o.hasteP, s.pct);
+          o.hasteT = Math.max(o.hasteT, s.dur);
+        }
+        this.emit({ k: 'haste', x: e.x, y: e.y, r: 60 });
+        said('rally');
+        break;
+      case 'mend':
+        if (e.hp < e.maxHp * (s.below || 1)) {
+          e.hp = Math.min(e.maxHp, e.hp + e.maxHp * s.pct);
+          this.emit({ k: 'heal', x: e.x, y: e.y, r: 18 });
+          said('mend');
+        }
+        break;
+    }
+  };
+  // 순간이동: 체력이 기준 아래로 떨어질 때마다 길 앞쪽으로 건너뛴다 (균열 문 바로 앞까지는 가지 않는다)
+  P.skillBlink = function (e, s) {
+    e.blinkDone = e.blinkDone || 0;
+    while (e.blinkDone < s.at.length && e.hp < e.maxHp * s.at[e.blinkDone]) {
+      e.blinkDone++;
+      const room = e.nextLap - e.d - 24;
+      if (room <= 0) continue;
+      const x1 = e.x;
+      const y1 = e.y;
+      e.d += Math.min(room, F.PERIM * s.dist);
+      RS.pathPos(e.d, e);
+      this.emit({ k: 'blink', x1, y1, x2: e.x, y2: e.y });
+      this.emit({ k: 'msg', text: `${e.def.name}이(가) 균열을 건너 앞으로 순간이동했다!`, warn: true });
+    }
+  };
+  // 2단계: 체력이 기준 아래로 떨어지면 빨라지고 기술을 더 자주 쓴다
+  P.bossPhase2 = function (e, def) {
+    e.p2 = true;
+    e.speed *= def.phase2.speed || 1;
+    if (def.phase2.shield) {
+      e.shield = Math.max(e.shield || 0, e.maxHp * def.phase2.shield);
+      e.shieldMax = Math.max(e.shieldMax || 0, e.maxHp * def.phase2.shield);
+    }
+    this.emit({ k: 'phase2', x: e.x, y: e.y });
+    this.emit({ k: 'msg', text: def.phase2.msg || `${def.name}이(가) 각성했다!`, warn: true });
+  };
+
   P.leak = function (e) {
     const M = this.M;
     const run = this.run;
@@ -431,15 +559,23 @@
     if (e.boss && this.enraged) dmg *= 2;
     if (M.lastWaveLeakMult && this.waveIdx >= nW) dmg *= 2;
     if (M.leakReduce) dmg = Math.max(1, dmg - M.leakReduce);
+    // 생명 보호(유령 망토·혼령 빙의·철갑 소라·버팀 닻·되감기 모래)는 일반 적에게만 완전히 통한다.
+    // 엘리트·보스는 막지 못하고 피해를 절반으로만 줄인다 (횟수가 있는 보호는 한 번 쓴다)
+    const big = e.boss || e.elite;
     let blocked = false;
-    if (this.ghostT > 0) blocked = true;
-    else if (M.firstWaveNoLeak && this.waveIdx <= 1) blocked = true;
+    let guarded = false;
+    if (this.ghostT > 0) guarded = true;
+    else if (M.firstWaveNoLeak && this.waveIdx <= 1) guarded = true;
     else if (M.helix && !this.helixUsed) {
       this.helixUsed = true;
-      blocked = true;
+      guarded = true;
     } else if (this.leakShield > 0) {
       this.leakShield--;
-      blocked = true;
+      guarded = true;
+    }
+    if (guarded) {
+      if (big) dmg *= 0.5;
+      else blocked = true;
     }
     if (!blocked) {
       run.life -= dmg;
@@ -556,8 +692,9 @@
         continue;
       }
       const cds = this.cd[i];
+      const udt = this.slotSlowT[i] > 0 ? dt * (1 - this.slotSlowAmt[i]) : dt;
       for (let u = 0; u < s.n; u++) {
-        cds[u] -= dt;
+        cds[u] -= udt;
         if (cds[u] > 0) continue;
         if (this.attack(i, s, st, u)) cds[u] = st.interval + Math.max(cds[u], -dt);
         else cds[u] = 0.1;
@@ -810,10 +947,24 @@
     }
     if ((e.elite || e.boss) && M.eliteDmgPct) dm *= 1 + M.eliteDmgPct;
     if (e.burning === 'armor') dm *= 0.75;
-    // 균열의 심장: 0.5초마다 받을 수 있는 피해에 한도가 있다
+    // 균열의 핵: 0.5초마다 받을 수 있는 피해에 한도가 있다
     if (def.dpsCap) {
       dm = Math.min(dm, e.capLeft);
       e.capLeft -= dm;
+    }
+    // 보호막이 먼저 피해를 받는다
+    if (e.shield > 0 && dm > 0) {
+      const ab = Math.min(e.shield, dm);
+      e.shield -= ab;
+      dm -= ab;
+      if (e.shield <= 0) {
+        e.shield = 0;
+        this.emit({ k: 'shieldBreak', x: e.x, y: e.y, boss: e.boss });
+      }
+      if (dm <= 0) {
+        if (!isDot) e.flash = 0.08;
+        return 0;
+      }
     }
     const dealt = Math.min(dm, e.hp);
     e.hp -= dm;

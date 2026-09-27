@@ -7,7 +7,8 @@
   // 웨이브 레벨 L = 3×(d-1) + 웨이브 번호
   RS.FLOORS_PER_ACT = 10;
   RS.depth = (act, floor, nF) => {
-    if (act >= 4) return 30 + floor;
+    // 4막은 층 수와 상관없이 진행도 31~34 (예전 4층짜리 4막과 같은 세기)
+    if (act >= 4) return 31 + ((Math.max(1, floor) - 1) * 3) / Math.max(1, (nF || 4) - 1);
     const n = nF || RS.FLOORS_PER_ACT;
     // 1층 → 1, 보스 층(n) → 10 으로 고르게 편다 (n = 10 이면 예전과 같다)
     return (act - 1) * RS.FLOORS_PER_ACT + 1 + ((Math.max(1, floor) - 1) * (RS.FLOORS_PER_ACT - 1)) / Math.max(1, n - 1);

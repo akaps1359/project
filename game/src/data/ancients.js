@@ -10,7 +10,7 @@
     R('forgottenShelf', '망각의 서가', 'scroll', '증강 선택지 +1, 증강을 건너뛸 때 골드 2배', { augChoices: 1, skipGoldMul: 1 }),
     R('forbiddenIndex', '금단의 색인', 'lens', '앞으로 얻는 증강이 30% 확률로 연마된 채 들어온다', { augUpChance: 0.3 }),
     R('stoppedClock', '멈춘 시계', 'watch', '모든 적 이동 속도 -12%, 보스 제한 시간 +20초', { enemySpeedPct: 0.12, bossTimeAdd: 20 }),
-    R('rewindSand', '되감기 모래', 'hourglass', '전투마다 처음 세 번은 한 바퀴를 돈 적에게 생명을 잃지 않는다', { leakShield: 3 }),
+    R('rewindSand', '되감기 모래', 'hourglass', '전투마다 처음 세 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스는 피해 절반, 한 번을 쓴다)', { leakShield: 3 }),
     R('dragonScale', '용비늘 금화', 'coins', '웨이브 시작 골드 +100%, 이자 한도 +5', { waveGoldPct: 1, interestCap: 5 }),
     R('goldenEgg', '황금 알', 'egg', '전투에서 이기면 골드 +25×막', { winGold: 25 }),
     R('bloodPactCup', '혈맹의 잔', 'chalice', '최대 생명 +10, 전투에서 이기면 생명 +4', { winHeal: 4 }, {

@@ -590,6 +590,48 @@
           this.shake = 0.5;
           this.fxs.push({ k: 'flash', t: 0.35, max: 0.35, col: '#ffffff' });
           break;
+        case 'bossSkill':
+          if (ev.id === 'glue') this.emit(ev.x, ev.y - 6, 10, { sp: [20, 50], ang: -Math.PI / 2, spread: 2.4, life: [0.3, 0.6], cols: ['#9ee06a', '#62c35f', '#5a9e3a'], g: 120, size: 1.5 });
+          else if (ev.id === 'pulse') {
+            // 심장 고동: 붉은 파동이 퍼지고 화면이 두근거린다
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 40, t: 0.5, max: 0.5, col: '#e04a52', glow: true });
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 24, t: 0.4, max: 0.4, col: '#f07fb0' });
+            this.fxs.push({ k: 'flash', t: 0.25, max: 0.25, col: '#e04a52' });
+            this.shake = Math.max(this.shake, 0.15);
+          } else if (ev.id === 'shield') {
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 16, t: 0.45, max: 0.45, col: '#a8ecff', glow: true });
+            this.emit(ev.x, ev.y - 6, 10, { sp: [10, 25], life: [0.3, 0.5], cols: ['#a8ecff', '#ffffff'], drag: 2, glow: 2 });
+          } else if (ev.id === 'rally') {
+            this.fxs.push({ k: 'flash', t: 0.18, max: 0.18, col: '#a061e8' });
+          }
+          break;
+        case 'slowCells':
+          for (const c of ev.cells) {
+            const cc = RS.slotCenter(c);
+            if (ev.kind === 'glue') this.emit(cc.x, cc.y - 4, 3, { sp: [10, 25], ang: Math.PI / 2, spread: 2, life: [0.25, 0.45], cols: ['#9ee06a', '#62c35f'], g: 60, size: 1.5 });
+          }
+          break;
+        case 'shieldBreak':
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 18, t: 0.35, max: 0.35, col: '#e8fbff', glow: true });
+          this.emit(ev.x, ev.y - 6, 16, { sp: [30, 70], life: [0.3, 0.55], cols: ['#a8ecff', '#e8fbff', '#52b6e0'], g: 80, drag: 1.5, glow: 2 });
+          this.shake = Math.max(this.shake, 0.15);
+          break;
+        case 'blink': {
+          // 순간이동: 떠난 자리와 나타난 자리에 균열, 그 사이에 보랏빛 자취
+          this.fxs.push({ k: 'ring', x: ev.x1, y: ev.y1, r: 14, t: 0.4, max: 0.4, col: '#a061e8', glow: true });
+          this.fxs.push({ k: 'ring', x: ev.x2, y: ev.y2, r: 18, t: 0.45, max: 0.45, col: '#f07fb0', glow: true });
+          for (let j = 0; j <= 12; j++) {
+            const q = j / 12;
+            this.emit(ev.x1 + (ev.x2 - ev.x1) * q, ev.y1 + (ev.y2 - ev.y1) * q, 1, { sp: [2, 8], life: [0.3, 0.6], cols: ['#a061e8', '#f07fb0', '#d3a0f7'], glow: 2 });
+          }
+          this.shake = Math.max(this.shake, 0.2);
+          break;
+        }
+        case 'phase2':
+          this.fxs.push({ k: 'flash', t: 0.4, max: 0.4, col: '#e04a52' });
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 30, t: 0.6, max: 0.6, col: '#ff6b86', glow: true });
+          this.shake = Math.max(this.shake, 0.45);
+          break;
         case 'wave':
           // 새 웨이브: 균열 문이 크게 일렁인다
           this.fxs.push({ k: 'ring', x: F.L, y: F.T, r: 16, t: 0.45, max: 0.45, col: '#d3a0f7', glow: true });
@@ -702,13 +744,17 @@
     }
   };
 
+  // 경고: 곧 기절(붉은 보라)·점액(초록)·고동(붉은) 칸
+  const WARN_COL = { glue: [120, 200, 80], pulse: [224, 74, 82] };
   P.drawRift = function (ctx, b) {
     for (const w of b.riftWarn) {
       const blink = Math.floor(this.t * 10) % 2 === 0;
+      const col = WARN_COL[w.kind] || [240, 60, 90];
+      const a = w.kind === 'pulse' ? (blink ? 0.22 : 0.1) : blink ? 0.45 : 0.2;
+      ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${a})`;
       for (const c of w.cells) {
         const x = F.GX + (c % F.COLS) * F.SLOT;
         const y = F.GY + Math.floor(c / F.COLS) * F.SLOT;
-        ctx.fillStyle = blink ? 'rgba(240,60,90,0.45)' : 'rgba(240,60,90,0.2)';
         ctx.fillRect(x + 1, y + 1, F.SLOT - 2, F.SLOT - 2);
       }
     }
@@ -935,6 +981,22 @@
         ctx.fillRect(x + 2, y + 2, F.SLOT - 4, F.SLOT - 4);
         this.drawStars(ctx, x + 13, y + 4);
       }
+      // 보스 기술로 느려진 칸: 점액은 초록 방울, 고동은 붉게 두근거린다
+      if (b.slotSlowT && b.slotSlowT[i] > 0) {
+        if (b.slotSlowKind[i] === 'glue') {
+          ctx.fillStyle = 'rgba(120,200,80,0.28)';
+          ctx.fillRect(x + 2, y + 2, F.SLOT - 4, F.SLOT - 4);
+          ctx.fillStyle = '#9ee06a';
+          for (let k = 0; k < 3; k++) {
+            const dy = (t * 9 + k * 7 + i * 3) % 12;
+            ctx.fillRect(x + 6 + k * 6, y + 3 + dy, 1, 2);
+          }
+        } else {
+          const beat = Math.max(0, Math.sin(t * 7)) ** 3;
+          ctx.fillStyle = `rgba(224,74,82,${0.12 + 0.25 * beat})`;
+          ctx.fillRect(x + 2, y + 2, F.SLOT - 4, F.SLOT - 4);
+        }
+      }
       // 스택 수
       if (s.n > 1) {
         ctx.fillStyle = '#1d1428';
@@ -1159,6 +1221,21 @@
         ctx.globalAlpha = 1;
       }
       const top = ay - h;
+      // 보호막: 몸을 감싸는 하늘색 막
+      if (e.shield > 0) {
+        const r = Math.max(w, h) * 0.62;
+        const n = Math.max(16, Math.round(r * 2));
+        const k = Math.min(1, e.shield / Math.max(1, e.shieldMax || e.shield));
+        ctx.globalAlpha = 0.45 + 0.35 * k;
+        ctx.fillStyle = '#a8ecff';
+        for (let j = 0; j < n; j++) {
+          if ((j + Math.floor(t * 8)) % 3 === 0) continue;
+          const a2 = (j / n) * Math.PI * 2;
+          ctx.fillRect(ax + Math.cos(a2) * r - 0.5, ay - h / 2 + Math.sin(a2) * r * 0.9 - 0.5, 1, 1);
+        }
+        ctx.globalAlpha = 1;
+        ctx.glow(ax, ay - h / 2, r * 1.1, '#a8ecff', 0.18 + 0.12 * k);
+      }
       // 불·독: 불티와 거품이 피어오른다
       if (e.burnT > 0 && dt > 0 && Math.random() < dt * 10) this.emit(ax + rnd(-w / 3, w / 3), top + h * 0.4, 1, { sp: [6, 14], ang: -Math.PI / 2, spread: 0.8, life: [0.3, 0.5], cols: ['#ff9a3d', '#ffe46b'], glow: 2 });
       if (e.poisonT > 0 && dt > 0 && Math.random() < dt * 6) this.emit(ax + rnd(-w / 3, w / 3), top + h * 0.5, 1, { sp: [4, 9], ang: -Math.PI / 2, spread: 0.6, life: [0.4, 0.6], cols: ['#9ee06a', '#62c35f'] });

@@ -12,7 +12,7 @@
     rareChance: 0.05, // 소환 시 희귀 등급 기본 확률
     epicChance: 0.005,
     hpBase: 64, // 웨이브 레벨 0의 슬라임 체력 (첫 몇 레벨은 60%부터 완만하게)
-    hpGrowth: [0, 1.137, 1.095, 1.0785, 1.0523], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
+    hpGrowth: [0, 1.1563, 1.1136, 1.0968, 1.0523], // [막] 웨이브 레벨당 체력 배율 (한 막 = 30레벨). 후반엔 플레이어 성장도 느려진다
     waveTime: 16, // 다음 웨이브까지 시간(초)
     prepTime: 5,
     spawnGap: 0.55,
@@ -119,19 +119,51 @@
     witch: { name: '마녀', hp: 6, speed: 26, gold: 8, leak: 3, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, trait: '주변 적 가속' },
     bigSlime: { name: '왕슬라임', hp: 6, speed: 20, gold: 8, leak: 3, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, trait: '죽으면 분열' },
     // 보스
-    slimeKing: { name: '슬라임 킹', hp: 7.5, speed: 13, gold: 40, leak: 6, boss: true, splitAt: [0.66, 0.33], splitN: 4, splitHp: 0.5, trait: '체력이 줄면 슬라임을 뱉는다' },
-    lich: { name: '리치', hp: 7, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 }, trait: '물리 피해 25% 감소, 해골 소환' },
+    slimeKing: {
+      name: '슬라임 킹', hp: 8, speed: 13, gold: 40, leak: 6, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 3, splitHp: 0.5,
+      skills: [{ k: 'glue', name: '끈적한 점액', every: 9, warn: 1.1, dur: 4, amt: 0.5, size: 2 }],
+      trait: '체력이 줄 때마다 슬라임을 뱉고, 점액을 뿌려 2×2 칸의 공격을 4초 동안 절반으로 늦춘다',
+    },
+    lich: {
+      name: '리치', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
+      skills: [{ k: 'shield', name: '뼈 방벽', every: 13, pct: 0.12 }],
+      phase2: { at: 0.4, speed: 1.2, cd: 0.7, msg: '리치가 죽음의 힘을 끌어올린다! (더 빨라지고 방벽을 자주 친다)' },
+      trait: '물리 피해 25% 감소. 해골을 부르고, 13초마다 체력 12%만큼의 뼈 방벽을 두른다. 체력 40%에서 각성',
+    },
     // 대체 막 (안개 늪 · 가라앉은 항구)
     frog: { name: '늪 개구리', hp: 0.9, speed: 24, gold: 1, leak: 1, hop: { every: 3.5, dist: 26 }, trait: '가끔 앞으로 크게 뛴다' },
     crab: { name: '철갑 게', hp: 2, speed: 19, gold: 2, leak: 1, armorLight: 0.5, countMul: 0.7, gap: 0.7, trait: '궁수·도적 피해 50% 감소' },
-    bogQueen: { name: '늪의 여왕', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2 }, trait: '개구리를 부르고, 가끔 물속에 잠겨 공격받지 않는다' },
-    captain: { name: '해골 선장', hp: 7, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 }, trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다' },
+    bogQueen: {
+      name: '늪의 여왕', hp: 8, speed: 14, gold: 40, leak: 6, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.04 },
+      skills: [{ k: 'glue', name: '늪 진흙', every: 11, warn: 1.1, dur: 3.5, amt: 0.45, size: 2 }],
+      trait: '개구리를 부르고, 물속에 잠겨 공격받지 않으며 체력 4%를 회복한다. 진흙으로 칸의 공격을 늦춘다',
+    },
+    captain: {
+      name: '해골 선장', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
+      skills: [{ k: 'rally', name: '럼 한 모금', every: 12, pct: 0.35, dur: 3 }],
+      trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다. 12초마다 모든 적이 3초 동안 35% 빨라진다',
+    },
     dummy: { name: '낡은 허수아비', hp: 1, speed: 11, gold: 0, leak: 0, trait: '시간 안에 쓰러뜨려야 하는 시험 대상' },
     // 4막
     spireShield: { name: '균열 방패병', hp: 7.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2, trait: '궁수·도적 피해 50%, 모든 물리 피해 20% 감소' },
     spireSpear: { name: '균열 창병', hp: 6, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 }, trait: '빠르고 주변 적을 가속' },
-    riftHeart: { name: '균열의 핵', hp: 28, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30, summon: { every: 6, type: 'imp', n: 2, hp: 0.5 }, trait: '1초에 최대 체력의 3%까지만 피해를 받는다. 임프를 부른다' },
-    riftLord: { name: '균열의 군주', hp: 10, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5, trait: '균열로 유닛을 기절시킨다. 체력 절반에서 가속' },
+    riftHeart: {
+      name: '균열의 핵', hp: 30, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30,
+      skills: [
+        { k: 'pulse', name: '심장 고동', every: 8, warn: 0.9, dur: 2.5, amt: 0.35 },
+        { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6 },
+        { k: 'spawn', name: '균열 창병 소환', every: 18, type: 'spireSpear', n: 1, hp: 0.3, first: 10 },
+        { k: 'shield', name: '피의 장막', every: 16, pct: 0.08, first: 12 },
+        { k: 'rift', every: 11, warn: 1.2, stun: 2.5 },
+      ],
+      phase2: { at: 0.5, speed: 1.5, cd: 0.7, shield: 0.06, msg: '균열의 핵이 격렬하게 뛰기 시작했다! (빨라지고 기술을 더 자주 쓴다)' },
+      trait: '1초에 최대 체력의 3%까지만 피해를 받는다. 고동으로 모든 유닛을 늦추고, 임프·균열 창병을 부르고, 피의 장막을 두르고, 균열로 칸을 기절시킨다. 체력 절반에서 각성',
+    },
+    riftLord: {
+      name: '균열의 군주', hp: 10.5, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
+      skills: [{ k: 'blink', at: [0.7, 0.4], dist: 0.2 }, { k: 'shield', name: '균열 장막', every: 16, pct: 0.1 }],
+      trait: '균열로 유닛을 기절시키고 16초마다 장막을 두른다. 체력 70%·40%에서 앞으로 순간이동, 절반부터 가속',
+    },
   };
 
   // pool: [적, 가중치, 등장 진행도(d)]. 1막·2막은 슬레이 더 스파이어 2처럼 두 지역 중 하나가 무작위로 나온다

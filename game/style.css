@@ -266,7 +266,8 @@ img { max-width: 100%; }
 }
 #bossbar.wait .bar { opacity: 0.35; }
 #bossbar.wait #boss-t { color: var(--dim); }
-#bossbar .bar { flex: 1; height: 8px; background: #3a1d2c; box-shadow: 0 0 0 1px var(--line); }
+#bossbar .bar { position: relative; flex: 1; height: 8px; background: #3a1d2c; box-shadow: 0 0 0 1px var(--line); }
+#bossbar #boss-sh { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: #a8ecff; opacity: 0.9; }
 #bossbar .bar i { display: block; height: 100%; background: var(--red); width: 100%; }
 #bossbar.enraged { animation: warn 0.4s steps(2) infinite; }
 #boss-name { color: var(--pink); white-space: nowrap; }

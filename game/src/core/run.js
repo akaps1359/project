@@ -264,8 +264,8 @@
 
   // ── 맵 (슬레이 더 스파이어식: 경로 6개를 겹쳐 그린다) ──
   RS.MAP_W = 5;
-  RS.MAP_FLOORS = 14; // + 보스 층 (막마다 15층)
-  RS.ELITE_FLOOR = 5; // 엘리트·휴식처가 나오기 시작하는 층
+  RS.MAP_FLOORS = 17; // + 보스 층 (막마다 18층)
+  RS.ELITE_FLOOR = 6; // 엘리트·휴식처가 나오기 시작하는 층
 
   // 막마다 무작위로 정해지는 지형: 방 종류의 비율이 달라져 막마다 길의 성격이 바뀐다
   RS.MAP_TRAITS = [
@@ -305,8 +305,8 @@
     const H = RS.MAP_FLOORS;
     // 지형은 막마다 무작위 (1막에는 격전지가 나오지 않는다)
     const trait = rng.pick(RS.MAP_TRAITS.filter((t) => run.act >= 2 || t.id !== 'war'));
-    // 보물 층도 막마다 6~9층 사이 어딘가
-    const tFloor = 6 + rng.int(4);
+    // 보물 층도 막마다 7~10층 사이 어딘가
+    const tFloor = 7 + rng.int(4);
     const floors = [];
     for (let f = 0; f < H; f++) floors.push(new Array(W).fill(null));
     const edge = {};
@@ -329,7 +329,7 @@
     }
     for (const row of floors) for (const n of row) if (n) n.next.sort((a, b) => a - b);
     const parents = (f, c) => (f <= 1 ? [] : floors[f - 2].filter((p) => p && p.next.indexOf(c) >= 0));
-    // 방 종류: 1층 전투(2막부터는 ?도), 보물 층(6~9층 중 하나), 마지막 층 휴식처. 나머지는 가중치(지형 반영) + 연속 금지 규칙
+    // 방 종류: 1층 전투(2막부터는 ?도), 보물 층(7~10층 중 하나), 마지막 층 휴식처. 나머지는 가중치(지형 반영) + 연속 금지 규칙
     for (let f = 1; f <= H; f++) {
       for (let c = 0; c < W; c++) {
         const n = floors[f - 1][c];
@@ -387,15 +387,15 @@
   };
   RS.mapTrait = (run) => RS.MAP_TRAITS.find((t) => run.map && t.id === run.map.trait) || null;
 
-  // 4막: 휴식처 → 상점 → 엘리트 → 균열의 핵 (일직선)
+  // 4막: 휴식처 → 엘리트 → 상점 → 엘리트 → 휴식처 → 균열의 핵 (일직선)
   function genAct4Map() {
     const row = (type) => {
       const r = new Array(RS.MAP_W).fill(null);
       r[2] = { type, next: [2], visited: false };
       return r;
     };
-    const floors = [row('rest'), row('shop'), row('elite'), row('boss')];
-    floors[3][2].next = [];
+    const floors = ['rest', 'elite', 'shop', 'elite', 'rest', 'boss'].map(row);
+    floors[floors.length - 1][2].next = [];
     return { floors };
   }
 

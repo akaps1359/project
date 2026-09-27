@@ -91,7 +91,7 @@
     A('apotheosis', '빛의 세례', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 된다', {}, {
       onPick(run) { RS.promoteTier(run, 0); },
     }),
-    A('wraithForm', '혼령 빙의', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 적에게 생명을 잃지 않고, 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
+    A('wraithForm', '혼령 빙의', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 일반 적에게 생명을 잃지 않고(엘리트·보스는 피해 절반), 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
       unique: true, cost: '필드 상한 60 → 50',
     }),
     A('corruption', '검은 풀무', 3, 'corrupt', '강화 비용 -55%', { upgradeCostPct: -0.55, summonCostPct: 0.1 }, {
@@ -117,7 +117,7 @@
     { id: 'anvilScroll', name: '강화 주문서', icon: 'anvil', desc: '보드에서 가장 강한 클래스 강화 +2 (높은 등급일수록 크게 친다)' },
     { id: 'potion', name: '회복 물약', icon: 'potion', desc: '생명 +6' },
     { id: 'rage', name: '광란의 북', icon: 'drum', desc: '10초간 공격 속도 +60%' },
-    { id: 'ghostly', name: '유령 망토', icon: 'ghost', desc: '8초 동안 한 바퀴를 돈 적에게 생명을 잃지 않는다' },
+    { id: 'ghostly', name: '유령 망토', icon: 'ghost', desc: '8초 동안 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스는 피해 절반)' },
   ];
 
   RS.CURSES = [

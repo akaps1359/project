@@ -27,7 +27,7 @@
     R('vampFang', '흡혈 송곳니', 1, 'fang', '엘리트·보스를 처치하면 최대 생명 +1', { eliteKillMaxLife: 1 }),
     R('rerollDice', '운명의 주사위', 1, 'dice', '증강을 고를 때 새로고침 1회', { augRerolls: 1 }),
     R('ancientCoin', '고대 주화', 1, 'coin', '이자 한도 +4', { interestCap: 4 }),
-    R('anchor', '버팀 닻', 1, 'anchor', '전투마다 처음 한 번은 한 바퀴를 돈 적에게 생명을 잃지 않는다', { leakShield: 1 }),
+    R('anchor', '버팀 닻', 1, 'anchor', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { leakShield: 1 }),
     R('bagPrep', '출정 배낭', 1, 'pack', '전투를 시작할 때 무료 소환 1회', { startSummons: 1 }),
     R('lantern', '반딧불 초롱', 1, 'lantern', '전투를 시작할 때 골드 +15×막', { battleStartGold: 15 }),
     R('strawberry', '산딸기', 1, 'berry', '최대 생명 +4', {}, {
@@ -68,7 +68,7 @@
     R('courier', '보부상', 2, 'box', '상점 가격 20% 할인, 산 자리에 새 물건이 들어온다', { shopDiscount: 0.2, courier: 1 }),
     R('wingBoots', '축지 장화', 2, 'boots', '길을 무시하고 다음 층 아무 칸으로 이동 (3회)', {}, { state: { uses: 3 } }),
     R('pantograph', '결전 나침반', 2, 'compass', '보스전을 시작할 때 생명 +6', { pantograph: 6 }),
-    R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 한 번은 한 바퀴를 돈 적에게 생명을 잃지 않는다', { helix: 1 }),
+    R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { helix: 1 }),
 
     // ── 보스 (강력하지만 대가가 따르는 것이 많다) ──
     R('cursedCrown', '저주받은 왕관', 3, 'crown', '전투를 시작할 때 골드 +30×막', { battleStartGold: 30 }, {

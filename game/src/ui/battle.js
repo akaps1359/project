@@ -857,6 +857,12 @@
         c.bhp = w;
         $('#boss-hp').style.width = w;
       }
+      // 보호막은 체력바 위에 하늘색으로 (최대 체력 대비)
+      const sh = blind || !(b.boss.shield > 0) ? '0%' : Math.min(100, (b.boss.shield / b.boss.maxHp) * 100).toFixed(1) + '%';
+      if (c.bsh !== sh) {
+        c.bsh = sh;
+        $('#boss-sh').style.width = sh;
+      }
       setText($('#boss-t'), 'bt', b.enraged ? '폭주!' : blind ? '??' : `${Math.ceil(b.bossTimer)}초`);
       setCls(bb, 'enr', 'enraged', !!b.enraged);
     } else if (!bb.hidden && b.bosses && b.bosses.length) {
@@ -871,8 +877,40 @@
   }
 
   // 전투 이벤트 → 소리·토스트
+  // 보스 기술 이름 옆에 붙는 짧은 설명 (전투마다 기술별로 처음 한 번만 띄운다)
+  const SKILL_HINT = {
+    glue: '칸의 공격이 느려져요',
+    pulse: '모든 유닛이 잠깐 느려져요',
+    shield: '보호막을 먼저 깨야 해요',
+    spawn: '부하를 불렀어요',
+    rally: '모든 적이 빨라져요',
+    mend: '체력을 회복해요',
+  };
+  const SKILL_SFX = { glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin' };
   UI.onFx = function (ev) {
     switch (ev.k) {
+      case 'bossSkill': {
+        RS.sfx(SKILL_SFX[ev.id] || 'boss');
+        const b = UI.G.battle;
+        if (b && ev.name) {
+          b.skillSeen = b.skillSeen || {};
+          if (!b.skillSeen[ev.name]) {
+            b.skillSeen[ev.name] = true;
+            UI.toast(`${ev.boss} · ${ev.name}: ${SKILL_HINT[ev.id] || ''}`, 'warn');
+          }
+        }
+        break;
+      }
+      case 'shieldBreak':
+        RS.sfx('shieldBreak');
+        if (ev.boss) UI.toast('보호막을 깼다!', 'good');
+        break;
+      case 'blink':
+        RS.sfx('blink');
+        break;
+      case 'phase2':
+        RS.sfx('boss');
+        break;
       case 'wave': {
         RS.sfx('wave');
         const g = (ev.gold || 0) + (ev.interest || 0);
