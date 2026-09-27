@@ -147,14 +147,14 @@
     dummy: { name: '낡은 허수아비', hp: 1, speed: 11, gold: 0, leak: 0, trait: '시간 안에 쓰러뜨려야 하는 시험 대상' },
     // 4막
     spireShield: {
-      name: '방패 사도', hp: 7.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2,
-      skills: [{ k: 'cross', name: '돌진', every: 9, warn: 1.0, stun: 1.6, selfStun: 2.2, speed: 100, first: 5 }],
-      trait: '궁수·도적 피해 50%, 물리 20% 감소. 9초마다 보드를 가로질러 돌진해 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 2.2초 기절',
+      name: '방패 사도', hp: 10.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2,
+      skills: [{ k: 'cross', name: '돌진', every: 8, warn: 1.0, stun: 2.2, selfStun: 2.2, speed: 100, first: 5 }],
+      trait: '궁수·도적 피해 50%, 물리 20% 감소. 8초마다 보드를 가로질러 돌진해 지나간 칸을 2.2초 기절시키고, 도착하면 스스로 2.2초 기절',
     },
     spireSpear: {
-      name: '창 사도', hp: 6, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 },
-      skills: [{ k: 'cross', name: '꿰뚫기', every: 7, warn: 0.8, stun: 1.2, selfStun: 1.8, speed: 140, first: 4 }],
-      trait: '빠르고 주변 적을 가속. 7초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.2초 기절시키고, 도착하면 스스로 1.8초 기절',
+      name: '창 사도', hp: 8.5, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 },
+      skills: [{ k: 'cross', name: '꿰뚫기', every: 6, warn: 0.8, stun: 1.6, selfStun: 1.8, speed: 140, first: 4 }],
+      trait: '빠르고 주변 적을 가속. 6초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 1.8초 기절',
     },
     riftHeart: {
       name: '고대신 옴네크', hp: 30, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30,
