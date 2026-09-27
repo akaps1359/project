@@ -7,7 +7,7 @@
     for (const c of RS.CLASSES) cls[c] = { dmg: 0, aspd: 0, range: 0, crit: 0, splash: 0, slow: 0 };
     return {
       dmgPct: 0, aspdPct: 0, rangeAdd: 0, critChance: 0, critMult: 0, cls,
-      tierDmg: [0, 0, 0, 0], cornerDmg: 0, innerDmg: 0, innerRange: 0,
+      tierDmg: [0, 0, 0, 0, 0], cornerDmg: 0, innerDmg: 0, innerRange: 0,
       killGoldPct: 0, waveGoldPct: 0, interestCap: 0, interestBonus: 0, combatGoldPct: 0,
       summonCostPct: 0, rareChance: 0, epicChance: 0, noRare: 0, twinChance: 0, cloverChance: 0,
       mergeRefund: 0, mergeDouble: 0, mergeFail: 0, mergeChoose: 0, mergeMirror: 0,
@@ -30,7 +30,7 @@
       if (k === 'cls') {
         for (const c in v) for (const s in v[c]) M.cls[c][s] += v[c][s];
       } else if (k === 'tierDmg') {
-        for (let i = 0; i < 4; i++) M.tierDmg[i] += v[i] || 0;
+        for (let i = 0; i < M.tierDmg.length; i++) M.tierDmg[i] += v[i] || 0;
       } else if (MULTIPLY[k]) {
         M[k] *= v;
       } else {

@@ -48,7 +48,7 @@
     // ── 희귀 ──
     R('scroll', '고대 두루마리', 2, 'scroll', '합성 결과를 두 클래스 중에서 고른다', { mergeChoose: 1 }),
     R('powderKeg', '화약통', 2, 'keg', '적이 한 바퀴 돌 때마다 모든 적에게 폭발 피해', { powderKeg: 1 }),
-    R('sageStone', '현인의 보석', 2, 'gem', '전설 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5] }),
+    R('sageStone', '현인의 보석', 2, 'gem', '전설·신화 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5, 0.5] }),
     R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 25%)', { burn: 0.25 }),
     R('crystalBall', '수정 구슬', 2, 'orb', '증강 선택지 +1', { augChoices: 1 }),
     R('mirror', '거울', 2, 'mirror', '합성할 때 8% 확률로 결과 유닛 2기', { mergeMirror: 0.08 }),

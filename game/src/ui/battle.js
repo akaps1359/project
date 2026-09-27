@@ -415,7 +415,7 @@
       if (res.clover) UI.toast('네잎클로버! 비용 반환', 'good');
       if (res.twin != null) UI.toast('한 기가 더 따라왔다!', 'good');
       const s = G.run.board[res.slot];
-      if (s && s.n === 3 && s.tier < 3 && (tut().off || tut().merge || UI.panelMode !== 'idle') && (UI.mergeHints = (UI.mergeHints || 0) + 1) <= 2) {
+      if (s && RS.canMerge(G.run.board, res.slot) && (tut().off || tut().merge || UI.panelMode !== 'idle') && (UI.mergeHints = (UI.mergeHints || 0) + 1) <= 2) {
         UI.toast('합성 가능! 반짝이는 칸을 누르세요', 'good');
       }
     }
@@ -458,7 +458,7 @@
       UI.toast('합성 실패…', 'warn');
     } else {
       const r = res.results[0];
-      RS.sfx(r && r.tier === 3 ? 'legend' : 'merge');
+      RS.sfx(r && r.tier >= 3 ? 'legend' : 'merge');
       if (r) UI.toast(`${res.double ? '대성공! ' : ''}${RS.TIER[r.tier].name} ${RS.CLASS[r.cls].name}${res.results.length > 1 ? ' ×2' : ''}`, 't' + r.tier);
       if (res.refund) UI.toast('재활용: 재료 1기 반환', 'good');
     }
@@ -562,7 +562,7 @@
           (refs.desc = h('p', { class: 'pdesc' })),
         ),
         h('div', { class: 'pbtns' },
-          btn(s.tier >= 3 ? '최고 등급' : canMerge ? '합성' : `합성 ${s.n}/3`, () => UI.doMerge(i), canMerge ? 'gold' : '', !canMerge),
+          btn(s.tier >= RS.TOP_TIER ? '최고 등급' : canMerge ? '합성' : `합성 ${s.n}/${RS.mergeNeed(s.tier)}`, () => UI.doMerge(i), canMerge ? 'gold' : '', !canMerge),
           (refs.sell = sellBtn),
         ),
       ));
@@ -785,7 +785,7 @@
     const noReach = R && (R.noReach || (R.noReach = new Uint8Array(F.SIZE)));
     for (let i = 0; i < F.SIZE; i++) {
       const s = run.board[i];
-      if (s && s.n >= 3 && s.tier < 3) mergeable++;
+      if (s && RS.canMerge(run.board, i)) mergeable++;
       if (noReach) noReach[i] = s && b.slotStats[i] && !UI.reaches(b.slotStats[i], i) ? 1 : 0;
     }
     if (UI.mergeAllBtn) {

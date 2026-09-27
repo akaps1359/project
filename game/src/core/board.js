@@ -75,7 +75,7 @@
   RS.mostCommonClass = function (run) {
     const w = {};
     for (const c of RS.CLASSES) w[c] = 0;
-    for (const s of run.board) if (s) w[s.cls] += s.n * Math.pow(3, s.tier);
+    for (const s of run.board) if (s) w[s.cls] += s.n * RS.tierUnits(s.tier);
     let best = RS.CLASSES[0];
     for (const c of RS.CLASSES) if (w[c] > w[best]) best = c;
     return best;
@@ -86,7 +86,7 @@
     const order = RS.slotOrder(cls);
     for (const i of order) {
       const s = board[i];
-      if (s && s.cls === cls && s.tier === tier && s.n < 3) return i;
+      if (s && s.cls === cls && s.tier === tier && s.n < RS.stackMax(tier)) return i;
     }
     if (prefer != null && prefer >= 0 && !board[prefer]) return prefer;
     for (const i of order) if (!board[i]) return i;
@@ -96,7 +96,7 @@
   // ── 유닛 가치 ──
   // 칸마다 v = 그 칸 유닛들에 들인 골드의 합. 판매는 한 기 몫(v / n)의 일부만 돌려주므로
   // 소환 → 판매·합성을 어떻게 반복해도 골드가 늘지 않는다.
-  RS.freeWorth = (tier) => RS.BAL.freeWorth * Math.pow(3, tier);
+  RS.freeWorth = (tier) => RS.BAL.freeWorth * RS.tierUnits(tier);
   const validV = (s) => typeof s.v === 'number' && isFinite(s.v) && s.v >= 0;
   // v 가 없는 칸(이전 버전 저장): 문맥이 없으면 무료 유닛으로 본다
   function worthOf(s) {
@@ -105,7 +105,7 @@
   }
   // 이전 버전 저장의 유닛: 예전 판매가(현재 소환 비용 × 0.4 × 3^등급)와 같아지도록 한 번만 값을 매긴다
   RS.legacyWorth = function (run, tier, M) {
-    return RS.summonCost(run, M || RS.baseMods()) * 0.8 * Math.pow(3, tier);
+    return RS.summonCost(run, M || RS.baseMods()) * 0.8 * RS.tierUnits(tier);
   };
   RS.migrateBoard = function (run, M) {
     for (const s of run.board) if (s && !validV(s)) s.v = s.n * RS.legacyWorth(run, s.tier, M);
@@ -218,7 +218,7 @@
 
   // 좋은 룬 칸에는 같은 구역(바깥/안쪽)의 가장 강한 유닛을, 금 간 칸은 가능하면 비운다
   function arrangeRunes(board, runes) {
-    const power = (s) => (s ? Math.pow(3, s.tier) * s.n : -1);
+    const power = (s) => (s ? RS.tierUnits(s.tier) * s.n : -1);
     const zone = (i) => (RS.isInner(i) ? 'in' : 'out');
     for (let i = 0; i < board.length; i++) {
       const r = runes[i];
@@ -235,7 +235,7 @@
 
   RS.canMerge = function (board, i) {
     const s = board[i];
-    return !!s && s.n >= 3 && s.tier < 3;
+    return !!s && s.tier < RS.TOP_TIER && s.n >= RS.mergeNeed(s.tier);
   };
 
   RS.firstMergeable = function (board) {
@@ -258,12 +258,12 @@
     if (!RS.canMerge(board, i)) return null;
     const res = { from: s.tier, results: [], fail: false, refund: false, double: false, gold: 0 };
     const share = RS.stackWorth(run, s, M) / s.n;
-    let used = 3;
-    s.n -= 3;
+    let used = RS.mergeNeed(s.tier);
+    s.n -= used;
     // 재활용: 돌아온 재료 1기는 제 몫을 그대로 갖고, 결과는 나머지 2기 몫을 받는다
     if (M.mergeRefund && rng.chance(M.mergeRefund)) {
       s.n += 1;
-      used = 2;
+      used -= 1;
       res.refund = true;
     }
     const moved = share * used;

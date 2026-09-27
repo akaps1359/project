@@ -391,7 +391,7 @@ function makeSmartBot(RS, rng, opts) {
         if (!s) continue;
         kinds[s.cls] = 1;
         cnt += s.n;
-        if (s.tier === 3) legends += s.n;
+        if (s.tier >= 3) legends += s.n * (s.tier >= 4 ? 4 : 1);
       }
       const k = Object.keys(kinds).length;
       if (M.diversity) dmg += M.diversity * (k === 5 ? 1 : future ? 0.6 : 0);
@@ -468,8 +468,8 @@ function makeSmartBot(RS, rng, opts) {
     for (const c of CL) bw[c] = 0;
     for (const s of run.board) {
       if (s && bw[s.cls] != null) {
-        bw[s.cls] += s.n * Math.pow(3, s.tier);
-        t += s.n * Math.pow(3, s.tier);
+        bw[s.cls] += s.n * RS.tierUnits(s.tier);
+        t += s.n * RS.tierUnits(s.tier);
       }
     }
     const out = {};
@@ -1320,7 +1320,7 @@ function makeSmartBot(RS, rng, opts) {
     const share = futureShare(run);
     return best(opts, (c) => {
       let s = (run.classLv[c] || 0) * 2 + share[c] * 10;
-      for (const x of run.board) if (x && x.cls === c && x.tier === tier && x.n < 3) s += 6 + x.n * 2;
+      for (const x of run.board) if (x && x.cls === c && x.tier === tier && x.n < RS.stackMax(tier)) s += 6 + x.n * 2;
       return s;
     });
   }
@@ -1429,7 +1429,7 @@ function makeSmartBot(RS, rng, opts) {
       }
       if (item.op === 'sacrifice') {
         const i = best(slots, (k) => (run.board[k].tier === 2 ? 10 : run.board[k].tier === 1 ? 5 : -run.board[k].tier));
-        if (run.board[i].tier === 0 || run.board[i].tier === 3) return false;
+        if (run.board[i].tier === 0 || run.board[i].tier >= 3) return false;
         RS.sacrificeUnit(run, i);
         return true;
       }
@@ -1449,7 +1449,7 @@ function makeSmartBot(RS, rng, opts) {
       let bi = -1;
       let bv = -Infinity;
       for (const k of slots) {
-        const v = simulateOutcome(run, E, (c) => { RS.sacrificeUnit(c, k); }, run.board[k].tier === 3 ? 2 : 1);
+        const v = simulateOutcome(run, E, (c) => { RS.sacrificeUnit(c, k); }, run.board[k].tier >= 3 ? 2 : 1);
         if (v !== null && v > bv) {
           bv = v;
           bi = k;

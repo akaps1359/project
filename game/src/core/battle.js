@@ -470,7 +470,7 @@
         if (!s) continue;
         kinds[s.cls] = 1;
         cnt += s.n;
-        if (s.tier === 3) legends += s.n;
+        if (s.tier >= 3) legends += s.n * (s.tier >= 4 ? 4 : 1);
       }
       const k = Object.keys(kinds).length;
       if (M.diversity && k === 5) dmg += M.diversity;

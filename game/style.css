@@ -24,6 +24,7 @@
   --t1: #5d9bf0;
   --t2: #b273f0;
   --t3: #f5ae3d;
+  --t4: #ff6b86;
   --font: 'Galmuri11', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   --px: 0 -2px 0 var(--line), 0 2px 0 var(--line), -2px 0 0 var(--line), 2px 0 0 var(--line);
 }
@@ -284,6 +285,7 @@ img { max-width: 100%; }
 .toast.t1 { color: var(--t1); }
 .toast.t2 { color: var(--t2); }
 .toast.t3 { color: var(--t3); }
+.toast.t4 { color: var(--t4); }
 @keyframes toast { 0% { transform: translateY(6px); opacity: 0; } 12% { transform: none; opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
 .page-toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 5; }
 
@@ -303,6 +305,7 @@ img { max-width: 100%; }
 .tier1 { color: var(--t1); font-weight: normal; }
 .tier2 { color: var(--t2); font-weight: normal; }
 .tier3 { color: var(--t3); font-weight: normal; }
+.tier4 { color: var(--t4); font-weight: normal; }
 .pstats { color: var(--gold); font-size: 11px; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .pdesc { margin: 2px 0 0; color: var(--dim); font-size: 11px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pbtns { display: flex; flex-direction: column; gap: 6px; }

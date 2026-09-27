@@ -382,6 +382,15 @@
       const stunned = b.slotStun[i] > 0;
       ctx.drawImage(spr, x + 4 + ox, y + 2 + oy);
       ctx.globalAlpha = 1;
+      // 신화: 유닛 둘레를 도는 반짝이
+      if (s.tier >= 4 && !draggedAway) {
+        const T4 = RS.TIER[s.tier];
+        for (let k = 0; k < 3; k++) {
+          const a = t * 2.4 + k * 2.094 + i;
+          ctx.fillStyle = k === 0 ? '#ffffff' : T4.light;
+          ctx.fillRect(Math.round(x + F.SLOT / 2 + Math.cos(a) * 8), Math.round(y + F.SLOT / 2 - 1 + Math.sin(a) * 8), 1, 1);
+        }
+      }
       if (draggedAway && dr.over >= 0 && dr.over !== i && board[dr.over]) {
         // 자리 바꿈 미리보기: 목표 칸의 유닛이 이 칸으로 온다
         const o = board[dr.over];
@@ -398,9 +407,9 @@
       if (s.n > 1) {
         ctx.fillStyle = '#1d1428';
         ctx.fillRect(x + F.SLOT - 9, y + F.SLOT - 10, 7, 7);
-        RS.drawNum(ctx, String(s.n), x + F.SLOT - 5.5, y + F.SLOT - 10, s.n === 3 && s.tier < 3 ? 'y' : 'w');
+        RS.drawNum(ctx, String(s.n), x + F.SLOT - 5.5, y + F.SLOT - 10, RS.canMerge(board, i) ? 'y' : 'w');
       }
-      if (s.n >= 3 && s.tier < 3 && Math.floor(t * 3) % 2 === 0) {
+      if (RS.canMerge(board, i) && Math.floor(t * 3) % 2 === 0) {
         ctx.drawImage(RS.SPR.i_up, x + 1, y + 1, 7, 7);
       }
       // 사거리가 길에 닿지 않는 칸: 오른쪽 위에 빨간 x (2Hz)

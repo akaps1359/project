@@ -730,7 +730,7 @@
   RS.bakeSprites = function () {
     const tierPal = (t) => ({ c: t.color, C: t.dark, l: t.light });
     for (const cls of RS.CLASSES) {
-      for (let tier = 0; tier < 4; tier++) {
+      for (let tier = 0; tier < RS.TIER.length; tier++) {
         const img = withOutline(parse(SRC[cls].rows, tierPal(RS.TIER[tier])));
         SPR[cls + tier] = toCanvas(img);
       }

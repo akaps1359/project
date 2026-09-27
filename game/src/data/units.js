@@ -46,32 +46,32 @@
       name: '전사', role: '근접 · 휘두르기', dmgType: 'heavy', melee: true,
       dmg: 16, interval: 1.1, range: 34,
       cleave: 0.4, cleaveR: 12,
-      stun: [0, 0.06, 0.1, 0.14], stunDur: 0.5,
+      stun: [0, 0.06, 0.1, 0.14, 0.2], stunDur: 0.5,
       desc: '묵직한 한 방. 대상 주변 적에게 40% 휘두르기 피해. 희귀 등급부터 기절.',
     },
     archer: {
       name: '궁수', role: '원거리 · 연사', dmgType: 'light',
       dmg: 8, interval: 0.6, range: 66,
-      shots: [1, 1, 2, 3],
-      desc: '가장 긴 사거리. 영웅 등급은 2발, 전설 등급은 3발을 동시에 쏜다.',
+      shots: [1, 1, 2, 3, 3],
+      desc: '가장 긴 사거리. 영웅 등급은 2발, 전설·신화 등급은 3발을 동시에 쏜다.',
     },
     mage: {
       name: '마법사', role: '광역 · 폭발', dmgType: 'magic',
       dmg: 13, interval: 1.5, range: 60,
-      splash: [14, 16, 19, 23],
+      splash: [14, 16, 19, 23, 27],
       desc: '느리지만 폭발 범위 안의 모든 적에게 같은 피해.',
     },
     rogue: {
       name: '도적', role: '근접 · 치명타', dmgType: 'light', melee: true,
       dmg: 6, interval: 0.4, range: 36,
-      crit: [0.2, 0.25, 0.3, 0.35], critMult: [2, 2, 2.2, 2.5],
+      crit: [0.2, 0.25, 0.3, 0.35, 0.4], critMult: [2, 2, 2.2, 2.5, 2.8],
       desc: '매우 빠른 공격. 높은 확률로 치명타.',
     },
     frost: {
       name: '서리술사', role: '보조 · 둔화', dmgType: 'magic',
       dmg: 6, interval: 1.0, range: 60,
-      slow: [0.25, 0.3, 0.35, 0.4], slowDur: 1.4,
-      frostSplash: [0, 0, 10, 14], freeze: [0, 0, 0, 0.1],
+      slow: [0.25, 0.3, 0.35, 0.4, 0.45], slowDur: 1.4,
+      frostSplash: [0, 0, 10, 14, 18], freeze: [0, 0, 0, 0.1, 0.16],
       desc: '맞은 적을 느리게 만든다. 영웅 등급부터 주변까지, 전설 등급은 빙결.',
     },
   };
@@ -81,7 +81,20 @@
     { name: '희귀', color: '#4f8fe6', dark: '#2b5aa6', light: '#94c1f7', dmg: 3.5, spd: 0.93 },
     { name: '영웅', color: '#a65ee8', dark: '#6a33a3', light: '#d3a0f7', dmg: 12, spd: 0.86 },
     { name: '전설', color: '#f2a531', dark: '#b1680f', light: '#ffd98a', dmg: 40, spd: 0.8 },
+    // 신화: 전설 4기를 합성해야 나온다 (전설 4기 합보다 약 20% 강하다)
+    { name: '신화', color: '#ef4f6f', dark: '#9e2340', light: '#ffb0c0', dmg: 175, spd: 0.74 },
   ];
+  RS.TOP_TIER = RS.TIER.length - 1;
+  // 합성에 필요한 수: 전설부터는 4기
+  RS.mergeNeed = (tier) => (tier >= 3 ? 4 : 3);
+  // 한 칸에 쌓을 수 있는 수 (합성에 필요한 만큼. 신화는 3기)
+  RS.stackMax = (tier) => (tier >= RS.TOP_TIER ? 3 : RS.mergeNeed(tier));
+  // 일반 유닛 몇 기 분량인가 (골드 가치·힘 비교용): 1, 3, 9, 27, 108
+  RS.tierUnits = (tier) => {
+    let u = 1;
+    for (let t = 0; t < tier; t++) u *= RS.mergeNeed(t);
+    return u;
+  };
 
   // hp: 웨이브 레벨 체력 대비 배율, leak: 한 바퀴 돌 때 잃는 생명
   RS.ENEMY = {

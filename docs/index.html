@@ -36,6 +36,7 @@
   --t1: #5d9bf0;
   --t2: #b273f0;
   --t3: #f5ae3d;
+  --t4: #ff6b86;
   --font: 'Galmuri11', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   --px: 0 -2px 0 var(--line), 0 2px 0 var(--line), -2px 0 0 var(--line), 2px 0 0 var(--line);
 }
@@ -296,6 +297,7 @@ img { max-width: 100%; }
 .toast.t1 { color: var(--t1); }
 .toast.t2 { color: var(--t2); }
 .toast.t3 { color: var(--t3); }
+.toast.t4 { color: var(--t4); }
 @keyframes toast { 0% { transform: translateY(6px); opacity: 0; } 12% { transform: none; opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
 .page-toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 5; }
 
@@ -315,6 +317,7 @@ img { max-width: 100%; }
 .tier1 { color: var(--t1); font-weight: normal; }
 .tier2 { color: var(--t2); font-weight: normal; }
 .tier3 { color: var(--t3); font-weight: normal; }
+.tier4 { color: var(--t4); font-weight: normal; }
 .pstats { color: var(--gold); font-size: 11px; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .pdesc { margin: 2px 0 0; color: var(--dim); font-size: 11px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pbtns { display: flex; flex-direction: column; gap: 6px; }
@@ -766,32 +769,32 @@ img { max-width: 100%; }
       name: '전사', role: '근접 · 휘두르기', dmgType: 'heavy', melee: true,
       dmg: 16, interval: 1.1, range: 34,
       cleave: 0.4, cleaveR: 12,
-      stun: [0, 0.06, 0.1, 0.14], stunDur: 0.5,
+      stun: [0, 0.06, 0.1, 0.14, 0.2], stunDur: 0.5,
       desc: '묵직한 한 방. 대상 주변 적에게 40% 휘두르기 피해. 희귀 등급부터 기절.',
     },
     archer: {
       name: '궁수', role: '원거리 · 연사', dmgType: 'light',
       dmg: 8, interval: 0.6, range: 66,
-      shots: [1, 1, 2, 3],
-      desc: '가장 긴 사거리. 영웅 등급은 2발, 전설 등급은 3발을 동시에 쏜다.',
+      shots: [1, 1, 2, 3, 3],
+      desc: '가장 긴 사거리. 영웅 등급은 2발, 전설·신화 등급은 3발을 동시에 쏜다.',
     },
     mage: {
       name: '마법사', role: '광역 · 폭발', dmgType: 'magic',
       dmg: 13, interval: 1.5, range: 60,
-      splash: [14, 16, 19, 23],
+      splash: [14, 16, 19, 23, 27],
       desc: '느리지만 폭발 범위 안의 모든 적에게 같은 피해.',
     },
     rogue: {
       name: '도적', role: '근접 · 치명타', dmgType: 'light', melee: true,
       dmg: 6, interval: 0.4, range: 36,
-      crit: [0.2, 0.25, 0.3, 0.35], critMult: [2, 2, 2.2, 2.5],
+      crit: [0.2, 0.25, 0.3, 0.35, 0.4], critMult: [2, 2, 2.2, 2.5, 2.8],
       desc: '매우 빠른 공격. 높은 확률로 치명타.',
     },
     frost: {
       name: '서리술사', role: '보조 · 둔화', dmgType: 'magic',
       dmg: 6, interval: 1.0, range: 60,
-      slow: [0.25, 0.3, 0.35, 0.4], slowDur: 1.4,
-      frostSplash: [0, 0, 10, 14], freeze: [0, 0, 0, 0.1],
+      slow: [0.25, 0.3, 0.35, 0.4, 0.45], slowDur: 1.4,
+      frostSplash: [0, 0, 10, 14, 18], freeze: [0, 0, 0, 0.1, 0.16],
       desc: '맞은 적을 느리게 만든다. 영웅 등급부터 주변까지, 전설 등급은 빙결.',
     },
   };
@@ -801,7 +804,20 @@ img { max-width: 100%; }
     { name: '희귀', color: '#4f8fe6', dark: '#2b5aa6', light: '#94c1f7', dmg: 3.5, spd: 0.93 },
     { name: '영웅', color: '#a65ee8', dark: '#6a33a3', light: '#d3a0f7', dmg: 12, spd: 0.86 },
     { name: '전설', color: '#f2a531', dark: '#b1680f', light: '#ffd98a', dmg: 40, spd: 0.8 },
+    // 신화: 전설 4기를 합성해야 나온다 (전설 4기 합보다 약 20% 강하다)
+    { name: '신화', color: '#ef4f6f', dark: '#9e2340', light: '#ffb0c0', dmg: 175, spd: 0.74 },
   ];
+  RS.TOP_TIER = RS.TIER.length - 1;
+  // 합성에 필요한 수: 전설부터는 4기
+  RS.mergeNeed = (tier) => (tier >= 3 ? 4 : 3);
+  // 한 칸에 쌓을 수 있는 수 (합성에 필요한 만큼. 신화는 3기)
+  RS.stackMax = (tier) => (tier >= RS.TOP_TIER ? 3 : RS.mergeNeed(tier));
+  // 일반 유닛 몇 기 분량인가 (골드 가치·힘 비교용): 1, 3, 9, 27, 108
+  RS.tierUnits = (tier) => {
+    let u = 1;
+    for (let t = 0; t < tier; t++) u *= RS.mergeNeed(t);
+    return u;
+  };
 
   // hp: 웨이브 레벨 체력 대비 배율, leak: 한 바퀴 돌 때 잃는 생명
   RS.ENEMY = {
@@ -958,7 +974,7 @@ img { max-width: 100%; }
     A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 10% 확률로 2단계 상승', { mergeDouble: 0.1 }, { unique: true }),
     A('berserk', '광전사', 3, 'rage', '생명이 절반 이하면 피해 +60%, 공격 속도 +25%', { berserk: 1 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
-    A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12%', { legendAura: 0.12 }, { unique: true }),
+    A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12% (신화는 전설 4기로 친다)', { legendAura: 0.12 }, { unique: true }),
     A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +50%', { killGoldPct: 0.5, sellPct: 0.5 }, { unique: true }),
     A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +60%, 범위 +5 (서리술사는 영웅 등급부터)', {
       cls: { mage: { dmg: 0.6, splash: 5 }, frost: { dmg: 0.6, splash: 5 } },
@@ -1087,7 +1103,7 @@ img { max-width: 100%; }
     // ── 희귀 ──
     R('scroll', '고대 두루마리', 2, 'scroll', '합성 결과를 두 클래스 중에서 고른다', { mergeChoose: 1 }),
     R('powderKeg', '화약통', 2, 'keg', '적이 한 바퀴 돌 때마다 모든 적에게 폭발 피해', { powderKeg: 1 }),
-    R('sageStone', '현인의 보석', 2, 'gem', '전설 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5] }),
+    R('sageStone', '현인의 보석', 2, 'gem', '전설·신화 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5, 0.5] }),
     R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 25%)', { burn: 0.25 }),
     R('crystalBall', '수정 구슬', 2, 'orb', '증강 선택지 +1', { augChoices: 1 }),
     R('mirror', '거울', 2, 'mirror', '합성할 때 8% 확률로 결과 유닛 2기', { mergeMirror: 0.08 }),
@@ -2442,7 +2458,7 @@ img { max-width: 100%; }
     for (const c of RS.CLASSES) cls[c] = { dmg: 0, aspd: 0, range: 0, crit: 0, splash: 0, slow: 0 };
     return {
       dmgPct: 0, aspdPct: 0, rangeAdd: 0, critChance: 0, critMult: 0, cls,
-      tierDmg: [0, 0, 0, 0], cornerDmg: 0, innerDmg: 0, innerRange: 0,
+      tierDmg: [0, 0, 0, 0, 0], cornerDmg: 0, innerDmg: 0, innerRange: 0,
       killGoldPct: 0, waveGoldPct: 0, interestCap: 0, interestBonus: 0, combatGoldPct: 0,
       summonCostPct: 0, rareChance: 0, epicChance: 0, noRare: 0, twinChance: 0, cloverChance: 0,
       mergeRefund: 0, mergeDouble: 0, mergeFail: 0, mergeChoose: 0, mergeMirror: 0,
@@ -2465,7 +2481,7 @@ img { max-width: 100%; }
       if (k === 'cls') {
         for (const c in v) for (const s in v[c]) M.cls[c][s] += v[c][s];
       } else if (k === 'tierDmg') {
-        for (let i = 0; i < 4; i++) M.tierDmg[i] += v[i] || 0;
+        for (let i = 0; i < M.tierDmg.length; i++) M.tierDmg[i] += v[i] || 0;
       } else if (MULTIPLY[k]) {
         M[k] *= v;
       } else {
@@ -2623,7 +2639,7 @@ img { max-width: 100%; }
   RS.mostCommonClass = function (run) {
     const w = {};
     for (const c of RS.CLASSES) w[c] = 0;
-    for (const s of run.board) if (s) w[s.cls] += s.n * Math.pow(3, s.tier);
+    for (const s of run.board) if (s) w[s.cls] += s.n * RS.tierUnits(s.tier);
     let best = RS.CLASSES[0];
     for (const c of RS.CLASSES) if (w[c] > w[best]) best = c;
     return best;
@@ -2634,7 +2650,7 @@ img { max-width: 100%; }
     const order = RS.slotOrder(cls);
     for (const i of order) {
       const s = board[i];
-      if (s && s.cls === cls && s.tier === tier && s.n < 3) return i;
+      if (s && s.cls === cls && s.tier === tier && s.n < RS.stackMax(tier)) return i;
     }
     if (prefer != null && prefer >= 0 && !board[prefer]) return prefer;
     for (const i of order) if (!board[i]) return i;
@@ -2644,7 +2660,7 @@ img { max-width: 100%; }
   // ── 유닛 가치 ──
   // 칸마다 v = 그 칸 유닛들에 들인 골드의 합. 판매는 한 기 몫(v / n)의 일부만 돌려주므로
   // 소환 → 판매·합성을 어떻게 반복해도 골드가 늘지 않는다.
-  RS.freeWorth = (tier) => RS.BAL.freeWorth * Math.pow(3, tier);
+  RS.freeWorth = (tier) => RS.BAL.freeWorth * RS.tierUnits(tier);
   const validV = (s) => typeof s.v === 'number' && isFinite(s.v) && s.v >= 0;
   // v 가 없는 칸(이전 버전 저장): 문맥이 없으면 무료 유닛으로 본다
   function worthOf(s) {
@@ -2653,7 +2669,7 @@ img { max-width: 100%; }
   }
   // 이전 버전 저장의 유닛: 예전 판매가(현재 소환 비용 × 0.4 × 3^등급)와 같아지도록 한 번만 값을 매긴다
   RS.legacyWorth = function (run, tier, M) {
-    return RS.summonCost(run, M || RS.baseMods()) * 0.8 * Math.pow(3, tier);
+    return RS.summonCost(run, M || RS.baseMods()) * 0.8 * RS.tierUnits(tier);
   };
   RS.migrateBoard = function (run, M) {
     for (const s of run.board) if (s && !validV(s)) s.v = s.n * RS.legacyWorth(run, s.tier, M);
@@ -2766,7 +2782,7 @@ img { max-width: 100%; }
 
   // 좋은 룬 칸에는 같은 구역(바깥/안쪽)의 가장 강한 유닛을, 금 간 칸은 가능하면 비운다
   function arrangeRunes(board, runes) {
-    const power = (s) => (s ? Math.pow(3, s.tier) * s.n : -1);
+    const power = (s) => (s ? RS.tierUnits(s.tier) * s.n : -1);
     const zone = (i) => (RS.isInner(i) ? 'in' : 'out');
     for (let i = 0; i < board.length; i++) {
       const r = runes[i];
@@ -2783,7 +2799,7 @@ img { max-width: 100%; }
 
   RS.canMerge = function (board, i) {
     const s = board[i];
-    return !!s && s.n >= 3 && s.tier < 3;
+    return !!s && s.tier < RS.TOP_TIER && s.n >= RS.mergeNeed(s.tier);
   };
 
   RS.firstMergeable = function (board) {
@@ -2806,12 +2822,12 @@ img { max-width: 100%; }
     if (!RS.canMerge(board, i)) return null;
     const res = { from: s.tier, results: [], fail: false, refund: false, double: false, gold: 0 };
     const share = RS.stackWorth(run, s, M) / s.n;
-    let used = 3;
-    s.n -= 3;
+    let used = RS.mergeNeed(s.tier);
+    s.n -= used;
     // 재활용: 돌아온 재료 1기는 제 몫을 그대로 갖고, 결과는 나머지 2기 몫을 받는다
     if (M.mergeRefund && rng.chance(M.mergeRefund)) {
       s.n += 1;
-      used = 2;
+      used -= 1;
       res.refund = true;
     }
     const moved = share * used;
@@ -3476,7 +3492,7 @@ img { max-width: 100%; }
         if (!s) continue;
         kinds[s.cls] = 1;
         cnt += s.n;
-        if (s.tier === 3) legends += s.n;
+        if (s.tier >= 3) legends += s.n * (s.tier >= 4 ? 4 : 1);
       }
       const k = Object.keys(kinds).length;
       if (M.diversity && k === 5) dmg += M.diversity;
@@ -6095,7 +6111,7 @@ img { max-width: 100%; }
   RS.bakeSprites = function () {
     const tierPal = (t) => ({ c: t.color, C: t.dark, l: t.light });
     for (const cls of RS.CLASSES) {
-      for (let tier = 0; tier < 4; tier++) {
+      for (let tier = 0; tier < RS.TIER.length; tier++) {
         const img = withOutline(parse(SRC[cls].rows, tierPal(RS.TIER[tier])));
         SPR[cls + tier] = toCanvas(img);
       }
@@ -6561,6 +6577,15 @@ img { max-width: 100%; }
       const stunned = b.slotStun[i] > 0;
       ctx.drawImage(spr, x + 4 + ox, y + 2 + oy);
       ctx.globalAlpha = 1;
+      // 신화: 유닛 둘레를 도는 반짝이
+      if (s.tier >= 4 && !draggedAway) {
+        const T4 = RS.TIER[s.tier];
+        for (let k = 0; k < 3; k++) {
+          const a = t * 2.4 + k * 2.094 + i;
+          ctx.fillStyle = k === 0 ? '#ffffff' : T4.light;
+          ctx.fillRect(Math.round(x + F.SLOT / 2 + Math.cos(a) * 8), Math.round(y + F.SLOT / 2 - 1 + Math.sin(a) * 8), 1, 1);
+        }
+      }
       if (draggedAway && dr.over >= 0 && dr.over !== i && board[dr.over]) {
         // 자리 바꿈 미리보기: 목표 칸의 유닛이 이 칸으로 온다
         const o = board[dr.over];
@@ -6577,9 +6602,9 @@ img { max-width: 100%; }
       if (s.n > 1) {
         ctx.fillStyle = '#1d1428';
         ctx.fillRect(x + F.SLOT - 9, y + F.SLOT - 10, 7, 7);
-        RS.drawNum(ctx, String(s.n), x + F.SLOT - 5.5, y + F.SLOT - 10, s.n === 3 && s.tier < 3 ? 'y' : 'w');
+        RS.drawNum(ctx, String(s.n), x + F.SLOT - 5.5, y + F.SLOT - 10, RS.canMerge(board, i) ? 'y' : 'w');
       }
-      if (s.n >= 3 && s.tier < 3 && Math.floor(t * 3) % 2 === 0) {
+      if (RS.canMerge(board, i) && Math.floor(t * 3) % 2 === 0) {
         ctx.drawImage(RS.SPR.i_up, x + 1, y + 1, 7, 7);
       }
       // 사거리가 길에 닿지 않는 칸: 오른쪽 위에 빨간 x (2Hz)
@@ -8342,7 +8367,7 @@ img { max-width: 100%; }
       if (res.clover) UI.toast('네잎클로버! 비용 반환', 'good');
       if (res.twin != null) UI.toast('한 기가 더 따라왔다!', 'good');
       const s = G.run.board[res.slot];
-      if (s && s.n === 3 && s.tier < 3 && (tut().off || tut().merge || UI.panelMode !== 'idle') && (UI.mergeHints = (UI.mergeHints || 0) + 1) <= 2) {
+      if (s && RS.canMerge(G.run.board, res.slot) && (tut().off || tut().merge || UI.panelMode !== 'idle') && (UI.mergeHints = (UI.mergeHints || 0) + 1) <= 2) {
         UI.toast('합성 가능! 반짝이는 칸을 누르세요', 'good');
       }
     }
@@ -8385,7 +8410,7 @@ img { max-width: 100%; }
       UI.toast('합성 실패…', 'warn');
     } else {
       const r = res.results[0];
-      RS.sfx(r && r.tier === 3 ? 'legend' : 'merge');
+      RS.sfx(r && r.tier >= 3 ? 'legend' : 'merge');
       if (r) UI.toast(`${res.double ? '대성공! ' : ''}${RS.TIER[r.tier].name} ${RS.CLASS[r.cls].name}${res.results.length > 1 ? ' ×2' : ''}`, 't' + r.tier);
       if (res.refund) UI.toast('재활용: 재료 1기 반환', 'good');
     }
@@ -8489,7 +8514,7 @@ img { max-width: 100%; }
           (refs.desc = h('p', { class: 'pdesc' })),
         ),
         h('div', { class: 'pbtns' },
-          btn(s.tier >= 3 ? '최고 등급' : canMerge ? '합성' : `합성 ${s.n}/3`, () => UI.doMerge(i), canMerge ? 'gold' : '', !canMerge),
+          btn(s.tier >= RS.TOP_TIER ? '최고 등급' : canMerge ? '합성' : `합성 ${s.n}/${RS.mergeNeed(s.tier)}`, () => UI.doMerge(i), canMerge ? 'gold' : '', !canMerge),
           (refs.sell = sellBtn),
         ),
       ));
@@ -8712,7 +8737,7 @@ img { max-width: 100%; }
     const noReach = R && (R.noReach || (R.noReach = new Uint8Array(F.SIZE)));
     for (let i = 0; i < F.SIZE; i++) {
       const s = run.board[i];
-      if (s && s.n >= 3 && s.tier < 3) mergeable++;
+      if (s && RS.canMerge(run.board, i)) mergeable++;
       if (noReach) noReach[i] = s && b.slotStats[i] && !UI.reaches(b.slotStats[i], i) ? 1 : 0;
     }
     if (UI.mergeAllBtn) {
@@ -10023,7 +10048,7 @@ img { max-width: 100%; }
     UI.modal('게임 방법', h('div', { class: 'help' },
       h('ol', null,
         li('소환', '골드로 무작위 유닛을 부릅니다. 같은 유닛은 한 칸에 3기까지 쌓입니다. 소환할수록 비용이 1씩 오릅니다.'),
-        li('합성', '같은 칸의 같은 유닛 3기 → 다음 등급 무작위 유닛 1기. 일반 → 희귀 → 영웅 → 전설.'),
+        li('합성', '같은 칸의 같은 유닛 3기(전설은 4기) → 다음 등급 무작위 유닛 1기. 일반 → 희귀 → 영웅 → 전설 → 신화. 소환으로는 영웅까지 나와요.'),
         li('배치', '유닛을 끌어서 옮깁니다. 전사·도적은 바깥 칸, 궁수·마법사·서리술사는 점선 안쪽 칸에. 사거리가 길에 닿지 않는 칸에는 빨간 x가 뜹니다. [정리]가 자동으로 해 줍니다.'),
         li('강화', '전투 중 [강화]: 골드로 한 클래스의 레벨을 올려 피해 +15%/Lv. 모험 내내 유지됩니다.'),
         li('판매', '유닛을 누르고 [판매]로 골드를 돌려받습니다. 영웅 이상은 두 번 눌러야 팔립니다.'),
