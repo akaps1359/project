@@ -301,6 +301,20 @@
     }, UI.icon(r.icon, '', 3));
   };
 
+  // 시너지 태그 줄: #치명타 #도적 … (이미 가진 것과 겹치면 밝게 + 개수)
+  UI.synRow = function (def, owned) {
+    const tags = RS.synTags(def);
+    const run = UI.G && UI.G.run;
+    const cnt = run && !owned ? RS.synCounts(run) : null;
+    if (!tags.length) return h('div', { class: 'syn' }, h('span', { class: 'tag gen' }, '#범용'));
+    return h('div', { class: 'syn' }, tags.map((t) => {
+      const n = cnt && cnt[t] ? cnt[t] : 0;
+      return h('span', { class: 'tag' + (n ? ' hit' : ''), style: `--tc:${RS.SYN[t].col}`, title: RS.SYN[t].desc }, `#${RS.SYN[t].name}${n ? ` ×${n}` : ''}`);
+    }));
+  };
+  const ownedAug = (a) => { const run = UI.G && UI.G.run; return !!run && run.augments.some((x) => RS.augDef(x).id === a.id); };
+  const ownedRel = (id) => { const run = UI.G && UI.G.run; return !!run && run.relics.indexOf(id) >= 0; };
+
   UI.augCard = function (id, selected, onclick, extra) {
     const a = RS.augDef(id);
     const up = RS.isUpgraded(id);
@@ -309,6 +323,7 @@
       h('div', { class: 'cbody' },
         h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.aug[a.rarity]), h('b', null, a.name + (up ? '+' : '')), a.unique ? null : h('small', { class: 'stack' }, '중첩 가능')),
         h('p', null, a.desc),
+        UI.synRow(a, ownedAug(a)),
         up ? UI.upgradeView(id, true) : null,
         a.cost ? h('p', { class: 'cost' }, '대가 · ' + a.cost) : null,
         a.cost ? UI.curseNote(a.cost) : null,
@@ -324,6 +339,7 @@
       h('div', { class: 'cbody' },
         h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.relic[r.rarity] + ' 유물'), h('b', null, r.name)),
         h('p', null, r.desc),
+        UI.synRow(r, ownedRel(id)),
         r.cost ? h('p', { class: 'cost' }, '대가 · ' + r.cost) : null,
         r.cost ? UI.curseNote(r.cost) : null,
       ),
@@ -469,12 +485,33 @@
     const a = RS.augDef(id);
     const up = RS.isUpgraded(id);
     return h('div', { class: `lrow r${a.rarity}` }, UI.icon(a.icon, '', 3),
-      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc), up ? UI.upgradeView(id, true) : null, a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
+      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc), UI.synRow(a, true), up ? UI.upgradeView(id, true) : null, a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
   };
   UI.relicRow = function (id) {
     const r = RS.REL[id];
     return h('div', { class: `lrow rr${r.rarity}` }, UI.icon(r.icon, '', 3),
-      h('div', null, h('b', null, `${r.name} · ${RS.RARITY_NAME.relic[r.rarity]}`), h('p', null, r.desc), r.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(r.cost)) : null));
+      h('div', null, h('b', null, `${r.name} · ${RS.RARITY_NAME.relic[r.rarity]}`), h('p', null, r.desc), UI.synRow(r, true), r.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(r.cost)) : null));
+  };
+  // 시너지 한눈에 보기: 태그마다 설명과 해당 증강·유물 (run 이 있으면 가진 것만, 없으면 전부)
+  UI.synList = function (run) {
+    const pool = [];
+    if (run) {
+      const seen = {};
+      for (const id of run.augments) {
+        const a = RS.augDef(id);
+        if (!seen['a' + a.id]) pool.push({ def: a, name: a.name });
+        seen['a' + a.id] = 1;
+      }
+      for (const id of run.relics) pool.push({ def: RS.REL[id], name: RS.REL[id].name });
+    } else {
+      for (const a of RS.AUGMENTS) pool.push({ def: a, name: `${a.name}(${RS.RARITY_NAME.aug[a.rarity]})` });
+      for (const r of RS.RELICS) if (r.rarity !== 6) pool.push({ def: r, name: `${r.name}(${RS.RARITY_NAME.relic[r.rarity]} 유물)` });
+    }
+    const rows = Object.keys(RS.SYN).map((t) => ({ t, items: pool.filter((x) => RS.synTags(x.def).indexOf(t) >= 0) })).filter((x) => x.items.length);
+    rows.sort((a, b) => b.items.length - a.items.length);
+    if (!rows.length) return h('p', { class: 'dim' }, '아직 시너지가 없습니다. 증강·유물의 #태그가 겹칠수록 빌드가 단단해져요.');
+    return h('div', { class: 'synlist' }, rows.map((x) => h('div', { class: 'lrow', style: `--tc:${RS.SYN[x.t].col}` },
+      h('div', null, h('b', null, `#${RS.SYN[x.t].name}`), h('span', { class: 'n' }, ` ${x.items.length}개`), h('p', { class: 'dim small' }, RS.SYN[x.t].desc), h('p', null, x.items.map((i) => i.name).join(' · '))))));
   };
 
   // 보드 미리보기 (칸 고르기용)

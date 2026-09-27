@@ -185,6 +185,7 @@
         name: `유물 ${run.relics.length}`,
         render: () => (run.relics.length ? sortable(run.relics.slice(), (id) => RS.REL[id].rarity, UI.relicRow) : h('p', { class: 'dim' }, '유물은 엘리트·보스·보물·상점에서 얻습니다.')),
       },
+      { name: '시너지', render: () => UI.synList(run) },
       {
         name: '진행',
         render: () => [
@@ -213,6 +214,7 @@
       { name: '유닛', sub: '같은 유닛 3기 → 다음 등급 무작위 유닛', render: () => RS.CLASSES.map((c) => h('div', { class: 'lrow' }, unitImg(c, 3), h('div', null, h('b', null, `${RS.CLASS[c].name} · ${RS.CLASS[c].role}`), h('p', null, RS.CLASS[c].desc)))) },
       { name: '증강', sub: '전투 보상으로 고르는 영구 효과', render: () => [1, 2, 3].map((r) => RS.AUGMENTS.filter((a) => a.rarity === r).map((a) => UI.augRow(a.id, 1))) },
       { name: '유물', sub: '모험 내내 유지 · 빨간 글씨는 대가', render: () => [1, 2, 3, 4, 5, 6].map((r) => RS.RELICS.filter((x) => x.rarity === r).map((x) => UI.relicRow(x.id))) },
+      { name: '시너지', sub: '#태그가 같은 증강·유물은 서로 이어진다 (덱 설계의 뼈대)', render: () => UI.synList(null) },
       { name: '룬', sub: '보드 칸에 새겨 그 칸 유닛에게 적용', render: () => RS.RUNES.map((r) => h('div', { class: 'lrow', style: `--rune:${r.color}` }, h('span', { class: 'runeic' }, '◆'), h('div', null, h('b', null, r.name), h('p', null, r.desc)))) },
       { name: '적', sub: '체력 배율 · 이동 속도 · 한 바퀴당 잃는 생명', render: () => Object.keys(RS.ENEMY).filter((k) => k !== 'dummy').map(enemyRow) },
       {

@@ -57,6 +57,8 @@
     this.enraged = false;
     this.buffs = { rage: 0, watch: 0 };
     this.demon = 0; // 악마의 형상 누적
+    this.itemUses = 0; // 이번 전투에서 쓴 소모품 수 (약사의 반지)
+    this.critHasteT = new Array(F.SIZE).fill(0); // 피의 흥분: 치명타를 낸 칸이 잠깐 빨라진다
     this.dynT = 0;
     this.statsDirty = true;
     this.nextId = 1;
@@ -218,7 +220,7 @@
     if (M.happyFlower) {
       const st = (run.relicState.happyFlower = run.relicState.happyFlower || { n: 0 });
       st.n++;
-      if (st.n >= 3) {
+      if (st.n >= 4) {
         st.n = 0;
         free++;
       }
@@ -348,12 +350,12 @@
       }
       if (e.burnT > 0) {
         e.burnT -= dt;
-        this.damage(e, e.burn * dt, null, false, true);
+        this.damage(e, e.burn * (1 + M.dotAmp) * dt, null, false, true);
         if (e.dead) continue;
       }
       if (e.poisonT > 0) {
         e.poisonT -= dt;
-        this.damage(e, e.poison * e.poisonN * dt, null, false, true);
+        this.damage(e, e.poison * e.poisonN * (1 + M.dotAmp) * dt, null, false, true);
         if (e.poisonT <= 0) {
           e.poisonN = 0;
           e.poison = 0;
@@ -362,7 +364,7 @@
       }
       if (e.burning === 'regen' && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.015 * dt);
       if (M.noxious) {
-        this.damage(e, e.maxHp * M.noxious * (e.boss ? 0.34 : 1) * dt, null, false, true);
+        this.damage(e, e.maxHp * M.noxious * (e.boss ? 0.34 : 1) * (1 + M.dotAmp) * dt, null, false, true);
         if (e.dead) continue;
       }
       const def = e.def;
@@ -869,9 +871,12 @@
       dmg += 0.6;
       aspd += 0.25;
     }
+    if (M.lowLifeDmg && run.life <= run.maxLife / 2) dmg += M.lowLifeDmg;
+    if (M.curseDmg) dmg += M.curseDmg * run.curses.length;
+    if (M.itemDmg) dmg += M.itemDmg * this.itemUses;
     const rst = run.relicState;
     if (rst.pumpkinCandle && rst.pumpkinCandle.charges > 0) dmg += 0.5;
-    if (rst.waxToys) aspd += Math.max(0, 0.4 - 0.1 * Math.floor(rst.waxToys.fights / 4));
+    if (rst.waxToys) aspd += Math.max(0, 0.4 - 0.1 * Math.floor(rst.waxToys.fights / 6));
     if (this.kind === 'elite') dmg += (M.eliteBattleDmg || 0) + (M.bigBattleDmg || 0);
     if (this.kind === 'boss') dmg += M.bigBattleDmg || 0;
     if (this.buffs.rage > 0) aspd += 0.6;
@@ -920,7 +925,7 @@
     st.runeEcho = rune && rune.echo ? rune.echo : 0;
     st.frostSplash = C.frostSplash && C.frostSplash[tier] ? C.frostSplash[tier] + cm.splash : 0;
     st.freeze = C.freeze ? C.freeze[tier] : 0;
-    st.stun = C.stun ? C.stun[tier] : 0;
+    st.stun = (C.stun ? C.stun[tier] : 0) + (cm.stun || 0);
     st.shots = C.shots ? C.shots[tier] : 1;
     st.dps = (st.dmg / st.interval) * (1 + Math.min(1, st.crit) * (st.critMult - 1)) * st.shots;
     return st;
@@ -940,7 +945,11 @@
         continue;
       }
       const cds = this.cd[i];
-      const udt = this.slotSlowT[i] > 0 ? dt * (1 - this.slotSlowAmt[i]) : dt;
+      let udt = this.slotSlowT[i] > 0 ? dt * (1 - this.slotSlowAmt[i]) : dt;
+      if (this.critHasteT[i] > 0) {
+        this.critHasteT[i] -= dt;
+        udt *= 1 + this.M.critHaste;
+      }
       for (let u = 0; u < s.n; u++) {
         cds[u] -= udt;
         if (cds[u] > 0) continue;
@@ -1004,6 +1013,7 @@
     if (st.crit > 0 && rng.next() < st.crit) {
       dmg *= st.critMult;
       crit = true;
+      if (M.critHaste) this.critHasteT[i] = 2;
     }
     const ex = e.x;
     const ey = e.y;
@@ -1050,6 +1060,7 @@
         break;
       default:
         this.damage(e, dmg, cls, crit);
+        if (cls === 'archer' && M.burnArrow && !e.dead) this.applyBurn(e, dmg * M.burnArrow);
     }
     if (st.runeSlow && !e.dead) this.applySlow(e, st.runeSlow, 1);
     if (M.shrapnel && cls !== 'mage' && cls !== 'frost') this.splash(ex, ey, 8, dmg * M.shrapnel, cls, e, false);
@@ -1160,6 +1171,11 @@
     }
   };
 
+  // 화상: 초당 b 피해를 3초 동안 (더 센 화상이 덮어쓴다)
+  P.applyBurn = function (e, b) {
+    if (b > e.burn || e.burnT <= 0) e.burn = b;
+    e.burnT = 3;
+  };
   P.splash = function (x, y, r, dmg, cls, exclude, crit) {
     const r2 = r * r;
     const list = this.enemies;
@@ -1171,11 +1187,7 @@
       const dy = e.y - y;
       if (dx * dx + dy * dy > r2) continue;
       this.damage(e, dmg, cls, crit);
-      if (burn && !e.dead) {
-        const b = dmg * burn;
-        if (b > e.burn || e.burnT <= 0) e.burn = b;
-        e.burnT = 3;
-      }
+      if (burn && !e.dead) this.applyBurn(e, dmg * burn);
     }
   };
 
@@ -1194,6 +1206,11 @@
       }
     }
     if ((e.elite || e.boss) && M.eliteDmgPct) dm *= 1 + M.eliteDmgPct;
+    // 얼음 깨기: 기절·빙결된 적은 크게, 둔화된 적은 조금 더 아프다
+    if (M.shatter) {
+      if (e.stunT > 0) dm *= 1 + M.shatter;
+      else if (e.slow > 0) dm *= 1 + M.shatter * 0.4;
+    }
     if (e.burning === 'armor') dm *= 0.75;
     // 고대신 옴네크: 0.5초마다 받을 수 있는 피해에 한도가 있다
     if (def.dpsCap) {
@@ -1295,6 +1312,23 @@
         RS.changeMaxLife(run, M.eliteKillMaxLife);
         RS.heal(run, M.eliteKillMaxLife);
       }
+    }
+    // 역병 확산: 화상·독에 걸린 채 쓰러지면 주변 적에게 옮는다
+    if (M.contagion && ((e.burnT > 0 && e.burn > 0) || (e.poisonT > 0 && e.poisonN > 0))) {
+      const r2 = 20 * 20;
+      let spread = 0;
+      for (const o of this.enemies) {
+        if (o.dead || o === e || o.subT > 0) continue;
+        if ((o.x - e.x) * (o.x - e.x) + (o.y - e.y) * (o.y - e.y) > r2) continue;
+        if (e.burnT > 0 && e.burn > 0) this.applyBurn(o, e.burn);
+        if (e.poisonT > 0 && e.poisonN > 0) {
+          o.poison = Math.max(o.poison, e.poison);
+          o.poisonN = Math.max(o.poisonN, Math.min(5, e.poisonN));
+          o.poisonT = 3;
+        }
+        if (++spread >= 3) break;
+      }
+      if (spread) this.emit({ k: 'plague', x: e.x, y: e.y });
     }
     if (def.split) {
       for (let j = 0; j < def.split.n; j++) this.queueSpawn(def.split.type, e.L, e.d - 4 * j, e.nextLap, def.split.hp);
@@ -1547,6 +1581,8 @@
         break;
     }
     run.items.splice(idx, 1);
+    this.itemUses++;
+    if (this.M.itemDmg) this.dynT = 0;
     this.emit({ k: 'item', id });
     return { id };
   };

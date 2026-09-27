@@ -8,7 +8,7 @@
   // 방랑자 유물 (보스 유물처럼 강력하고, 대가가 있는 것이 많다)
   const ANCIENT_RELICS = [
     R('forgottenShelf', '망각의 서가', 'scroll', '증강 선택지 +1, 증강을 건너뛸 때 골드 2배', { augChoices: 1, skipGoldMul: 1 }),
-    R('forbiddenIndex', '금단의 색인', 'lens', '앞으로 얻는 증강이 30% 확률로 연마된 채 들어온다', { augUpChance: 0.3 }),
+    R('forbiddenIndex', '금단의 색인', 'lens', '앞으로 얻는 증강이 25% 확률로 연마된 채 들어온다', { augUpChance: 0.25 }),
     R('stoppedClock', '멈춘 시계', 'watch', '모든 적 이동 속도 -12%, 보스 제한 시간 +20초', { enemySpeedPct: 0.12, bossTimeAdd: 20 }),
     R('rewindSand', '되감기 모래', 'hourglass', '전투마다 처음 세 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스는 피해 절반, 한 번을 쓴다)', { leakShield: 3 }),
     R('dragonScale', '용비늘 금화', 'coins', '웨이브 시작 골드 +100%, 이자 한도 +5', { waveGoldPct: 1, interestCap: 5 }),
@@ -16,18 +16,18 @@
     R('bloodPactCup', '혈맹의 잔', 'chalice', '최대 생명 +10, 전투에서 이기면 생명 +4', { winHeal: 4 }, {
       onPick(run) { RS.changeMaxLife(run, 10); RS.heal(run, 10); },
     }),
-    R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +35%', { dmgPct: 0.35 }, {
+    R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +45%', { dmgPct: 0.45 }, {
       cost: '최대 생명 -3',
       onPick(run) { RS.changeMaxLife(run, -3); },
     }),
     R('twinStar', '쌍둥이 별', 'twin', '합성할 때 10% 확률로 결과 유닛 2기', { mergeMirror: 0.1 }),
-    R('luckyStar', '행운의 별', 'star', '소환 시 희귀 확률 +10%, 영웅 확률 +2%', { rareChance: 0.1, epicChance: 0.02 }),
-    R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 20을 내고 무료 소환 1회 (소환 비용이 오르지 않는다)', { sealSummon: 20 }, { cost: '웨이브마다 골드 -20' }),
-    R('pumpkinCandle', '박 등잔', 'lantern', '다음 8번의 전투 동안 모든 유닛 피해 +50%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 8 } }),
-    R('waxToys', '밀랍 병정', 'box', '모든 유닛 공격 속도 +40%. 전투 4번마다 녹아 10%p씩 줄어든다', {}, { state: { fights: 0 } }),
+    R('luckyStar', '행운의 별', 'star', '소환 시 희귀 확률 +7%, 영웅 확률 +1%', { rareChance: 0.07, epicChance: 0.01 }),
+    R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 35를 내고 무료 소환 1회 (소환 비용이 오르지 않는다)', { sealSummon: 35 }, { cost: '웨이브마다 골드 -35' }),
+    R('pumpkinCandle', '박 등잔', 'lantern', '다음 12번의 전투 동안 모든 유닛 피해 +50%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 12 } }),
+    R('waxToys', '밀랍 병정', 'box', '모든 유닛 공격 속도 +40%. 전투 6번마다 녹아 10%p씩 줄어든다', {}, { state: { fights: 0 } }),
     R('lordParasol', '거상의 관', 'crown2', '상점마다 첫 번째로 사는 물건은 공짜', { freeFirstBuy: 1 }),
     R('whisperEarring', '홀림 귀고리', 'charm', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
-    R('spikedGauntlet', '고슴도치 장갑', 'fist', '모든 유닛 피해 +45%', { dmgPct: 0.45, upgradeCostPct: 0.5 }, { cost: '강화 비용 +50%' }),
+    R('spikedGauntlet', '고슴도치 장갑', 'fist', '모든 유닛 피해 +50%', { dmgPct: 0.5, upgradeCostPct: 0.3 }, { cost: '강화 비용 +30%' }),
     R('warHammerA', '담금질 망치', 'hammer', '엘리트를 처치하면 무작위 증강 2개 연마', { eliteUpgrade: 2 }),
     R('loomingFruit', '차원 복숭아', 'mango', '최대 생명 +12', {}, {
       onPick(run) { RS.changeMaxLife(run, 12); RS.heal(run, 12); },

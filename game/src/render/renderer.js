@@ -611,6 +611,11 @@
           this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 20, t: 0.35, max: 0.35, col, glow: true });
           break;
         }
+        case 'plague':
+          // 역병 확산: 쓰러진 자리에서 초록·주황 포자가 퍼진다
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 3, r: 20, t: 0.4, max: 0.4, col: '#9ee06a' });
+          this.emit(ev.x, ev.y - 3, 8, { sp: [15, 35], life: [0.3, 0.55], cols: ['#9ee06a', '#62c35f', '#ff9a3d'], drag: 2, glow: 1.5 });
+          break;
         case 'doze':
           this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 22, t: 0.6, max: 0.6, col: '#d7e6ff', glow: true });
           break;

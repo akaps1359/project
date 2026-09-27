@@ -60,6 +60,7 @@ const AUG_SCORE = {
   vampRite: 3, smithDiscount: 3,
   demonForm: 8, echoForm: 6, apotheosis: 6, wraithForm: 6, corruption: 5, creativeAI: 5,
   noxious: 6, poisonBlade: 4, offering: 5, limitBreak: 5,
+  fireArrow: 4, shatter: 5, bloodRush: 5, plague: 5,
 };
 const ANC_SCORE = {
   bloodCrown: 8, spikedGauntlet: 8, whisperEarring: 7, twinStar: 7, luckyStar: 7, legend: 7, epic2: 7,
@@ -528,7 +529,7 @@ function makeSmartBot(RS, rng, opts) {
     const clear = CLEAR_B[a] * (1 + (M.combatGoldPct || 0)) + (M.winGold || 0) * Math.min(3, a);
     const start = (M.battleStartGold || 0) * Math.min(3, a) - (M.debt || 0) * 3 - (M.sealSummon || 0) * 3;
     const S = summonCostAt(run, M, a);
-    const free = ((M.waveFreeSummon || 0) * 3 + (M.startSummons || 0) + (M.startRare ? 3 : 0) + (M.happyFlower ? 1 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
+    const free = ((M.waveFreeSummon || 0) * 3 + (M.startSummons || 0) + (M.startRare ? 3 : 0) + (M.happyFlower ? 0.75 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
     const fish = (M.ceramicFish || 0) * 1.1;
     return wave + intr + kill + EARLY_B[a] + clear + start + free + fish;
   }
@@ -739,7 +740,7 @@ function makeSmartBot(RS, rng, opts) {
       // 증강 선택·휴식·상점·보스 관련 효과
       const picks = remTot * 1.1;
       v += picks * E.augV * ((M.augChoices || 0) * 0.12 + (M.augRerolls || 0) * 0.06 + (M.augUpChance || 0) * 0.35);
-      if (M.prayerWheel) v += remTot * 0.75 * E.augV * 0.8;
+      if (M.prayerWheel) v += remTot * 0.6 * E.augV * 0.8;
       const elitesRem = actsLeft * 1.2;
       v += (M.eliteUpgrade || 0) * elitesRem * E.augV * 0.25;
       if (M.blackStar) v += elitesRem * E.relV * 0.8;

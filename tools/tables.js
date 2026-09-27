@@ -34,14 +34,15 @@ for (const id in RS.ENEMY) {
 }
 
 p('\n### 증강 (' + RS.AUGMENTS.length + '종)\n');
-p('| 등급 | 이름 | 효과 | 대가 | 중첩 |');
-p('|---|---|---|---|---|');
-for (const a of RS.AUGMENTS) p(`| ${RS.RARITY_NAME.aug[a.rarity]} | ${a.name} | ${a.desc} | ${a.cost || '-'} | ${a.unique ? '1회' : '가능'} |`);
+const tagStr = (d) => RS.synTags(d).map((t) => '#' + RS.SYN[t].name).join(' ') || '#범용';
+p('| 등급 | 이름 | 효과 | 대가 | 중첩 | 시너지 |');
+p('|---|---|---|---|---|---|');
+for (const a of RS.AUGMENTS) p(`| ${RS.RARITY_NAME.aug[a.rarity]} | ${a.name} | ${a.desc} | ${a.cost || '-'} | ${a.unique ? '1회' : '가능'} | ${tagStr(a)} |`);
 
 p('\n### 유물 (' + RS.RELICS.length + '종)\n');
-p('| 등급 | 이름 | 효과 | 대가 |');
-p('|---|---|---|---|');
-for (const r of RS.RELICS) p(`| ${RS.RARITY_NAME.relic[r.rarity]} | ${r.name} | ${r.desc} | ${r.cost || '-'} |`);
+p('| 등급 | 이름 | 효과 | 대가 | 시너지 |');
+p('|---|---|---|---|---|');
+for (const r of RS.RELICS) p(`| ${RS.RARITY_NAME.relic[r.rarity]} | ${r.name} | ${r.desc} | ${r.cost || '-'} | ${tagStr(r)} |`);
 
 p('\n### 소모품\n');
 p('| 이름 | 효과 |');

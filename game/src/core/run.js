@@ -435,9 +435,11 @@
     if (M.tinyChest) {
       const st = run.relicState.tinyChest || (run.relicState.tinyChest = { n: 0 });
       st.n++;
-      if (st.n % 4 === 0) return 'treasure';
+      if (st.n % 3 === 0) return 'treasure';
     }
     const r = run.rng.next();
+    // 고요의 구슬: ? 칸에 들어설 때마다 마음이 가라앉아 생명 +2
+    if (M.juzu) RS.heal(run, 2);
     const combat = M.juzu ? 0 : u.combat;
     if (r < combat) {
       u.combat = 0.1;
@@ -647,10 +649,10 @@
     if (type === 'boss') reward.relics = RS.rollRelics(run, 3, [3], [1]);
     if (stage.type === 'eventFight' && stage.spec.relic) reward.relics = RS.rollRelics(run, stage.spec.relicChoices || 1, stage.spec.relic, stage.spec.relic.map(() => 1));
     if (type === 'combat' && M.prayerWheel) {
-      // 소원 물레: 일반 전투 4번마다 증강 한 번 더
+      // 소원 물레: 일반 전투 5번마다 증강 한 번 더
       const st = (run.relicState.prayerWheel = run.relicState.prayerWheel || { n: 0 });
       st.n = (st.n || 0) + 1;
-      if (st.n % 4 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
+      if (st.n % 5 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
     }
     run.phase = 'reward';
     run.pending = { reward };
@@ -1066,7 +1068,7 @@
       opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 +6% (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });
     }
     const candle = run.relicState.pumpkinCandle;
-    if (candle && candle.charges < 8) opts.push({ id: 'kindle', label: '불 붙이기', desc: `박 등잔을 다시 켠다 (남은 ${candle.charges}번 → 8번)` });
+    if (candle && candle.charges < 12) opts.push({ id: 'kindle', label: '불 붙이기', desc: `박 등잔을 다시 켠다 (남은 ${candle.charges}번 → 12번)` });
     if (run.quests && run.quests.egg) opts.push({ id: 'hatch', label: '부화', desc: '용의 알을 부화시킨다: 전설 유닛 1기 + 유물 [아기 용]' });
     const onRune = run.runes.some((r, i) => r === 'cloneR' && run.board[i]);
     if (onRune) {
@@ -1106,7 +1108,7 @@
         run.keys.ruby = true;
         break;
       case 'kindle':
-        run.relicState.pumpkinCandle.charges = 8;
+        run.relicState.pumpkinCandle.charges = 12;
         break;
       case 'hatch':
         run.quests.egg = false;

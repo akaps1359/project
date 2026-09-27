@@ -9,15 +9,15 @@
   // rarity: 1 은빛 / 2 황금 / 3 프리즘. unique 가 아니면 여러 번 고를 수 있다.
   RS.AUGMENTS = [
     // ── 은빛 ──
-    A('sharp', '날카로운 무기', 1, 'sword', '모든 유닛 피해 +12%', { dmgPct: 0.12 }),
+    A('sharp', '날카로운 무기', 1, 'sword', '모든 유닛 피해 +15%', { dmgPct: 0.15 }),
     A('quick', '빠른 손놀림', 1, 'wing', '모든 유닛 공격 속도 +10%', { aspdPct: 0.1 }),
     A('eagle', '매의 눈', 1, 'eye', '모든 유닛 사거리 +6', { rangeAdd: 6 }),
-    A('drillKnight', '전사 훈련', 1, 'c_knight', '전사 피해 +30%', { cls: { knight: { dmg: 0.3 } } }),
-    A('drillArcher', '궁수 훈련', 1, 'c_archer', '궁수 공격 속도 +25%', { cls: { archer: { aspd: 0.25 } } }),
+    A('drillKnight', '전사 훈련', 1, 'c_knight', '전사 피해 +25%, 기절 확률 +6%p (일반 등급부터)', { cls: { knight: { dmg: 0.25, stun: 0.06 } } }),
+    A('drillArcher', '궁수 훈련', 1, 'c_archer', '궁수 공격 속도 +30%, 사거리 +4', { cls: { archer: { aspd: 0.3, range: 4 } } }),
     A('drillMage', '마법 연구', 1, 'c_mage', '마법사 피해 +25%, 폭발 범위 +3', { cls: { mage: { dmg: 0.25, splash: 3 } } }),
     A('drillRogue', '암살 교본', 1, 'c_rogue', '도적 치명타 확률 +12%', { cls: { rogue: { crit: 0.12 } } }),
     A('drillFrost', '서리 결정', 1, 'c_frost', '서리술사 피해 +40%, 둔화 +8%', { cls: { frost: { dmg: 0.4, slow: 0.08 } } }),
-    A('piggy', '저금통', 1, 'pig', '이자 한도 +2', { interestCap: 2 }),
+    A('piggy', '저금통', 1, 'pig', '이자 한도 +3', { interestCap: 3 }),
     A('bounty', '현상금', 1, 'coin', '처치 골드 +20%', { killGoldPct: 0.2 }),
     A('discount', '소환 할인', 1, 'star', '소환 비용 -10%', { summonCostPct: -0.1 }),
     A('wall', '두꺼운 성벽', 1, 'heart', '최대 생명 +5, 생명 +5', {}, {
@@ -29,18 +29,19 @@
     A('goldRush', '골드 러시', 1, 'bag', '즉시 골드 +70×막', {}, {
       onPick(run) { RS.addGold(run, 70 * run.act); },
     }),
-    A('smithDiscount', '대장간 할인', 1, 'anvil', '강화 비용 -20%', { upgradeCostPct: -0.2 }),
+    A('smithDiscount', '대장간 할인', 1, 'anvil', '강화 비용 -25%', { upgradeCostPct: -0.25 }),
     A('firstStrike', '선제공격', 1, 'bolt', '각 적에게 가하는 첫 공격 피해 +150%', { firstStrike: 1.5 }, { unique: true }),
     A('massProduction', '대량 생산', 1, 'gear', '소환 비용 -30%', { summonCostPct: -0.3, noRare: 1 }, {
       unique: true, cost: '소환 시 희귀 이상 등급이 나오지 않음',
     }),
+    A('fireArrow', '불화살', 1, 'firearrow', '궁수 공격이 3초 동안 화상 (초당 그 피해의 20%)', { burnArrow: 0.2 }),
     A('hastyWaves', '속전속결', 1, 'clock', '웨이브 시작 골드 2배', { waveGoldPct: 1, waveIntervalPct: 0.25 }, {
       unique: true, cost: '웨이브 간격 25% 단축',
     }),
 
     // ── 골드 ──
-    A('luckySummon', '행운의 소환', 2, 'clover', '소환 시 희귀 등급 확률 +10%', { rareChance: 0.1 }),
-    A('recycle', '재활용', 2, 'recycle', '합성할 때 20% 확률로 재료 1기 반환', { mergeRefund: 0.2 }, { unique: true }),
+    A('luckySummon', '행운의 소환', 2, 'clover', '소환 시 희귀 등급 확률 +8%', { rareChance: 0.08 }),
+    A('recycle', '재활용', 2, 'recycle', '합성할 때 12% 확률로 재료 1기 반환', { mergeRefund: 0.12 }, { unique: true }),
     A('diversity', '다양성', 2, 'rainbow', '보드에 다섯 클래스가 모두 있으면 피해 +35%', { diversity: 0.35 }, { unique: true }),
     A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +40%', { purity: 0.4 }, { unique: true }),
     A('eliteSquad', '정예주의', 2, 'medal', '보드 유닛이 12기 이하면 피해 +45%', { eliteSquad: 0.45 }, { unique: true }),
@@ -48,35 +49,40 @@
     A('critMaster', '치명적 일격', 2, 'dagger', '치명타 확률 +8%, 치명타 피해 +50%', { critChance: 0.08, critMult: 0.5 }, { unique: true }),
     A('shrapnel', '파편탄', 2, 'burst', '전사·궁수·도적의 공격이 주변 적에게 30% 피해', { shrapnel: 0.3 }, { unique: true }),
     A('mud', '끈적한 땅', 2, 'drop', '모든 적 이동 속도 -10%', { enemySpeedPct: 0.1 }),
-    A('compound', '복리', 2, 'coins', '이자 한도 +3, 이자가 붙으면 +1 추가', { interestCap: 3, interestBonus: 1 }),
+    A('compound', '복리', 2, 'coins', '이자 한도 +4, 이자가 붙으면 +1 추가', { interestCap: 4, interestBonus: 1 }),
     A('giantSlayer', '거인 사냥꾼', 2, 'axe', '엘리트·보스에게 피해 +40%', { eliteDmgPct: 0.4 }),
     A('promotion', '승급', 2, 'up', '즉시 희귀 유닛 2기 소환', {}, {
       onPick(run) { RS.grantUnits(run, 1, 2); },
     }),
-    A('vampRite', '흡혈 의식', 2, 'fang', '엘리트·보스를 처치하면 생명 +3', { eliteKillHeal: 3 }),
-    A('bloodPact', '피의 계약', 2, 'blood', '모든 유닛 피해 +35%', { dmgPct: 0.35 }, {
-      cost: '최대 생명 -5',
-      onPick(run) { RS.changeMaxLife(run, -5); },
+    A('vampRite', '흡혈 의식', 2, 'fang', '엘리트·보스를 처치하면 생명 +4, 최대 생명 +1', { eliteKillHeal: 4, eliteKillMaxLife: 1 }),
+    A('bloodPact', '피의 계약', 2, 'blood', '모든 유닛 피해 +40%', { dmgPct: 0.4 }, {
+      cost: '최대 생명 -4',
+      onPick(run) { RS.changeMaxLife(run, -4); },
     }),
-    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 18% 확률로 2단계 상승', { mergeDouble: 0.18, mergeFail: 0.15 }, {
-      unique: true, cost: '15% 확률로 합성 실패(결과 소멸)',
+    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 18% 확률로 2단계 상승', { mergeDouble: 0.18, mergeFail: 0.12 }, {
+      unique: true, cost: '12% 확률로 합성 실패(결과 소멸)',
     }),
     A('greed', '탐욕', 2, 'bag', '처치 골드 +60%', { killGoldPct: 0.6, enemyHpPct: 0.15 }, {
       unique: true, cost: '적 체력 +15%',
     }),
-    A('overdrive', '과부하', 2, 'bolt', '모든 유닛 공격 속도 +35%', { aspdPct: 0.35, battleStartLifeLoss: 2 }, {
-      unique: true, cost: '전투를 시작할 때마다 생명 -2',
+    A('overdrive', '과부하', 2, 'bolt', '모든 유닛 공격 속도 +35%', { aspdPct: 0.35, battleStartLifeLoss: 1 }, {
+      unique: true, cost: '전투를 시작할 때마다 생명 -1',
     }),
+
+    // 키워드 보상: 이미 가진 것과 이어질 때 강해진다
+    A('shatter', '얼음 깨기', 2, 'icecrack', '기절·빙결된 적에게 피해 +50%, 둔화된 적에게 +20%', { shatter: 0.5 }, { unique: true }),
+    A('bloodRush', '피의 흥분', 2, 'bloodrush', '치명타를 낸 유닛은 2초 동안 공격 속도 +30%', { critHaste: 0.3 }, { unique: true }),
+    A('plague', '역병 확산', 2, 'plague', '화상·독·독안개 피해 +50%. 화상·독에 걸린 적이 쓰러지면 주변 적 3명에게 옮는다', { dotAmp: 0.5, contagion: 1 }, { unique: true }),
 
     // ── 프리즘 ──
     A('twinSummon', '쌍둥이 소환', 3, 'twin', '소환할 때 20% 확률로 같은 유닛 1기 추가', { twinChance: 0.2 }, { unique: true }),
-    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 10% 확률로 2단계 상승', { mergeDouble: 0.1 }, { unique: true }),
+    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 8% 확률로 2단계 상승', { mergeDouble: 0.08 }, { unique: true }),
     A('berserk', '광전사', 3, 'rage', '생명이 절반 이하면 피해 +60%, 공격 속도 +25%', { berserk: 1 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
     A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12% (신화는 전설 4기로 친다)', { legendAura: 0.12 }, { unique: true }),
     A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +50%', { killGoldPct: 0.5, sellPct: 0.5 }, { unique: true }),
-    A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +60%, 범위 +5 (서리술사는 영웅 등급부터)', {
-      cls: { mage: { dmg: 0.6, splash: 5 }, frost: { dmg: 0.6, splash: 5 } },
+    A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +80%, 범위 +5 (서리술사는 영웅 등급부터)', {
+      cls: { mage: { dmg: 0.8, splash: 5 }, frost: { dmg: 0.8, splash: 5 } },
     }, { unique: true }),
     A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +80%', { dmgPct: 0.8, leakMult: 2 }, {
       unique: true, cost: '적이 한 바퀴 돌 때 잃는 생명 2배',
@@ -86,7 +92,7 @@
       onPick(run) { RS.changeMaxLife(run, -Math.floor(run.maxLife / 2)); },
     }),
     // ── 슬레이 더 스파이어의 '파워' 카드에서 착안 ──
-    A('demonForm', '분노의 뿔', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +12% (누적)', { demonForm: 0.12 }, { unique: true }),
+    A('demonForm', '분노의 뿔', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +15% (누적)', { demonForm: 0.15 }, { unique: true }),
     A('echoForm', '산울림', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1 }, { unique: true }),
     A('apotheosis', '빛의 세례', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 된다', {}, {
       onPick(run) { RS.promoteTier(run, 0); },
@@ -97,15 +103,15 @@
     A('corruption', '검은 풀무', 3, 'corrupt', '강화 비용 -55%', { upgradeCostPct: -0.55, summonCostPct: 0.1 }, {
       unique: true, cost: '소환 비용 +10%',
     }),
-    A('creativeAI', '태엽 소환기', 2, 'chip', '웨이브가 시작될 때 30% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.3 }, { unique: true }),
+    A('creativeAI', '태엽 소환기', 2, 'chip', '웨이브가 시작될 때 20% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.2 }, { unique: true }),
     A('noxious', '독안개', 2, 'gas', '모든 적이 초당 최대 체력의 0.9% 피해 (보스는 0.3%)', { noxious: 0.009 }, { unique: true }),
-    A('poisonBlade', '맹독 칼날', 2, 'vial', '도적 공격이 독을 건다 (피해의 50%를 3초간, 5번까지 중첩, 방어 무시)', { poison: 0.5 }, { unique: true }),
+    A('poisonBlade', '맹독 칼날', 2, 'vial', '도적 공격이 독을 건다 (피해의 70%를 3초간, 5번까지 중첩, 방어 무시)', { poison: 0.7 }, { unique: true }),
     A('offering', '피의 헌납', 2, 'altar', '즉시 희귀 유닛 3기 소환', {}, {
       cost: '최대 생명 -3',
       onPick(run) { RS.changeMaxLife(run, -3); RS.grantUnits(run, 1, 3); },
     }),
-    A('limitBreak', '곱절 단련', 2, 'fist', '강화할 때 레벨이 2씩 오른다', { upgradeDouble: 1, upgradeCostPct: 0.6 }, {
-      unique: true, cost: '강화 비용 +60%',
+    A('limitBreak', '곱절 단련', 2, 'fist', '강화할 때 레벨이 2씩 오른다', { upgradeDouble: 1, upgradeCostPct: 0.5 }, {
+      unique: true, cost: '강화 비용 +50%',
     }),
   ];
 

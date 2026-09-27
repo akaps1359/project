@@ -407,6 +407,13 @@ img { max-width: 100%; }
 .card .stack { color: var(--dim); font-size: 10px; }
 .card p { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: #e2d8c4; }
 .card p.cost, .cost { color: var(--red); }
+/* 시너지 태그 */
+.syn { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.syn .tag { font-size: 10px; padding: 0 4px; color: var(--tc, var(--dim)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tc, #888) 45%, transparent); opacity: 0.8; }
+.syn .tag.hit { opacity: 1; background: color-mix(in srgb, var(--tc, #888) 22%, transparent); box-shadow: inset 0 0 0 1px var(--tc); }
+.syn .tag.gen { color: var(--dim); box-shadow: inset 0 0 0 1px var(--line); }
+.synlist .lrow b { color: var(--tc); }
+.synlist .lrow .n { color: var(--dim); font-size: 11px; }
 .card.r2 { box-shadow: var(--px), inset 4px 0 0 var(--gold); }
 .card.r2 .rar { color: var(--gold); }
 .card.r3 { background: linear-gradient(135deg, #2c2445 0%, #372655 55%, #2a3350 100%); box-shadow: var(--px), inset 4px 0 0 var(--pink); }

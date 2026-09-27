@@ -682,6 +682,13 @@
   I('corrupt', ['..pppp..', '.ppkkpp.', 'ppkppkpp', 'pkpvvpkp', 'pkpvvpkp', 'ppkppkpp', '.ppkkpp.', '..pppp..']);
   I('chip', ['.n.n.n..', 'nnnnnnn.', '.kkkkk..', 'nkyykkn.', '.kyykk..', 'nkkkkkn.', '.nnnnn..', '.n.n.n..']);
   I('gas', ['...t....', '..ttt.t.', '.ttTtttt', 'tttTTttt', '.tTttTt.', '..ttttt.', '...t.t..', '........']);
+  // 시너지 키워드 아이콘
+  I('firearrow', ['......ay', '.....aya', '....bra.', '...b.r..', '..b.....', '.b......', 'bw......', 'ww......']);
+  I('icecrack', ['..iiii..', '.iwiiIi.', 'iwikIiiI', 'iiiIkiiI', 'iiikiIiI', 'iIkiiiII', '.iiIIII.', '..IIII..']);
+  I('bloodrush', ['.......w', '......wW', '..r..wW.', '.rr.wW..', 'rrrrW...', '.rrg....', '..r.g...', '.b......']);
+  I('plague', ['..nnnn..', '.nNnnnn.', 'nnaNnnNn', 'nNnnanNn', 'nnnNnnnn', '.nnnnNn.', '..nnnn..', '.a..a..a']);
+  I('ring', ['..pppp..', '.pwppPp.', '..pPPp..', '.g....g.', 'g......g', 'g......g', '.g....g.', '..gggg..']);
+  I('voodoo', ['..bbbb..', '.bkbbkb.', '.bbbbbb.', '..bbbb..', 'wbbbbbbw', '.rbbbbw.', '..b..b..', '.bb..bb.']);
   I('vial', ['..ww....', '..bb....', '.wttw...', 'wtttnw..', 'wtntttw.', 'wttttnw.', 'wtttttw.', '.wwwww..']);
   I('altar', ['...r....', '..rrr...', '...r....', '.wwwww..', 'wwwwwww.', '.w.w.w..', '.w.w.w..', 'wwwwwww.']);
   I('fist', ['.rrrr...', 'rrrrrr..', 'rsrsrsr.', 'rsrsrsr.', 'rrrrrrr.', '.rrrrrr.', '..rrrr..', '..rrrr..']);

@@ -1027,7 +1027,7 @@
         RS.sfx('heartbeat');
         break;
       case 'capHit':
-        UI.toast('고대의 몸: 1초에 최대 체력의 3%까지만 피해가 들어가요. 잠들었을 때 몰아치세요!', 'warn');
+        UI.toast('고대의 몸: 1초에 최대 체력의 2.8%까지만 피해가 들어가요. 잠들었을 때 몰아치세요!', 'warn');
         break;
       case 'shieldBreak':
         RS.sfx('shieldBreak');
