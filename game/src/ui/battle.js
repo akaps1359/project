@@ -514,6 +514,11 @@
     const G = UI.G;
     const b = G.battle;
     if (!b) return;
+    if (G.run.board[i] && G.run.board[i].sealed) {
+      RS.sfx('error');
+      UI.toast('봉인된 유닛은 팔거나 합성할 수 없어요 (장막을 깨면 풀려요)', 'warn');
+      return;
+    }
     const v = b.sell(i);
     if (v) {
       RS.sfx('coin');
@@ -577,7 +582,9 @@
           (refs.sell = sellBtn),
         ),
       ));
-      refs.baseDesc = s.tier >= 4 && RS.MYTHIC[s.cls]
+      refs.baseDesc = s.sealed
+        ? '봉인됨: 싸우지 못해요. 보스의 장막을 깨면 풀려나요'
+        : s.tier >= 4 && RS.MYTHIC[s.cls]
         ? `[${RS.MYTHIC[s.cls].name}] ${RS.MYTHIC[s.cls].short}`
         : run.runes[i] && RS.RUNE[run.runes[i]] ? `${RS.RUNE[run.runes[i]].name}: ${RS.RUNE[run.runes[i]].desc}` : `${C.role} · ${C.desc}`;
       UI.refreshUnitStats();
@@ -648,7 +655,7 @@
 
   function unitSig(run, i) {
     const s = run.board[i];
-    return s ? `${i}/${s.cls}/${s.tier}/${s.n}/${RS.canMerge(run.board, i)}/${run.runes[i] || ''}` : '';
+    return s ? `${i}/${s.cls}/${s.tier}/${s.n}/${RS.canMerge(run.board, i)}/${run.runes[i] || ''}/${s.sealed ? 1 : 0}` : '';
   }
 
   UI.refreshUnitStats = function () {
@@ -880,13 +887,16 @@
   // 보스 기술 이름 옆에 붙는 짧은 설명 (전투마다 기술별로 처음 한 번만 띄운다)
   const SKILL_HINT = {
     glue: '칸의 공격이 느려져요',
+    cross: '곧 보드를 가로질러 돌진해요! 지나가는 칸의 유닛은 기절',
+    shuffle: '유닛 자리를 뒤섞어요',
+    plunder: '골드를 빼앗아요',
     pulse: '모든 유닛이 잠깐 느려져요',
     shield: '보호막을 먼저 깨야 해요',
     spawn: '부하를 불렀어요',
     rally: '모든 적이 빨라져요',
     mend: '체력을 회복해요',
   };
-  const SKILL_SFX = { glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin' };
+  const SKILL_SFX = { glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin', cross: 'charge', shuffle: 'blink', plunder: 'error' };
   UI.onFx = function (ev) {
     switch (ev.k) {
       case 'bossSkill': {
@@ -904,6 +914,20 @@
       case 'shieldBreak':
         RS.sfx('shieldBreak');
         if (ev.boss) UI.toast('보호막을 깼다!', 'good');
+        break;
+      case 'seal':
+        RS.sfx('seal');
+        UI.toast(`${ev.boss}이(가) 유닛 ${ev.slots.length}칸을 봉인했다! 장막을 깨면 풀려나요`, 'warn');
+        break;
+      case 'unseal':
+        RS.sfx('unseal');
+        UI.toast(ev.reason === 'break' ? '장막이 깨져 봉인이 풀렸다! 유닛이 다시 싸워요' : '봉인이 저절로 풀렸다', 'good');
+        break;
+      case 'plunder':
+        UI.hudFloat($('#h-gold'), `-${ev.g}G`, 'bad');
+        break;
+      case 'crossGo':
+        RS.sfx('big');
         break;
       case 'blink':
         RS.sfx('blink');

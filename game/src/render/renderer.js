@@ -605,6 +605,57 @@
             this.fxs.push({ k: 'flash', t: 0.18, max: 0.18, col: '#a061e8' });
           }
           break;
+        case 'crossWarn':
+          // 돌진 경고: 가로지를 길에 붉은 화살표
+          this.fxs.push({ k: 'crossLine', x1: ev.x1, y1: ev.y1, x2: ev.x2, y2: ev.y2, t: ev.t + 0.2, max: ev.t + 0.2 });
+          break;
+        case 'crossGo':
+          this.shake = Math.max(this.shake, 0.15);
+          break;
+        case 'crossHit': {
+          const cc = RS.slotCenter(ev.slot);
+          this.emit(cc.x, cc.y + 4, 8, { sp: [20, 50], life: [0.25, 0.5], cols: ['#d8cbb0', '#a8987a', '#ffffff'], g: 60, drag: 2.5 });
+          this.fxs.push({ k: 'ring', x: cc.x, y: cc.y, r: 12, t: 0.3, max: 0.3, col: '#ffe46b' });
+          break;
+        }
+        case 'crossEnd':
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: 16, t: 0.4, max: 0.4, col: '#d8cbb0' });
+          this.emit(ev.x, ev.y + 3, 12, { sp: [25, 60], ang: -Math.PI / 2, spread: Math.PI * 1.5, life: [0.3, 0.55], cols: ['#d8cbb0', '#a8987a'], g: 120, drag: 1.5 });
+          this.shake = Math.max(this.shake, 0.25);
+          break;
+        case 'seal':
+          for (const i of ev.slots) {
+            const cc = RS.slotCenter(i);
+            this.fxs.push({ k: 'ring', x: cc.x, y: cc.y, r: 14, t: 0.5, max: 0.5, col: '#a061e8', glow: true });
+            this.emit(cc.x, cc.y, 10, { sp: [10, 30], life: [0.3, 0.6], cols: ['#5e3593', '#a061e8', '#2a1f3d'], drag: 2, glow: 2 });
+          }
+          this.fxs.push({ k: 'flash', t: 0.25, max: 0.25, col: '#5e3593' });
+          break;
+        case 'unseal':
+          for (const i of ev.slots) {
+            const cc = RS.slotCenter(i);
+            this.fxs.push({ k: 'ring', x: cc.x, y: cc.y, r: 14, t: 0.45, max: 0.45, col: '#ffe46b', glow: true });
+            this.emit(cc.x, cc.y, 12, { sp: [20, 50], life: [0.3, 0.6], cols: ['#ffe46b', '#ffffff', '#a8ecff'], drag: 2, glow: 2.5 });
+          }
+          break;
+        case 'shuffle':
+          for (const i of ev.slots) {
+            const cc = RS.slotCenter(i);
+            this.fxs.push({ k: 'star', x: cc.x, y: cc.y, t: 0.45, max: 0.45, col: '#d3a0f7' });
+          }
+          this.fxs.push({ k: 'flash', t: 0.2, max: 0.2, col: '#a061e8' });
+          break;
+        case 'plunder':
+          this.emit(ev.x, ev.y - 6, 10, { sp: [20, 50], ang: -Math.PI / 2, spread: 1.6, life: [0.4, 0.7], cols: ['#ffe46b', '#f5c44a'], g: 90, glow: 2 });
+          this.nums.push({ x: ev.x, y: ev.y - 12, vx: 0, vy: -16, s: '-' + ev.g, c: 'g', t: 0.9, max: 0.9, big: 1.5 });
+          break;
+        case 'soul':
+          // 리치가 영혼을 빨아들인다
+          for (let j = 0; j < 5; j++) {
+            const q = j / 5;
+            if (this.parts.length < 400) this.parts.push({ x: ev.x1 + (ev.x2 - ev.x1) * q * 0.2, y: ev.y1 + (ev.y2 - ev.y1) * q * 0.2, vx: (ev.x2 - ev.x1) * 1.6, vy: (ev.y2 - ev.y1) * 1.6, g: 0, drag: 0, life: 0.5, max: 0.5, col: '#bfe0ff', size: 1, glow: 2 });
+          }
+          break;
         case 'slowCells':
           for (const c of ev.cells) {
             const cc = RS.slotCenter(c);
@@ -952,6 +1003,23 @@
         ctx.sprite(RS.SPR[s.cls + s.tier + '_w'], ax + pose.ox, ay + pose.oy, pose.sx, pose.sy, pose.rot, flip);
       }
       ctx.globalAlpha = 1;
+      // 봉인: 어둡게 가라앉고 보랏빛 사슬이 X자로 묶는다
+      if (s.sealed) {
+        ctx.fillStyle = 'rgba(20,10,35,0.55)';
+        ctx.fillRect(x + 2, y + 2, F.SLOT - 4, F.SLOT - 4);
+        const pulse = 0.7 + 0.3 * Math.sin(t * 4 + i);
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#a061e8';
+        for (let k = 3; k < F.SLOT - 3; k += 2) {
+          ctx.fillRect(x + k, y + k, 1.5, 1.5);
+          ctx.fillRect(x + F.SLOT - 1 - k, y + k, 1.5, 1.5);
+        }
+        ctx.fillStyle = '#d3a0f7';
+        ctx.fillRect(x + F.SLOT / 2 - 2, y + F.SLOT / 2 - 1, 4, 3);
+        ctx.fillRect(x + F.SLOT / 2 - 1, y + F.SLOT / 2 - 3, 2, 2);
+        ctx.globalAlpha = 1;
+        ctx.glow(x + F.SLOT / 2, y + F.SLOT / 2, 9, '#a061e8', 0.25 * pulse);
+      }
       // 마법사: 공격할 때 지팡이 끝에 빛
       if (s.cls === 'mage' && this.atk[i] > 0) {
         const p = 1 - this.atk[i] / (this.atkDur[i] || 0.3);
@@ -1139,6 +1207,16 @@
       const backY = e.dir === 1 ? -1 : e.dir === 3 ? 1 : 0;
       pose.ox += back * 0.7 * k;
       pose.oy += backY * 0.7 * k;
+    }
+    // 돌진 준비: 웅크리며 떨린다 / 돌진 중: 앞으로 기울고 흙먼지
+    if (e.crossWarn) {
+      pose.sy *= 0.88;
+      pose.sx *= 1.1;
+      pose.ox += Math.sin(this.t * 60) * 0.5;
+    } else if (e.cross) {
+      pose.rot = (e.cross.x2 < e.cross.x1 ? -1 : 1) * 0.25;
+      pose.oy -= 1;
+      if (dt > 0 && Math.random() < dt * 30) this.emit(e.x, e.y + 5, 1, { sp: [5, 20], ang: -Math.PI / 2, spread: 2, life: [0.25, 0.45], cols: ['#d8cbb0', '#a8987a'], g: 30 });
     }
     // 가로로 움직일 때 가는 쪽을 본다
     if (e.dir === 0) e._f = 1;
@@ -1485,6 +1563,43 @@
           }
           ctx.globalAlpha = 1;
           if (f.glow) ctx.glow(f.x, f.y, r * 0.9, f.col, 0.18 * (1 - p));
+          break;
+        }
+        case 'crossLine': {
+          // 돌진할 길: 깜빡이는 붉은 점선과 화살촉
+          const dx = f.x2 - f.x1;
+          const dy = f.y2 - f.y1;
+          const len = Math.max(1, Math.hypot(dx, dy));
+          const ux = dx / len;
+          const uy = dy / len;
+          const on = Math.floor(this.t * 12) % 2 === 0;
+          // 지나갈 칸을 붉게 깜빡여 미리 알려 준다
+          if (!f.cells) {
+            f.cells = [];
+            for (let d = 0; d < len; d += 3) {
+              const i = RS.slotAt(f.x1 + ux * d, f.y1 + uy * d);
+              if (i >= 0 && f.cells.indexOf(i) < 0) f.cells.push(i);
+            }
+          }
+          ctx.fillStyle = on ? 'rgba(255,90,90,0.3)' : 'rgba(255,90,90,0.12)';
+          for (const i of f.cells) ctx.fillRect(F.GX + (i % F.COLS) * F.SLOT + 1, F.GY + Math.floor(i / F.COLS) * F.SLOT + 1, F.SLOT - 2, F.SLOT - 2);
+          ctx.globalAlpha = on ? 0.9 : 0.5;
+          ctx.fillStyle = '#ff6b6b';
+          const off = (this.t * 40) % 6;
+          for (let d = off; d < len; d += 6) {
+            ctx.fillRect(f.x1 + ux * d - 1, f.y1 + uy * d - 1, 2, 2);
+          }
+          // 화살촉
+          const hx = f.x2 - ux * 4;
+          const hy = f.y2 - uy * 4;
+          const nx = -uy;
+          const ny = ux;
+          for (let k2 = 0; k2 < 4; k2++) {
+            ctx.fillRect(hx - ux * k2 + nx * k2 - 0.5, hy - uy * k2 + ny * k2 - 0.5, 1.5, 1.5);
+            ctx.fillRect(hx - ux * k2 - nx * k2 - 0.5, hy - uy * k2 - ny * k2 - 0.5, 1.5, 1.5);
+          }
+          ctx.globalAlpha = 1;
+          ctx.glow(f.x2, f.y2, 8, '#e04a52', 0.3);
           break;
         }
         case 'pop': {

@@ -266,7 +266,7 @@ function main() {
   const secs = (Date.now() - t0) / 1000;
   const pct = (x, of) => ((100 * x) / (of || n)).toFixed(1) + '%';
   console.log(`bot=${kind} runs=${n} cmd=${cmdArg} asc=${asc}${keys ? ' keys' : ''}${Object.keys(params).length ? ' bp=' + JSON.stringify(params) : ''} time=${secs.toFixed(1)}s (${(secs / n).toFixed(3)}s/판)`);
-  console.log(`승률 ${pct(wins)}${act4 ? ` · 4막 도달 ${act4}회, 균열의 핵 격파 ${act4win}회` : ''}${extra.corr ? ` · 검은 풀무를 가진 판 ${extra.corr}회(승 ${extra.corrWon}), 뺀 승률 ${pct(wins - extra.corrWon, n - extra.corr)}` : ''}`);
+  console.log(`승률 ${pct(wins)}${act4 ? ` · 4막 도달 ${act4}회, 고대신 격파 ${act4win}회` : ''}${extra.corr ? ` · 검은 풀무를 가진 판 ${extra.corr}회(승 ${extra.corrWon}), 뺀 승률 ${pct(wins - extra.corrWon, n - extra.corr)}` : ''}`);
   if (cmds.length > 1) console.log('지휘관별 승률:', Object.entries(byCmd).map(([c, v]) => `${RS.COMMANDER[c].name} ${pct(v.w, v.n)}`).join(' | '));
   console.log('도달(사망 막 / WIN):', Object.entries(reach).sort().map(([k, v]) => `${k} ${pct(v)}`).join(' | '));
   console.log(`이벤트 평균 ${(events.reduce((a, b) => a + b, 0) / n).toFixed(1)}회/판`);

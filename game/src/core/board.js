@@ -235,7 +235,7 @@
 
   RS.canMerge = function (board, i) {
     const s = board[i];
-    return !!s && s.tier < RS.TOP_TIER && s.n >= RS.mergeNeed(s.tier);
+    return !!s && !s.sealed && s.tier < RS.TOP_TIER && s.n >= RS.mergeNeed(s.tier);
   };
 
   RS.firstMergeable = function (board) {

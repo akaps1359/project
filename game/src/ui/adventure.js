@@ -909,9 +909,9 @@
     const reason = run.pending && run.pending.reason === 'cap' ? '필드의 적이 상한에 도달했습니다.' : '생명이 모두 떨어졌습니다.';
     // 3막 보스를 쓰러뜨리고 4막에서 쓰러지면 클리어로 기록된다
     const heartFail = !victory && run.act >= 4;
-    const title = victory ? (run.act === 4 ? '균열의 핵을 부쉈다!' : '균열을 닫았다!') : heartFail ? '클리어 · 균열의 핵 도전 실패' : '쓰러졌다…';
+    const title = victory ? (run.act === 4 ? '고대신을 다시 잠재웠다!' : '균열을 닫았다!') : heartFail ? '클리어 · 고대신 옴네크 도전 실패' : '쓰러졌다…';
     const sub = victory
-      ? (run.act === 4 ? '세 개의 봉인석으로 균열의 중심부까지 올라 모든 것을 끝냈습니다.' : '균열의 군주를 쓰러뜨렸습니다.')
+      ? (run.act === 4 ? '세 개의 봉인석으로 잠든 신의 제단에 올라 고대신을 다시 잠재웠습니다.' : '균열의 군주를 쓰러뜨렸습니다.')
       : heartFail ? `3막 보스를 쓰러뜨려 클리어로 기록했어요. 4막 ${run.floor}층 · ${reason}` : `${run.act}막 ${run.floor}층 · ${reason}`;
     const miles = UI.chronicleMiles ? UI.chronicleMiles(G.meta) : [];
     const next = miles.find((m) => !m.done);

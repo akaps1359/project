@@ -127,8 +127,9 @@
     lich: {
       name: '리치', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
       skills: [{ k: 'shield', name: '뼈 방벽', every: 13, pct: 0.12 }],
+      feed: { r: 44, pct: 0.012 },
       phase2: { at: 0.4, speed: 1.2, cd: 0.7, msg: '리치가 죽음의 힘을 끌어올린다! (더 빨라지고 방벽을 자주 친다)' },
-      trait: '물리 피해 25% 감소. 해골을 부르고, 13초마다 체력 12%만큼의 뼈 방벽을 두른다. 체력 40%에서 각성',
+      trait: '물리 피해 25% 감소. 해골을 부르고, 13초마다 체력 12%만큼의 뼈 방벽을 두른다. 주변에서 적이 쓰러질 때마다 영혼을 흡수해 체력 1.2% 회복. 체력 40%에서 각성',
     },
     // 대체 막 (안개 늪 · 가라앉은 항구)
     frog: { name: '늪 개구리', hp: 0.9, speed: 24, gold: 1, leak: 1, hop: { every: 3.5, dist: 26 }, trait: '가끔 앞으로 크게 뛴다' },
@@ -140,29 +141,38 @@
     },
     captain: {
       name: '해골 선장', hp: 7.5, speed: 14, gold: 40, leak: 6, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
-      skills: [{ k: 'rally', name: '럼 한 모금', every: 12, pct: 0.35, dur: 3 }],
-      trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다. 12초마다 모든 적이 3초 동안 35% 빨라진다',
+      skills: [{ k: 'rally', name: '럼 한 모금', every: 12, pct: 0.35, dur: 3 }, { k: 'plunder', name: '약탈', every: 14, pct: 0.15, max: 40 }],
+      trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다. 12초마다 모든 적이 3초 동안 35% 빨라지고, 14초마다 가진 골드의 15%(최대 40)를 약탈한다',
     },
     dummy: { name: '낡은 허수아비', hp: 1, speed: 11, gold: 0, leak: 0, trait: '시간 안에 쓰러뜨려야 하는 시험 대상' },
     // 4막
-    spireShield: { name: '균열 방패병', hp: 7.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2, trait: '궁수·도적 피해 50%, 모든 물리 피해 20% 감소' },
-    spireSpear: { name: '균열 창병', hp: 6, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 }, trait: '빠르고 주변 적을 가속' },
+    spireShield: {
+      name: '방패 사도', hp: 7.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2,
+      skills: [{ k: 'cross', name: '돌진', every: 9, warn: 1.0, stun: 1.6, selfStun: 2.2, speed: 100, first: 5 }],
+      trait: '궁수·도적 피해 50%, 물리 20% 감소. 9초마다 보드를 가로질러 돌진해 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 2.2초 기절',
+    },
+    spireSpear: {
+      name: '창 사도', hp: 6, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 },
+      skills: [{ k: 'cross', name: '꿰뚫기', every: 7, warn: 0.8, stun: 1.2, selfStun: 1.8, speed: 140, first: 4 }],
+      trait: '빠르고 주변 적을 가속. 7초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.2초 기절시키고, 도착하면 스스로 1.8초 기절',
+    },
     riftHeart: {
-      name: '균열의 핵', hp: 30, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30,
+      name: '고대신 옴네크', hp: 30, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30,
       skills: [
-        { k: 'pulse', name: '심장 고동', every: 8, warn: 0.9, dur: 2.5, amt: 0.35 },
+        { k: 'pulse', name: '광기의 시선', every: 9, warn: 0.9, dur: 2.5, amt: 0.35 },
         { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6 },
-        { k: 'spawn', name: '균열 창병 소환', every: 18, type: 'spireSpear', n: 1, hp: 0.3, first: 10 },
-        { k: 'shield', name: '피의 장막', every: 16, pct: 0.08, first: 12 },
-        { k: 'rift', every: 11, warn: 1.2, stun: 2.5 },
+        { k: 'spawn', name: '사도 부르기', every: 20, type: 'spireSpear', n: 1, hp: 0.3, first: 10 },
+        { k: 'shield', name: '봉인의 장막', every: 18, pct: 0.08, first: 8, seal: 2 },
+        { k: 'shuffle', name: '혼돈의 속삭임', every: 13, n: 4, first: 15 },
+        { k: 'rift', every: 12, warn: 1.2, stun: 2.5 },
       ],
-      phase2: { at: 0.5, speed: 1.5, cd: 0.7, shield: 0.06, msg: '균열의 핵이 격렬하게 뛰기 시작했다! (빨라지고 기술을 더 자주 쓴다)' },
-      trait: '1초에 최대 체력의 3%까지만 피해를 받는다. 고동으로 모든 유닛을 늦추고, 임프·균열 창병을 부르고, 피의 장막을 두르고, 균열로 칸을 기절시킨다. 체력 절반에서 각성',
+      phase2: { at: 0.5, speed: 1.5, cd: 0.7, shield: 0.06, seal: 1, msg: '고대신이 완전히 눈을 떴다! (빨라지고 기술을 더 자주 쓴다)' },
+      trait: '고대의 몸: 1초에 최대 체력의 3%까지만 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 체력 절반에서 완전히 깨어난다',
     },
     riftLord: {
       name: '균열의 군주', hp: 10.5, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
-      skills: [{ k: 'blink', at: [0.7, 0.4], dist: 0.2 }, { k: 'shield', name: '균열 장막', every: 16, pct: 0.1 }],
-      trait: '균열로 유닛을 기절시키고 16초마다 장막을 두른다. 체력 70%·40%에서 앞으로 순간이동, 절반부터 가속',
+      skills: [{ k: 'blink', at: [0.7, 0.4], dist: 0.2 }, { k: 'shield', name: '균열 장막', every: 16, pct: 0.1 }, { k: 'shuffle', name: '차원 뒤섞기', every: 15, n: 3, first: 9 }],
+      trait: '균열로 유닛을 기절시키고 16초마다 장막을 두르며, 15초마다 유닛 3기의 자리를 뒤섞는다. 체력 70%·40%에서 앞으로 순간이동, 절반부터 가속',
     },
   };
 
@@ -201,7 +211,7 @@
     ],
     [
       {
-        id: 'heart', name: '균열의 중심부', boss: 'riftHeart', theme: 'heart',
+        id: 'heart', name: '잠든 신의 제단', boss: 'riftHeart', theme: 'heart',
         pool: [['imp', 3, 1], ['ghost', 3, 1], ['golem', 2, 1], ['shaman', 2, 1]],
         elites: ['spireShield', 'spireSpear'],
       },

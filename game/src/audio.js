@@ -155,6 +155,9 @@
     shield: () => { tone(520, 0.1, 'triangle', 0.1, 780); tone(780, 0.16, 'sine', 0.08, 1040, 0.08); },
     shieldBreak: () => { noise(0.22, 0.16, 'bandpass', 3000, 600, 0, 0.8); tone(900, 0.12, 'square', 0.06, 300, 0.02); },
     blink: () => { tone(1200, 0.12, 'sine', 0.1, 300); tone(300, 0.14, 'sine', 0.08, 1200, 0.1); },
+    charge: () => { tone(90, 0.5, 'sawtooth', 0.12, 180); noise(0.4, 0.08, 'lowpass', 400, 1500); },
+    seal: () => { tone(110, 0.4, 'square', 0.1, 70); tone(165, 0.4, 'triangle', 0.1, 104, 0.05); tone(233, 0.5, 'sine', 0.08, 147, 0.1); },
+    unseal: () => { [523, 784, 1047, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.1, null, i * 0.05)); },
   };
   const GAP = { kill: 0.06, leak: 0.12, coin: 0.05, summon: 0.04 };
 

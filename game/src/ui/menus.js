@@ -231,7 +231,7 @@
       { done: meta.bestAct >= 3, text: '2막 보스를 쓰러뜨린다', reward: '지휘관 카이(사냥꾼)' },
       { done: meta.wins >= 1, text: '3막 보스를 쓰러뜨린다', reward: '지휘관 미라(연금술사) · 심연 1' },
       { done: meta.wins >= 2, text: '두 번 클리어한다', reward: '지휘관 아스트라(별의 섭정)' },
-      { done: !!meta.heart, text: '세 봉인석으로 4막 균열의 핵을 부순다', reward: '진 엔딩' },
+      { done: !!meta.heart, text: '세 봉인석으로 4막 고대신을 잠재운다', reward: '진 엔딩' },
       { done: (meta.maxAsc || 0) >= 10, text: '심연 10에 도전한다', reward: '최고 난이도' },
     ];
   };

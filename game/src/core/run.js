@@ -387,14 +387,14 @@
   };
   RS.mapTrait = (run) => RS.MAP_TRAITS.find((t) => run.map && t.id === run.map.trait) || null;
 
-  // 4막: 휴식처 → 엘리트 → 상점 → 엘리트 → 휴식처 → 균열의 핵 (일직선)
+  // 4막: 휴식처 → 상점 → 엘리트(사도 둘) → 휴식처 → 고대신 (일직선)
   function genAct4Map() {
     const row = (type) => {
       const r = new Array(RS.MAP_W).fill(null);
       r[2] = { type, next: [2], visited: false };
       return r;
     };
-    const floors = ['rest', 'elite', 'shop', 'elite', 'rest', 'boss'].map(row);
+    const floors = ['rest', 'shop', 'elite', 'rest', 'boss'].map(row);
     floors[floors.length - 1][2].next = [];
     return { floors };
   }

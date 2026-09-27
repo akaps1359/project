@@ -36,6 +36,9 @@
     this.cap = RS.BAL.fieldCap + (M.capAdd || 0);
     this.cd = [];
     this.mcd = []; // 신화 스킬 대기 시간 (칸마다, 유닛마다)
+    // 지난 전투에서 남은 봉인 표시는 지운다 (봉인은 전투 안에서만)
+    for (const u of this.run.board) if (u && u.sealed) delete u.sealed;
+    this.sealT = 0;
     this.slotStats = [];
     for (let i = 0; i < F.SIZE; i++) {
       // 한 칸에 최대 4기(전설)까지 쌓이므로 공격 대기 시간도 4칸
@@ -107,6 +110,11 @@
     }
     this.t += dt;
     this.dynT -= dt;
+    // 봉인은 장막을 깨면 풀리지만, 너무 오래가면(30초) 저절로 풀린다
+    if (this.sealT > 0) {
+      this.sealT -= dt;
+      if (this.sealT <= 0) this.unsealAll('time');
+    }
     if (this.buffs.rage > 0) this.buffs.rage -= dt;
     if (this.buffs.watch > 0) this.buffs.watch -= dt;
     if (this.ghostT > 0) this.ghostT -= dt;
@@ -360,6 +368,11 @@
       // 기절·빙결 중에는 기술 타이머도 멈춘다
       if (e.stunT <= 0 && (def.heal || def.haste || def.summon || def.rift || def.hop || def.submerge || def.anchor || def.skills)) this.enemySkill(e, def, dt);
       if (def.phase2 && !e.p2 && e.hp < e.maxHp * def.phase2.at) this.bossPhase2(e, def);
+      // 보드를 가로지르는 중(또는 준비 중)이면 길을 따라 걷지 않는다
+      if (e.crossWarn || e.cross) {
+        this.updateCross(e, dt);
+        continue;
+      }
       if (e.subT > 0) e.subT -= dt;
       if (e.stunT > 0) continue;
       let sp = e.speed * globalSpeed * (1 - e.slow) * (1 + e.hasteP);
@@ -462,7 +475,8 @@
       st[k] -= dt;
       if (st[k] > 0) continue;
       st[k] = s.every * cdMul;
-      this.castBossSkill(e, s);
+      // 지금은 쓸 수 없는 자리(돌진할 수 없는 모서리 등)면 잠시 뒤 다시 시도
+      if (this.castBossSkill(e, s) === false) st[k] = 0.4;
     }
   };
   P.castBossSkill = function (e, s) {
@@ -491,7 +505,58 @@
         e.shield = Math.max(e.shield || 0, e.maxHp * s.pct);
         e.shieldMax = Math.max(e.shieldMax || 0, e.maxHp * s.pct);
         said('shield');
+        if (s.seal) this.sealUnits(e, s.seal + (e.p2 && e.def.phase2 && e.def.phase2.seal ? e.def.phase2.seal : 0));
         break;
+      case 'cross': {
+        // 보드를 가로질러 돌진: 위쪽 길이면 아래쪽 길로, 오른쪽 길이면 왼쪽 길로 (늘 앞으로 건너뛴다)
+        const local = ((e.d % F.PERIM) + F.PERIM) % F.PERIM;
+        const base = e.d - local;
+        const x1 = e.x;
+        const y1 = e.y;
+        let x2;
+        let y2;
+        let dLocal;
+        if (e.dir === 0 && e.x > F.GX + 4 && e.x < F.GX + F.COLS * F.SLOT - 4) {
+          x2 = e.x;
+          y2 = F.B;
+          dLocal = F.TOPLEN + F.SIDELEN + (F.R - e.x);
+        } else if (e.dir === 1 && e.y > F.GY + 4 && e.y < F.GY + F.ROWS * F.SLOT - 4) {
+          x2 = F.L;
+          y2 = e.y;
+          dLocal = 2 * F.TOPLEN + F.SIDELEN + (F.B - e.y);
+        } else return false;
+        const dTo = base + dLocal;
+        if (dTo >= e.nextLap - 4) return false;
+        e.crossWarn = { x1, y1, x2, y2, dTo, t: s.warn, stun: s.stun, selfStun: s.selfStun, speed: s.speed || 110 };
+        this.emit({ k: 'crossWarn', x1, y1, x2, y2, t: s.warn });
+        said('cross');
+        return true;
+      }
+      case 'shuffle': {
+        // 유닛 몇 기의 자리를 뒤섞는다 (빈칸으로 옮겨질 수도 있다)
+        const occ = [];
+        for (let i = 0; i < F.SIZE; i++) if (this.run.board[i]) occ.push(i);
+        if (occ.length < 2) return false;
+        const moved = [];
+        for (let k = 0; k < s.n && occ.length; k++) {
+          const a = occ.splice(this.rng.int(occ.length), 1)[0];
+          let b2 = this.rng.int(F.SIZE);
+          if (b2 === a) b2 = (b2 + 1 + this.rng.int(F.SIZE - 1)) % F.SIZE;
+          this.swap(a, b2);
+          moved.push(a, b2);
+        }
+        this.emit({ k: 'shuffle', slots: moved });
+        said('shuffle');
+        break;
+      }
+      case 'plunder': {
+        const g = Math.min(s.max, Math.floor(this.run.gold * s.pct));
+        if (g <= 0) return false;
+        this.run.gold -= g;
+        this.emit({ k: 'plunder', g, x: e.x, y: e.y });
+        said('plunder');
+        break;
+      }
       case 'spawn':
         for (let k = 0; k < s.n; k++) this.queueSpawn(s.type, e.L, e.d - 8 * (k + 1), e.nextLap, s.hp);
         this.emit({ k: 'summonFx', x: e.x, y: e.y });
@@ -538,6 +603,80 @@
       this.emit({ k: 'msg', text: `${e.def.name}이(가) 균열을 건너 앞으로 순간이동했다!`, warn: true });
     }
   };
+  // 가로지르기: 경고 → 돌진(지나가는 칸의 유닛 기절) → 도착해서 스스로 기절
+  P.updateCross = function (e, dt) {
+    if (e.crossWarn) {
+      const w = e.crossWarn;
+      w.t -= dt;
+      if (w.t > 0) return;
+      e.crossWarn = null;
+      e.cross = Object.assign({}, w, { p: 0, dur: Math.max(0.3, Math.hypot(w.x2 - w.x1, w.y2 - w.y1) / w.speed), hit: {} });
+      this.emit({ k: 'crossGo', x: e.x, y: e.y });
+      return;
+    }
+    const c = e.cross;
+    c.p += dt / c.dur;
+    const q = Math.min(1, c.p);
+    e.x = c.x1 + (c.x2 - c.x1) * q;
+    e.y = c.y1 + (c.y2 - c.y1) * q;
+    e.dir = c.x2 < c.x1 ? 2 : c.y2 > c.y1 ? 1 : e.dir;
+    const i = RS.slotAt(e.x, e.y);
+    if (i >= 0 && !c.hit[i]) {
+      c.hit[i] = 1;
+      this.slotStun[i] = Math.max(this.slotStun[i], c.stun);
+      this.emit({ k: 'crossHit', slot: i, x: e.x, y: e.y });
+    }
+    if (q >= 1) {
+      e.cross = null;
+      e.d = c.dTo;
+      RS.pathPos(e.d, e);
+      e.stunT = Math.max(e.stunT, c.selfStun);
+      this.emit({ k: 'crossEnd', x: e.x, y: e.y });
+    }
+  };
+
+  // 봉인: 높은 등급일수록 잘 걸린다 (신화는 봉인되지 않는다). 칸이 아니라 유닛에 붙어서 자리를 옮겨도 따라간다
+  P.sealUnits = function (e, n) {
+    const board = this.run.board;
+    const cands = [];
+    for (let i = 0; i < F.SIZE; i++) {
+      const u = board[i];
+      if (u && !u.sealed && u.tier < RS.TOP_TIER) cands.push(i);
+    }
+    const slots = [];
+    for (let k = 0; k < n && cands.length; k++) {
+      let tot = 0;
+      for (const i of cands) tot += Math.pow(board[i].tier + 1, 2) * board[i].n;
+      let r = this.rng.next() * tot;
+      let pickIdx = 0;
+      for (let j = 0; j < cands.length; j++) {
+        r -= Math.pow(board[cands[j]].tier + 1, 2) * board[cands[j]].n;
+        if (r <= 0) {
+          pickIdx = j;
+          break;
+        }
+      }
+      const i = cands.splice(pickIdx, 1)[0];
+      board[i].sealed = true;
+      slots.push(i);
+    }
+    if (!slots.length) return;
+    this.sealT = 30;
+    this.statsDirty = true;
+    this.emit({ k: 'seal', slots, boss: e.def.name });
+  };
+  P.unsealAll = function (reason) {
+    const slots = [];
+    this.run.board.forEach((u, i) => {
+      if (u && u.sealed) {
+        delete u.sealed;
+        slots.push(i);
+      }
+    });
+    this.sealT = 0;
+    if (slots.length) this.emit({ k: 'unseal', slots, reason });
+  };
+
   // 2단계: 체력이 기준 아래로 떨어지면 빨라지고 기술을 더 자주 쓴다
   P.bossPhase2 = function (e, def) {
     e.p2 = true;
@@ -684,7 +823,7 @@
     for (let i = 0; i < F.SIZE; i++) {
       const s = board[i];
       if (!s) continue;
-      if (this.slotStun[i] > 0) continue;
+      if (this.slotStun[i] > 0 || s.sealed) continue;
       const st = this.slotStats[i];
       // 전투 밖에서 보드가 바뀌어 수치가 없으면 다음 틱에 다시 계산한다
       if (!st) {
@@ -947,7 +1086,7 @@
     }
     if ((e.elite || e.boss) && M.eliteDmgPct) dm *= 1 + M.eliteDmgPct;
     if (e.burning === 'armor') dm *= 0.75;
-    // 균열의 핵: 0.5초마다 받을 수 있는 피해에 한도가 있다
+    // 고대신 옴네크: 0.5초마다 받을 수 있는 피해에 한도가 있다
     if (def.dpsCap) {
       dm = Math.min(dm, e.capLeft);
       e.capLeft -= dm;
@@ -960,6 +1099,7 @@
       if (e.shield <= 0) {
         e.shield = 0;
         this.emit({ k: 'shieldBreak', x: e.x, y: e.y, boss: e.boss });
+        if (e.boss) this.unsealAll('break');
       }
       if (dm <= 0) {
         if (!isDot) e.flash = 0.08;
@@ -1007,6 +1147,16 @@
     const def = e.def;
     const run = this.run;
     const M = this.M;
+    // 리치: 주변에서 쓰러진 적의 영혼을 흡수해 회복
+    if (!e.boss) {
+      for (const bz of this.bosses) {
+        const fd = bz.def.feed;
+        if (!fd || bz.dead) continue;
+        if ((bz.x - e.x) * (bz.x - e.x) + (bz.y - e.y) * (bz.y - e.y) > fd.r * fd.r) continue;
+        bz.hp = Math.min(bz.maxHp, bz.hp + bz.maxHp * fd.pct);
+        this.emit({ k: 'soul', x1: e.x, y1: e.y, x2: bz.x, y2: bz.y });
+      }
+    }
     let g = M.noKillGold ? 0 : def.gold * RS.BAL.killGoldMul[Math.min(3, run.act)] * (1 + M.killGoldPct);
     if (e.runeGold && !M.noKillGold) g += e.runeGold; // 엑토 심장이면 황금 룬 골드도 없다
     RS.addGold(run, g);
@@ -1065,6 +1215,7 @@
 
   P.finish = function (result, reason) {
     if (this.status !== 'running') return;
+    for (const u of this.run.board) if (u && u.sealed) delete u.sealed;
     this.result = result;
     this.reason = reason || null;
     this.status = this.fxOn ? 'ending' : result;
@@ -1183,7 +1334,7 @@
 
   // 한 기 판매. 받는 골드는 RS.sellValueAt(run, i, M) 과 같다
   P.sell = function (i) {
-    if (!this.run.board[i]) return 0;
+    if (!this.run.board[i] || this.run.board[i].sealed) return 0;
     const v = RS.sellOne(this.run, i, this.M);
     this.statsDirty = true;
     this.emit({ k: 'sell', slot: i, v });
