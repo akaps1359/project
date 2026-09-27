@@ -224,6 +224,23 @@
           for (const c of ev.cells) this.fxs.push({ k: 'riftHit', i: c, t: 0.4, max: 0.4 });
           this.shake = Math.max(this.shake, 0.2);
           break;
+        case 'mythic': {
+          // 신화 스킬
+          const T4 = RS.TIER[4];
+          if (ev.cls === 'knight') {
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.35, max: 0.35, col: T4.light });
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r * 0.6, t: 0.3, max: 0.3, col: '#ffffff' });
+            this.shake = Math.max(this.shake, 0.25);
+          } else if (ev.cls === 'mage') {
+            this.fxs.push({ k: 'meteor', x: ev.x, y: ev.y, r: ev.r, t: 0.45, max: 0.45 });
+          } else if (ev.cls === 'frost') {
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.45, max: 0.45, col: '#a8ecff' });
+            this.fxs.push({ k: 'flash', t: 0.25, max: 0.25, col: '#a8ecff' });
+          } else if (ev.cls === 'rogue') {
+            this.fxs.push({ k: 'star', x: ev.x, y: ev.y, t: 0.35, max: 0.35, col: T4.light });
+          }
+          break;
+        }
         case 'bossDown':
           this.shake = 0.5;
           this.fxs.push({ k: 'flash', t: 0.35, max: 0.35, col: '#ffffff' });
@@ -697,6 +714,40 @@
           for (let j = 0; j < 8; j++) {
             const a = (j / 8) * Math.PI * 2 + p;
             ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y + Math.sin(a) * r), 1, 1);
+          }
+          break;
+        }
+        case 'meteor': {
+          // 0~0.4: 불덩이가 떨어지고, 이후 폭발
+          if (p < 0.4) {
+            const q = p / 0.4;
+            const mx = Math.round(f.x + 30 * (1 - q));
+            const my = Math.round(f.y - 60 * (1 - q));
+            ctx.fillStyle = '#ffb347';
+            ctx.fillRect(mx - 2, my - 2, 5, 5);
+            ctx.fillStyle = '#fff6e6';
+            ctx.fillRect(mx - 1, my - 1, 3, 3);
+            ctx.fillStyle = '#ef4f6f';
+            ctx.fillRect(mx + 3, my - 4, 2, 2);
+            ctx.fillRect(mx + 6, my - 7, 1, 1);
+          } else {
+            if (!f.hit) {
+              f.hit = true;
+              this.shake = Math.max(this.shake, 0.3);
+              this.fxs.push({ k: 'flash', t: 0.2, max: 0.2, col: '#ff9a3d' });
+            }
+            const q = (p - 0.4) / 0.6;
+            const r = Math.max(2, f.r * (0.3 + 0.7 * q));
+            const n = Math.max(12, Math.round(r * 1.6));
+            for (let j = 0; j < n; j++) {
+              const a = (j / n) * Math.PI * 2;
+              ctx.fillStyle = j % 3 ? '#ff9a3d' : '#ffe46b';
+              ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y + Math.sin(a) * r), 1, 1);
+            }
+            if (q < 0.4) {
+              ctx.fillStyle = '#fff6e6';
+              ctx.fillRect(f.x - 3, f.y - 3, 7, 7);
+            }
           }
           break;
         }

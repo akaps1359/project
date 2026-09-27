@@ -566,7 +566,9 @@
           (refs.sell = sellBtn),
         ),
       ));
-      refs.baseDesc = run.runes[i] && RS.RUNE[run.runes[i]] ? `${RS.RUNE[run.runes[i]].name}: ${RS.RUNE[run.runes[i]].desc}` : `${C.role} · ${C.desc}`;
+      refs.baseDesc = s.tier >= 4 && RS.MYTHIC[s.cls]
+        ? `[${RS.MYTHIC[s.cls].name}] ${RS.MYTHIC[s.cls].short}`
+        : run.runes[i] && RS.RUNE[run.runes[i]] ? `${RS.RUNE[run.runes[i]].name}: ${RS.RUNE[run.runes[i]].desc}` : `${C.role} · ${C.desc}`;
       UI.refreshUnitStats();
     } else if (mode === 'upgrade') {
       const refs = (UI.panelRefs = { rows: {} });
@@ -881,6 +883,20 @@
       case 'shot':
         if (RS.sfxAttack) RS.sfxAttack(ev.cls, ev.crit);
         break;
+      case 'mythic': {
+        if (ev.quiet) break;
+        RS.sfx(ev.cls === 'mage' ? 'bomb' : ev.cls === 'frost' ? 'freeze' : ev.cls === 'archer' ? 'rare' : 'big');
+        // 전투마다 클래스별로 처음 한 번만 이름을 띄운다
+        const b = UI.G.battle;
+        if (b) {
+          b.mythicSeen = b.mythicSeen || {};
+          if (!b.mythicSeen[ev.cls]) {
+            b.mythicSeen[ev.cls] = true;
+            UI.toast(`신화 스킬 · ${RS.MYTHIC[ev.cls].name}!`, 't4');
+          }
+        }
+        break;
+      }
       case 'kill':
         RS.sfx(ev.big ? 'big' : 'kill');
         break;

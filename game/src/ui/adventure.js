@@ -199,6 +199,7 @@
       if (sel == null) return;
       e.currentTarget.disabled = true;
       RS.sfx('upgrade');
+      G.markBack();
       const snap = UI.snapGains(run);
       RS.applyBlessing(run, list[sel]);
       const gains = UI.diffGains(snap, run);
@@ -251,6 +252,7 @@
         if (!sel || anc.done) return;
         e.currentTarget.disabled = true;
         RS.sfx('legend');
+        G.markBack();
         const snap = UI.snapGains(run);
         RS.applyAncient(run, sel);
         anc.done = true;
@@ -502,6 +504,14 @@
       default:
         return done();
     }
+    // 뒤로: 이 고르기를 부른 선택 직전으로 돌아가 다른 것을 고를 수 있다 (유료 구매는 '구매 취소'가 대신한다)
+    if (G.canGoBack() && !paid) {
+      footer = [btn('← 뒤로', () => {
+        RS.sfx('click');
+        UI.choiceSel = null;
+        G.goBack();
+      }, 'sm back')].concat(footer || []);
+    }
     UI.page(title, null, body, footer);
   };
 
@@ -732,6 +742,7 @@
             // 한 번 고르면 다시 그릴 때까지 모든 선택지를 잠근다
             UI.lockAll(opts);
             RS.sfx('click');
+            G.markBack();
             const snap = UI.snapGains(run);
             const pend = run.pending;
             RS.eventChoose(run, i);
@@ -755,6 +766,8 @@
       if (gains && gains.length) body.appendChild(UI.gainsView(gains));
       if (run.pending.fight) footer = [btn('전투 시작', (e) => { e.currentTarget.disabled = true; G.startEventFight(); }, 'gold grow')];
       else footer = [btn('계속', (e) => { e.currentTarget.disabled = true; G.leaveNode(); }, 'gold grow')];
+      // 이어서 고를 것이 남아 있으면(제거·연마 등) 아직 되돌릴 수 있다
+      if (G.canGoBack() && run.queue.length && !run.pending.fight) footer.unshift(btn('← 뒤로', () => { RS.sfx('click'); G.goBack(); }, 'sm back'));
     }
     UI.page(ev.title, null, body, footer);
   };
@@ -787,6 +800,7 @@
           }
           UI.lockAll(box);
           RS.sfx('upgrade');
+          G.markBack();
           const snap = UI.snapGains(run);
           const said = RS.restDo(run, o.id);
           const gains = SHOW_GAINS[o.id] ? UI.diffGains(snap, run) : null;

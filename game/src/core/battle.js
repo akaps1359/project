@@ -35,9 +35,11 @@
     this.numCount = 0;
     this.cap = RS.BAL.fieldCap + (M.capAdd || 0);
     this.cd = [];
+    this.mcd = []; // 신화 스킬 대기 시간 (칸마다, 유닛마다)
     this.slotStats = [];
     for (let i = 0; i < F.SIZE; i++) {
-      this.cd.push([this.rng.next() * 0.4, this.rng.next() * 0.4, this.rng.next() * 0.4]);
+      // 한 칸에 최대 4기(전설)까지 쌓이므로 공격 대기 시간도 4칸
+      this.cd.push([this.rng.next() * 0.4, this.rng.next() * 0.4, this.rng.next() * 0.4, this.rng.next() * 0.4]);
       this.slotStats.push(null);
     }
     this.slotStun = new Float32Array(F.SIZE);
@@ -560,6 +562,7 @@
         if (this.attack(i, s, st, u)) cds[u] = st.interval + Math.max(cds[u], -dt);
         else cds[u] = 0.1;
       }
+      if (s.tier >= 4) this.updateMythic(i, s, st, dt);
     }
   };
 
@@ -649,6 +652,7 @@
         break;
       case 'rogue':
         this.damage(e, dmg, cls, crit);
+        if (s.tier >= 4) this.shadowExecute(i, st, e, c, crit, dmg);
         if (M.poison && !e.dead) {
           // 중첩 하나 = 그 공격 피해의 50%를 3초에 걸쳐. 세기는 중첩들의 평균이라 치명타 한 번이 모든 중첩을 키우지 않는다
           const p = (dmg * M.poison) / 3;
@@ -667,6 +671,98 @@
     if (M.freezeChance && !e.boss && rng.next() < M.freezeChance) e.stunT = Math.max(e.stunT, 0.8);
     this.lastSlot = -1;
     if (this.fxOn) this.fx.push({ k: 'shot', cls, tier: s.tier, slot: i, u, x1: c.x, y1: c.y, x2: ex, y2: ey, crit });
+  };
+
+  // ── 신화 스킬 ──
+  P.updateMythic = function (i, s, st, dt) {
+    const def = RS.MYTHIC[s.cls];
+    if (!def || !def.cd) return;
+    const mc = this.mcd[i] || (this.mcd[i] = [def.cd * 0.4, def.cd * 0.7, def.cd]);
+    for (let u = 0; u < s.n && u < mc.length; u++) {
+      mc[u] -= dt;
+      if (mc[u] > 0) continue;
+      mc[u] = this.castMythic(i, s, st) ? def.cd : 0.3;
+    }
+  };
+  const alive = (e) => !e.dead && !(e.subT > 0);
+  P.enemiesNear = function (x, y, r) {
+    const r2 = r * r;
+    return this.enemies.filter((e) => alive(e) && (e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= r2);
+  };
+  P.castMythic = function (i, s, st) {
+    const c = RS.slotCenter(i);
+    const cls = s.cls;
+    this.lastSlot = i;
+    let ok = false;
+    if (cls === 'knight') {
+      const r = st.range + 8;
+      const list = this.enemiesNear(c.x, c.y, r);
+      if (list.length) {
+        for (const e of list) {
+          this.damage(e, st.dmg * 3, cls, false);
+          if (!e.dead && !e.boss) e.stunT = Math.max(e.stunT, 0.8);
+        }
+        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r });
+        ok = true;
+      }
+    } else if (cls === 'archer') {
+      const list = this.enemies.filter(alive);
+      if (list.length) {
+        for (let k = 0; k < 8 && list.length; k++) {
+          const e = list.splice(this.rng.int(list.length), 1)[0];
+          this.damage(e, st.dmg * 1.5, cls, false);
+          if (this.fxOn) this.fx.push({ k: 'shot', cls, tier: 4, slot: -1, u: 0, x1: e.x - 6 + this.rng.next() * 12, y1: e.y - 44, x2: e.x, y2: e.y, crit: false });
+        }
+        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: 0 });
+        ok = true;
+      }
+    } else if (cls === 'mage') {
+      const list = this.enemiesNear(c.x, c.y, st.range * 1.5);
+      if (list.length) {
+        let best = list[0];
+        let bestN = -1;
+        for (const e of list) {
+          let n = 0;
+          for (const o of list) if ((o.x - e.x) * (o.x - e.x) + (o.y - e.y) * (o.y - e.y) <= 28 * 28) n++;
+          if (n > bestN) {
+            bestN = n;
+            best = e;
+          }
+        }
+        this.splash(best.x, best.y, 28, st.dmg * 5, cls, null, false);
+        this.emit({ k: 'mythic', cls, x: best.x, y: best.y, r: 28 });
+        ok = true;
+      }
+    } else if (cls === 'frost') {
+      const list = this.enemiesNear(c.x, c.y, st.range);
+      if (list.length) {
+        for (const e of list) {
+          this.damage(e, st.dmg * 2, cls, false);
+          if (e.dead) continue;
+          if (e.boss) this.applySlow(e, 0.6, 2);
+          else e.stunT = Math.max(e.stunT, 1.5);
+        }
+        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: st.range });
+        ok = true;
+      }
+    }
+    this.lastSlot = -1;
+    return ok;
+  };
+  // 도적 신화: 약해진 일반 적은 한 번에 처치, 치명타는 가까운 다른 적에게 이어진다
+  P.shadowExecute = function (i, st, e, c, crit, dmg) {
+    if (!e.dead && !e.boss && !e.elite && e.hp <= e.maxHp * 0.15) {
+      this.damage(e, e.hp * 20 + 1, 'rogue', true);
+      this.emit({ k: 'mythic', cls: 'rogue', x: e.x, y: e.y, r: 6, quiet: true });
+    }
+    if (crit) {
+      const near = this.enemiesNear(c.x, c.y, st.range).filter((o) => o !== e);
+      if (near.length) {
+        const o = near[this.rng.int(near.length)];
+        this.damage(o, dmg, 'rogue', true);
+        if (this.fxOn) this.fx.push({ k: 'shot', cls: 'rogue', tier: 4, slot: -1, u: 0, x1: e.x, y1: e.y, x2: o.x, y2: o.y, crit: true });
+      }
+    }
   };
 
   P.applySlow = function (e, pct, dur) {
@@ -901,7 +997,7 @@
 
   P.resetCd = function (slot) {
     const cds = this.cd[slot];
-    for (let u = 0; u < 3; u++) if (cds[u] < 0.05) cds[u] = 0.05 + this.rng.next() * 0.3;
+    for (let u = 0; u < cds.length; u++) if (cds[u] < 0.05) cds[u] = 0.05 + this.rng.next() * 0.3;
   };
 
   // 고대 두루마리: i 칸 유닛의 합성 후보 둘. '클래스:등급'마다 한 번만 굴려 두고 실제로 합성할 때까지 유지하므로
@@ -949,6 +1045,9 @@
     const t = this.cd[a];
     this.cd[a] = this.cd[b];
     this.cd[b] = t;
+    const m = this.mcd[a];
+    this.mcd[a] = this.mcd[b];
+    this.mcd[b] = m;
     this.statsDirty = true;
   };
 

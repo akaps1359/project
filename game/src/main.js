@@ -162,9 +162,28 @@
     G.route();
   };
 
+  // ── 뒤로가기: 선택지를 고르기 직전 상태를 기억해 두고, 이어지는 고르기 화면에서 되돌린다 ──
+  // 난수 상태까지 함께 되돌리므로 같은 선택지를 다시 골라도 결과는 같다
+  G.markBack = function () {
+    G.backSnap = { str: RS.saveString(G.run) };
+  };
+  G.canGoBack = () => !!G.backSnap;
+  G.goBack = function () {
+    const snap = G.backSnap;
+    G.backSnap = null;
+    const r = snap && RS.loadString(snap.str);
+    if (!r) return;
+    resetSelections();
+    G.run = r;
+    G.save();
+    G.route();
+  };
+
   G.route = function () {
     const run = G.run;
     releaseWake();
+    // 새 칸으로 넘어가거나 전투가 시작되면 되돌릴 수 없다
+    if (run.phase !== 'choice' && run.phase !== 'event' && run.phase !== 'rest' && run.phase !== 'neow' && run.phase !== 'actStart') G.backSnap = null;
     // 상황별 배경 음악 (고르기 화면은 이전 곡을 이어 간다)
     const BGM = { neow: 'event', map: 'map', reward: 'map', treasure: 'map', shop: 'shop', event: 'event', rest: 'rest', actStart: 'event', over: 'lose', victory: 'win' };
     if (BGM[run.phase]) RS.bgm(BGM[run.phase]);
@@ -214,6 +233,7 @@
   });
   G.startEventFight = step(() => RS.startEventFight(G.run));
   G.finishChoice = function () {
+    G.backSnap = null; // 하나라도 고르거나 넘기면 그 앞으로는 돌아갈 수 없다
     RS.popQueue(G.run);
     G.save();
     G.route();
