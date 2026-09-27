@@ -13,18 +13,70 @@
     /* 저장소를 못 쓰면 기본값 */
   }
 
-  function ensure() {
-    if (ctx) {
-      if (ctx.state === 'suspended') ctx.resume();
-      return ctx;
+  // 무음 스위치를 켜 둔 아이폰에서도 효과음이 나게 오디오 세션을 '재생'으로 둔다 (iOS 17+)
+  function setSession() {
+    try {
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+    } catch (e) {
+      /* 지원하지 않으면 무시 */
     }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    ctx = new AC();
-    master = ctx.createGain();
-    master.gain.value = 0.35;
-    master.connect(ctx.destination);
+  }
+  setSession();
+
+  // 옛 iOS: HTML 오디오를 한 번 재생하면 세션이 '재생'으로 바뀌어 무음 스위치를 무시한다
+  const SILENT = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+  let htmlKicked = false;
+  function kickHtmlAudio() {
+    if (htmlKicked) return;
+    htmlKicked = true;
+    try {
+      const a = new Audio(SILENT);
+      a.setAttribute('playsinline', '');
+      a.muted = false;
+      a.volume = 0.01;
+      const p = a.play();
+      if (p && p.catch) p.catch(() => (htmlKicked = false));
+    } catch (e) {
+      htmlKicked = false;
+    }
+  }
+
+  function ensure() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try {
+        ctx = new AC();
+      } catch (e) {
+        return null;
+      }
+      master = ctx.createGain();
+      master.gain.value = 0.35;
+      master.connect(ctx.destination);
+    }
+    // iOS 는 백그라운드·전화 뒤에 'interrupted' 로 멈출 수 있다
+    if (ctx.state !== 'running' && ctx.state !== 'closed') {
+      try {
+        const p = ctx.resume();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {
+        /* 다음 터치에서 다시 */
+      }
+    }
     return ctx;
+  }
+
+  // 터치 안에서 아주 짧은 무음 버퍼를 재생해야 옛 iOS 가 오디오를 연다
+  function primeBuffer(c) {
+    try {
+      const b = c.createBuffer(1, 1, 22050);
+      const s = c.createBufferSource();
+      s.buffer = b;
+      s.connect(c.destination);
+      s.start(0);
+    } catch (e) {
+      /* 무시 */
+    }
   }
 
   function tone(freq, dur, type, vol, slide, delay) {
@@ -63,11 +115,8 @@
   };
   const GAP = { kill: 0.06, leak: 0.12, coin: 0.05, summon: 0.04 };
 
-  RS.sfx = function (name) {
-    if (muted) return;
-    const c = ensure();
-    if (!c || c.state !== 'running') return;
-    const now = c.currentTime;
+  function play(name) {
+    const now = ctx.currentTime;
     if (last[name] && now - last[name] < (GAP[name] || 0.03)) return;
     last[name] = now;
     try {
@@ -75,14 +124,40 @@
     } catch (e) {
       /* 소리는 실패해도 게임은 계속 */
     }
+  }
+
+  RS.sfx = function (name) {
+    if (muted) return;
+    const c = ensure();
+    if (!c) return;
+    if (c.state === 'running') play(name);
+    // 막 깨우는 중이면 깨어난 뒤 한 번 재생 (첫 탭 소리가 사라지지 않게)
+    else if (c.state !== 'closed' && !pending) {
+      pending = name;
+      const p = c.resume();
+      const done = () => {
+        const n = pending;
+        pending = null;
+        if (c.state === 'running' && n) play(n);
+      };
+      if (p && p.then) p.then(done, () => (pending = null));
+      else pending = null;
+    }
   };
+  let pending = null;
 
   // iOS 는 사용자 터치 안에서 오디오를 깨워야 한다
   RS.unlockAudio = function () {
     if (muted) return;
+    setSession();
+    kickHtmlAudio();
     const c = ensure();
-    if (c && c.state === 'suspended') c.resume();
+    if (c && !primed) {
+      primed = true;
+      primeBuffer(c);
+    }
   };
+  let primed = false;
 
   RS.isMuted = () => muted;
   RS.setMuted = function (m) {
