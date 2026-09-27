@@ -9,7 +9,7 @@
 ## 주요 내용
 
 - 지휘관 7명 · 심연 10단계 · 연대기(해금)
-- 막마다 10층 갈림길 맵, 1·2막은 두 지역 중 무작위, 2·3막 시작에 차원 방랑자
+- 막마다 15층 갈림길 맵(막마다 무작위 지형), 1·2막은 두 지역 중 무작위, 2·3막 시작에 차원 방랑자
 - 별점술사의 점괘, 성난 엘리트, 봉인석 3개로 여는 4막 균열의 핵
 - 증강 54 · 유물 101 · 이벤트 45 · 룬 9 · 소모품 8 · 저주 12
 - v2.1: 적대적 검증(확정 93건 + 2차 27건) 반영, 첫 전투 코치·연타 방지·환불 등 UI 개선, 강화까지 쓰는 봇 기준으로 재밸런스
@@ -37,7 +37,8 @@ node tools/sim.js 280 random --cmd=all
 node tools/sim.js 200 smart --asc=10           # 심연 10
 node tools/sim.js 200 smart --keys             # 봉인석·4막을 노리는 봇
 node tools/sim.js 200 smart --bp=banAugs='["corruption"]'   # 봇 조정값 (tools/simbot.js 의 SMART_DEFAULTS)
-node tools/sim.js 300 smart --set 'hpGrowth=[0,1.11,1.0775,1.0654,1.0523]'   # 밸런스 상수 바꿔 보기
+node tools/sim.js 200 smart --asc=5 --relic=blindfold   # 유물을 쥐고 시작 (유물 가치 측정)
+node tools/sim.js 300 smart --set 'hpGrowth=[0,1.137,1.095,1.0785,1.0523]'   # 밸런스 상수 바꿔 보기
 
 # 한 파일 빌드 → docs/index.html (+ build/artifact.html)
 pip install fonttools brotli   # 폰트 서브셋용 (없으면 전체 폰트를 넣음)
