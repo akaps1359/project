@@ -93,8 +93,9 @@
     R('brokenCrown', '깨진 왕관', 3, 'crown2', '전투를 시작할 때 50% 확률로 희귀 유닛 1기 소환', { startRare: 0.5, augChoices: -1 }, {
       cost: '증강 선택지 -1',
     }),
-    R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +35%', { dmgPct: 0.35, blindfold: 1 }, {
-      cost: '적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
+    // 실시간 디펜스라 정보를 가리는 것만으로는 대가가 되지 않는다 → 실제로 빗나가게 한다 (승천 5 봇: 없음 54% · 예전 68% · 지금 60%)
+    R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +35%', { dmgPct: 0.35, blindfold: 1, missChance: 0.07 }, {
+      cost: '모든 공격이 7% 확률로 빗나간다 · 적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
     }),
     R('philStone', '현자의 돌', 3, 'redgem', '소환 비용 -35%', { summonCostPct: -0.35, enemyHpPct: 0.15 }, {
       cost: '모든 적 체력 +15%',
