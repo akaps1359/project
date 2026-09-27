@@ -225,8 +225,12 @@
           this.shake = Math.max(this.shake, 0.2);
           break;
         case 'mythic': {
-          // 신화 스킬
+          // 신화 스킬: 시전한 유닛 칸에서 빛기둥이 솟고, 스킬마다 다른 연출
           const T4 = RS.TIER[4];
+          if (ev.cx != null) this.fxs.push({ k: 'pillar', x: ev.cx, y: ev.cy, t: 0.5, max: 0.5, col: ev.cls === 'frost' ? '#a8ecff' : ev.cls === 'mage' ? '#ff9a3d' : ev.cls === 'archer' ? '#ffe46b' : T4.light });
+          if (ev.cls === 'knight') this.fxs.push({ k: 'quake', x: ev.x, y: ev.y, r: ev.r, t: 0.5, max: 0.5, seed: Math.random() * 6 });
+          if (ev.cls === 'frost') this.fxs.push({ k: 'shards', x: ev.x, y: ev.y, r: ev.r, t: 0.6, max: 0.6, seed: Math.random() * 6 });
+          if (ev.cls === 'archer') this.fxs.push({ k: 'flash', t: 0.15, max: 0.15, col: '#ffe46b' });
           if (ev.cls === 'knight') {
             this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r, t: 0.35, max: 0.35, col: T4.light });
             this.fxs.push({ k: 'ring', x: ev.x, y: ev.y, r: ev.r * 0.6, t: 0.3, max: 0.3, col: '#ffffff' });
@@ -256,7 +260,7 @@
     const dur = ev.cls === 'knight' ? (ev.crit ? 0.26 : 0.2) : ev.cls === 'rogue' ? 0.1 : ev.cls === 'mage' ? 0.16 : 0.12;
     // 전사는 번갈아 가며 반대 방향으로 벤다
     this.slashFlip = !this.slashFlip;
-    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip, miss: ev.miss });
+    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip, miss: ev.miss, rain: ev.rain });
   };
 
   // ── 그리기 ──
@@ -585,6 +589,24 @@
       const T = RS.TIER[s.tier];
       switch (s.cls) {
         case 'archer': {
+          if (s.rain) {
+            // 신화 화살비: 금빛 긴 화살 + 꼬리
+            const dx = s.x2 - s.x1;
+            const dy = s.y2 - s.y1;
+            const len = Math.max(1, Math.hypot(dx, dy));
+            for (let k2 = 0; k2 < 6; k2++) {
+              ctx.fillStyle = k2 === 0 ? '#ffffff' : k2 < 3 ? '#ffe46b' : T.light;
+              ctx.globalAlpha = 1 - k2 * 0.14;
+              ctx.fillRect(Math.round(x - (dx / len) * k2), Math.round(y - (dy / len) * k2), 1, 1);
+            }
+            ctx.globalAlpha = 1;
+            if (p > 0.85) {
+              ctx.fillStyle = '#ffe46b';
+              ctx.fillRect(s.x2 - 2, s.y2, 5, 1);
+              ctx.fillRect(s.x2, s.y2 - 2, 1, 5);
+            }
+            break;
+          }
           const dx = s.x2 - s.x1;
           const dy = s.y2 - s.y1;
           const len = Math.max(1, Math.hypot(dx, dy));
@@ -715,6 +737,54 @@
             const a = (j / 8) * Math.PI * 2 + p;
             ctx.fillRect(Math.round(f.x + Math.cos(a) * r), Math.round(f.y + Math.sin(a) * r), 1, 1);
           }
+          break;
+        }
+        case 'pillar': {
+          // 시전 유닛 위로 솟는 빛기둥
+          const h = Math.round(26 * Math.min(1, p * 3));
+          ctx.globalAlpha = 0.85 * (1 - p);
+          ctx.fillStyle = f.col;
+          ctx.fillRect(f.x - 2, f.y - h, 5, h + 4);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(f.x - 1, f.y - h, 3, h + 4);
+          for (let j = 0; j < 6; j++) {
+            const a = j * 1.047 + p * 5;
+            ctx.fillStyle = f.col;
+            ctx.fillRect(Math.round(f.x + Math.cos(a) * (6 + 8 * p)), Math.round(f.y + Math.sin(a) * (6 + 8 * p)), 1, 1);
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case 'quake': {
+          // 대지 가르기: 사방으로 갈라지는 균열
+          ctx.globalAlpha = 1 - p;
+          for (let j = 0; j < 8; j++) {
+            const a = j * 0.785 + f.seed;
+            const L = f.r * Math.min(1, p * 2.5);
+            for (let d = 4; d < L; d += 1.5) {
+              const w = Math.sin(d * 0.7 + j) * 1.5;
+              ctx.fillStyle = d < L * 0.6 ? '#fff6e6' : '#ffb0c0';
+              ctx.fillRect(Math.round(f.x + Math.cos(a) * d - Math.sin(a) * w), Math.round(f.y + Math.sin(a) * d + Math.cos(a) * w), 1, 1);
+            }
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case 'shards': {
+          // 절대 영도: 사방에 솟는 얼음 결정
+          ctx.globalAlpha = 1 - p * 0.8;
+          for (let j = 0; j < 10; j++) {
+            const a = j * 0.628 + f.seed;
+            const d = f.r * (0.35 + 0.6 * ((j * 7) % 10) / 10);
+            const px = Math.round(f.x + Math.cos(a) * d);
+            const py = Math.round(f.y + Math.sin(a) * d);
+            const hgt = Math.round(4 * Math.min(1, p * 4));
+            ctx.fillStyle = '#e8fbff';
+            ctx.fillRect(px, py - hgt, 1, hgt + 1);
+            ctx.fillStyle = '#a8ecff';
+            ctx.fillRect(px - 1, py - 1, 3, 1);
+          }
+          ctx.globalAlpha = 1;
           break;
         }
         case 'meteor': {

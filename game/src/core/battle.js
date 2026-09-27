@@ -702,7 +702,7 @@
           this.damage(e, st.dmg * 3, cls, false);
           if (!e.dead && !e.boss) e.stunT = Math.max(e.stunT, 0.8);
         }
-        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r });
+        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r, cx: c.x, cy: c.y });
         ok = true;
       }
     } else if (cls === 'archer') {
@@ -711,9 +711,9 @@
         for (let k = 0; k < 8 && list.length; k++) {
           const e = list.splice(this.rng.int(list.length), 1)[0];
           this.damage(e, st.dmg * 1.5, cls, false);
-          if (this.fxOn) this.fx.push({ k: 'shot', cls, tier: 4, slot: -1, u: 0, x1: e.x - 6 + this.rng.next() * 12, y1: e.y - 44, x2: e.x, y2: e.y, crit: false });
+          if (this.fxOn) this.fx.push({ k: 'shot', cls, tier: 4, slot: -1, u: 0, x1: e.x - 6 + this.rng.next() * 12, y1: e.y - 44, x2: e.x, y2: e.y, crit: false, rain: true });
         }
-        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: 0 });
+        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: 0, cx: c.x, cy: c.y });
         ok = true;
       }
     } else if (cls === 'mage') {
@@ -730,7 +730,7 @@
           }
         }
         this.splash(best.x, best.y, 28, st.dmg * 5, cls, null, false);
-        this.emit({ k: 'mythic', cls, x: best.x, y: best.y, r: 28 });
+        this.emit({ k: 'mythic', cls, x: best.x, y: best.y, r: 28, cx: c.x, cy: c.y });
         ok = true;
       }
     } else if (cls === 'frost') {
@@ -742,7 +742,7 @@
           if (e.boss) this.applySlow(e, 0.6, 2);
           else e.stunT = Math.max(e.stunT, 1.5);
         }
-        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: st.range });
+        this.emit({ k: 'mythic', cls, x: c.x, y: c.y, r: st.range, cx: c.x, cy: c.y });
         ok = true;
       }
     }
