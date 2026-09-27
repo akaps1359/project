@@ -134,6 +134,11 @@
       dur = 2400;
       t.style.animationDuration = '2.4s';
     }
+    // 긴 설명(보스 기술 첫 안내 등)은 읽을 시간을 더 준다
+    if (text.length > 28) {
+      dur = Math.min(4200, Math.max(dur, text.length * 60));
+      t.style.animationDuration = dur / 1000 + 's';
+    }
     box.appendChild(t);
     setTimeout(() => t.remove(), dur);
   };

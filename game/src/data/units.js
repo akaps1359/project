@@ -157,17 +157,18 @@
       trait: '빠르고 주변 적을 가속. 6초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 1.8초 기절',
     },
     riftHeart: {
-      name: '고대신 옴네크', hp: 30, speed: 12, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 30,
+      name: '고대신 옴네크', hp: 34, speed: 14, gold: 0, leak: 12, boss: true, dpsCap: 0.03, bossTimeAdd: 40,
       skills: [
         { k: 'pulse', name: '광기의 시선', every: 9, warn: 0.9, dur: 2.5, amt: 0.35 },
-        { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6 },
+        { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6, wind: 0 },
         { k: 'spawn', name: '사도 부르기', every: 20, type: 'spireSpear', n: 1, hp: 0.3, first: 10 },
         { k: 'shield', name: '봉인의 장막', every: 18, pct: 0.08, first: 8, seal: 2 },
         { k: 'shuffle', name: '혼돈의 속삭임', every: 13, n: 4, first: 15 },
         { k: 'rift', every: 12, warn: 1.2, stun: 2.5 },
+        { k: 'doze', name: '깊은 잠', every: 17, first: 13, dur: 4.5, heal: 0.01, cap: 1.6 },
       ],
       phase2: { at: 0.5, speed: 1.5, cd: 0.7, shield: 0.06, seal: 1, msg: '고대신이 완전히 눈을 떴다! (빨라지고 기술을 더 자주 쓴다)' },
-      trait: '고대의 몸: 1초에 최대 체력의 3%까지만 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 체력 절반에서 완전히 깨어난다',
+      trait: '고대의 몸: 1초에 최대 체력의 3%까지만 피해를 받는다. 17초마다 4.5초 동안 깊은 잠에 빠져 제자리에 멈추고 초당 1%씩 회복하지만, 그동안은 초당 4.8%까지 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 체력 절반에서 완전히 깨어난다',
     },
     riftLord: {
       name: '균열의 군주', hp: 10.5, speed: 14, gold: 40, leak: 6, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,

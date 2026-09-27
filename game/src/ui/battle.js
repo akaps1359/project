@@ -100,7 +100,9 @@
       const def = id && RS.ENEMY[id];
       if (!def) return;
       const t = RS.BAL.bossTime + (b.M.bossTimeAdd || 0) + (def.bossTimeAdd || 0);
-      UI.tip(e.currentTarget, `${def.name} · 보스`, def.trait || '', `제한 시간 ${t}초 · 지나면 폭주: 속도 ×1.8, 잃는 생명 ×2`);
+      const marks = bossMarks(def);
+      const mk = marks.length ? ` · 체력바 노란 눈금: ${marks.map((m) => `${Math.round(m[0] * 100)}% ${m[1]}`).join(', ')}` : '';
+      UI.tip(e.currentTarget, `${def.name} · 보스`, def.trait || '', `제한 시간 ${t}초 · 지나면 폭주: 속도 ×1.8, 잃는 생명 ×2${mk} · 기술을 쓰기 전에 머리 위 ! 와 이 바 아래에 예고가 떠요`);
     });
     bindField();
     window.addEventListener('resize', () => UI.fitCanvas());
@@ -115,6 +117,15 @@
     const lim = trialLimit(b);
     return lim ? Math.max(0, lim - (b.trialT || 0)) : null;
   }
+  // 체력바 눈금: 이 체력 아래로 떨어지면 무언가 일어난다
+  function bossMarks(def) {
+    const m = [];
+    if (def.phase2) m.push([def.phase2.at, '각성']);
+    if (def.splitAt) for (const a of def.splitAt) m.push([a, '분열']);
+    for (const s of def.skills || []) if (s.k === 'blink') for (const a of s.at) m.push([a, '순간이동']);
+    return m;
+  }
+  UI.bossMarks = bossMarks;
   function bossIdOf(b) {
     const st = b.stage;
     if (st.spec && st.spec.boss) return st.spec.boss;
@@ -161,11 +172,16 @@
     const bossId = bossIdOf(b);
     UI.bossReserved = !!bossId;
     bb.classList.remove('enraged');
+    $('#boss-cast').classList.add('idle');
+    $('#boss-cast b').textContent = bossId ? '특성' : '';
+    $('#boss-cast span').textContent = bossId ? RS.ENEMY[bossId].trait || '' : '';
+    $('#boss-ticks').innerHTML = '';
     if (bossId) {
       bb.hidden = false;
       bb.classList.add('wait');
       $('#boss-name').textContent = RS.ENEMY[bossId].name;
       $('#boss-hp').style.width = '100%';
+      $('#boss-ticks').innerHTML = bossMarks(RS.ENEMY[bossId]).map((m) => `<b style="left:${m[0] * 100}%" title="${m[1]}"></b>`).join('');
       $('#boss-t').textContent = '마지막 웨이브';
     } else {
       bb.hidden = true;
@@ -872,6 +888,10 @@
       }
       setText($('#boss-t'), 'bt', b.enraged ? '폭주!' : blind ? '??' : `${Math.ceil(b.bossTimer)}초`);
       setCls(bb, 'enr', 'enraged', !!b.enraged);
+      const fr = b.boss.hp / b.boss.maxHp;
+      const ticks = $('#boss-ticks').children;
+      for (let j = 0; j < ticks.length; j++) setCls(ticks[j], 'tk' + j, 'done', fr < parseFloat(ticks[j].style.left) / 100);
+      updateCastBar(b, c);
     } else if (!bb.hidden && b.bosses && b.bosses.length) {
       // 보스를 쓰러뜨렸다: 바는 그대로 두어 캔버스 크기가 바뀌지 않게 한다
       setText($('#boss-t'), 'bt', '처치!');
@@ -883,34 +903,132 @@
     }
   }
 
+  // 보스 바 아래 기술 예고: 무엇을·언제 쓰는지 (잠든 동안은 남은 시간)
+  const CAST_TXT = {
+    glue: '표시된 칸이 느려져요',
+    pulse: '모든 유닛이 느려져요',
+    shield: '보호막을 둘러요 · 먼저 깨야 체력이 깎여요',
+    seal: '보호막 + 표시된 유닛 봉인 · 장막을 깨면 풀려요',
+    spawn: '부하를 불러요',
+    rally: '모든 적이 빨라져요',
+    mend: '체력을 회복해요',
+    cross: '붉은 선을 따라 돌진! 지나는 칸 기절',
+    shuffle: '같은 색 칸끼리 유닛 자리가 바뀌어요',
+    plunder: '골드를 빼앗아요 · 지금 써 버리면 안 뺏겨요!',
+    doze: '곧 잠들어요: 멈추고 회복하지만 피해를 더 받아요',
+    rift: '표시된 칸이 기절해요',
+    submerge: '물속에 숨어 공격을 피해요',
+    anchor: '표시된 열이 기절해요',
+  };
+  const CAST_NAME = { rift: '균열', spawn: '소환', glue: '점액' };
+  function updateCastBar(b, c) {
+    const el = $('#boss-cast');
+    const e = b.boss;
+    let cast = null;
+    let k = '';
+    let name = '';
+    let txt = '';
+    let frac = 0;
+    let col = '';
+    if (e.dozeT > 0) {
+      k = 'dozing';
+      name = `깊은 잠 ${e.dozeT.toFixed(1)}`;
+      txt = `멈춰서 회복 중 · 지금은 피해를 ${e.dozeCap || 1}배 받아요!`;
+      frac = e.dozeT / (e.dozeT0 || 1);
+      col = '#9ee06a';
+    } else if ((cast = RS.castOf && RS.castOf(e)) && cast.T > 0) {
+      k = cast.k;
+      name = `${cast.name || CAST_NAME[k] || '기술'} ${Math.max(0, cast.t).toFixed(1)}`;
+      txt = CAST_TXT[k] || '';
+      frac = 1 - cast.t / cast.T;
+      col = RS.CAST_COL[k] || '#ffe46b';
+    }
+    if (!k) {
+      // 쉬는 동안: 다음에 쓸 기술과 남은 시간 (이름 있는 기술만)
+      const sk = e.def.skills;
+      let best = -1;
+      if (sk && e.sk) for (let j = 0; j < sk.length; j++) if (sk[j].name && sk[j].k !== 'blink' && (best < 0 || e.sk[j] < e.sk[best])) best = j;
+      if (best >= 0) {
+        name = '다음';
+        txt = `${sk[best].name} · ${Math.max(0, Math.ceil(e.sk[best]))}초`;
+      } else if (e.def.trait) {
+        name = '특성';
+        txt = e.def.trait;
+      }
+    }
+    setCls(el, 'cidle', 'idle', !k);
+    let plw = false;
+    for (const o of b.bosses) if (!o.dead && o.cast && o.cast.s.k === 'plunder') plw = true;
+    setCls($('#h-gold'), 'plw', 'plunder', plw);
+    setText(el.querySelector('b'), 'cn', name);
+    setText(el.querySelector('span'), 'ct', txt);
+    if (c.ccol !== col) {
+      c.ccol = col;
+      el.style.setProperty('--cc', col);
+    }
+    if (!k) return;
+    const w = (Math.max(0, Math.min(1, frac)) * 100).toFixed(0) + '%';
+    if (c.cw !== w) {
+      c.cw = w;
+      el.querySelector('i').style.width = w;
+    }
+    setCls(el, 'cnow', 'now', k !== 'dozing' && frac > 0.65);
+  }
+
   // 전투 이벤트 → 소리·토스트
   // 보스 기술 이름 옆에 붙는 짧은 설명 (전투마다 기술별로 처음 한 번만 띄운다)
   const SKILL_HINT = {
-    glue: '칸의 공격이 느려져요',
-    cross: '곧 보드를 가로질러 돌진해요! 지나가는 칸의 유닛은 기절',
-    shuffle: '유닛 자리를 뒤섞어요',
-    plunder: '골드를 빼앗아요',
-    pulse: '모든 유닛이 잠깐 느려져요',
-    shield: '보호막을 먼저 깨야 해요',
-    spawn: '부하를 불렀어요',
-    rally: '모든 적이 빨라져요',
-    mend: '체력을 회복해요',
+    glue: '표시된 칸의 공격이 곧 느려져요',
+    cross: '붉은 선을 따라 곧 보드를 가로질러요! 지나가는 칸의 유닛은 기절, 도착한 사도도 잠시 기절',
+    shuffle: '같은 색으로 표시된 칸끼리 곧 유닛 자리가 바뀌어요',
+    plunder: '곧 골드를 빼앗아요. 그 전에 소환·강화로 써 버리면 덜 뺏겨요!',
+    pulse: '곧 모든 유닛이 잠깐 느려져요',
+    shield: '보호막을 두르면 먼저 깨야 체력이 깎여요',
+    seal: '보랏빛으로 조준된 유닛이 곧 봉인돼요(높은 등급일수록 잘 걸림, 신화는 면역). 장막을 깨면 풀려요',
+    spawn: '부하를 불러요',
+    rally: '곧 모든 적이 잠깐 빨라져요',
+    mend: '곧 체력을 회복해요',
+    doze: '곧 잠들어 멈춰 서서 회복해요. 대신 그동안은 피해를 훨씬 많이 받아요. 몰아칠 때!',
+    rift: '표시된 칸이 곧 기절해요',
+    submerge: '곧 물속에 숨어 잠시 공격받지 않아요',
+    anchor: '표시된 열이 곧 기절해요',
   };
   const SKILL_SFX = { glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin', cross: 'charge', shuffle: 'blink', plunder: 'error' };
   UI.onFx = function (ev) {
     switch (ev.k) {
-      case 'bossSkill': {
+      case 'bossSkill':
         RS.sfx(SKILL_SFX[ev.id] || 'boss');
+        break;
+      case 'castStart': {
+        // 기술 예고: 처음 보는 기술이면 무엇이 오는지 한 번 설명한다
         const b = UI.G.battle;
-        if (b && ev.name) {
+        if (ev.t > 0.6 && ev.id !== 'cross') RS.sfx('cast');
+        const nm = ev.name || CAST_NAME[ev.id];
+        const key = ev.seal ? 'seal' : ev.id;
+        if (b && nm && ev.id !== 'spawn') {
           b.skillSeen = b.skillSeen || {};
-          if (!b.skillSeen[ev.name]) {
-            b.skillSeen[ev.name] = true;
-            UI.toast(`${ev.boss} · ${ev.name}: ${SKILL_HINT[ev.id] || ''}`, 'warn');
+          if (!b.skillSeen[nm]) {
+            b.skillSeen[nm] = true;
+            UI.toast(`${ev.boss} · ${nm}: ${SKILL_HINT[key] || CAST_TXT[key] || ''}`, 'warn');
+          }
+        } else if (b && ev.name && ev.id === 'spawn') {
+          b.skillSeen = b.skillSeen || {};
+          if (!b.skillSeen[nm]) {
+            b.skillSeen[nm] = true;
+            UI.toast(`${ev.boss} · ${nm}: ${SKILL_HINT.spawn}`, 'warn');
           }
         }
         break;
       }
+      case 'doze':
+        RS.sfx('doze');
+        break;
+      case 'wake':
+        RS.sfx('heartbeat');
+        break;
+      case 'capHit':
+        UI.toast('고대의 몸: 1초에 최대 체력의 3%까지만 피해가 들어가요. 잠들었을 때 몰아치세요!', 'warn');
+        break;
       case 'shieldBreak':
         RS.sfx('shieldBreak');
         if (ev.boss) UI.toast('보호막을 깼다!', 'good');

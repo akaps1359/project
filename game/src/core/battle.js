@@ -342,7 +342,8 @@
         e.capT += dt;
         if (e.capT >= 0.5) {
           e.capT -= 0.5;
-          e.capLeft = e.maxHp * e.def.dpsCap * 0.5;
+          e.capLeft = e.maxHp * e.def.dpsCap * 0.5 * (e.dozeT > 0 ? e.dozeCap || 1 : 1);
+          e.capped = false;
         }
       }
       if (e.burnT > 0) {
@@ -371,6 +372,21 @@
       // 보드를 가로지르는 중(또는 준비 중)이면 길을 따라 걷지 않는다
       if (e.crossWarn || e.cross) {
         this.updateCross(e, dt);
+        continue;
+      }
+      if (e.castInfo) {
+        e.castInfo.t -= dt;
+        if (e.castInfo.t <= 0) e.castInfo = null;
+      }
+      // 잠든 고대신: 제자리에 멈춰 체력을 조금씩 회복한다 (대신 받는 피해 한도가 커진다)
+      if (e.dozeT > 0) {
+        e.dozeT -= dt;
+        e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.dozeHeal * dt);
+        if (e.dozeT <= 0) {
+          e.dozeT = 0;
+          this.emit({ k: 'wake', x: e.x, y: e.y });
+        }
+        RS.pathPos(e.d, e);
         continue;
       }
       if (e.subT > 0) e.subT -= dt;
@@ -405,8 +421,13 @@
     // 늪의 여왕: 물속에 잠기면 공격받지 않는다
     if (def.submerge) {
       e.subTimer = (e.subTimer || 0) + dt;
+      if (!e.subWarned && e.subTimer >= def.submerge.every - 1.2) {
+        e.subWarned = true;
+        this.warnCast(e, 'submerge', '잠수', 1.2);
+      }
       if (e.subTimer >= def.submerge.every) {
         e.subTimer = 0;
+        e.subWarned = false;
         e.subT = def.submerge.dur;
         // 물속에서 상처를 조금 회복한다
         if (def.submerge.heal) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * def.submerge.heal);
@@ -422,6 +443,7 @@
         const cells = [];
         for (let r = 0; r < F.ROWS; r++) cells.push(r * F.COLS + c);
         this.riftWarn.push({ cells, t: def.anchor.warn, total: def.anchor.warn, stun: def.anchor.stun });
+        this.warnCast(e, 'anchor', '닻 던지기', def.anchor.warn);
       }
     }
     if (def.heal && e.timer >= def.heal.every) {
@@ -463,23 +485,89 @@
   };
 
   // ── 보스 기술 (def.skills): 기술마다 따로 대기 시간을 센다. 2단계(phase2)에서는 더 자주 쓴다 ──
+  // 기술 준비 시간(초). 이 동안 보스 머리 위의 ! 표시·보스 바·대상 표시로 무엇이 올지 미리 보여 준다.
+  // 0이면 기술 자체의 경고(칸 표시·돌진 선)가 준비 시간 역할을 한다
+  const WIND = { shield: 1.6, shuffle: 1.8, plunder: 2.4, rally: 1.4, mend: 1.6, spawn: 1.2, doze: 1.3 };
+  RS.SKILL_WIND = WIND;
   P.bossSkills = function (e, def, dt) {
     const st = e.sk || (e.sk = def.skills.map((s, k) => (s.first != null ? s.first : s.every * (0.55 + 0.1 * k))));
+    // 잠든 동안에는 기술도 멈춘다
+    if (e.dozeT > 0) return;
+    for (const s of def.skills) if (s.k === 'blink') this.skillBlink(e, s);
+    // 준비 중인 기술이 있으면 그것부터 마친다 (한 번에 기술 하나)
+    if (e.cast) {
+      e.cast.t -= dt;
+      if (e.cast.t > 0) return;
+      const c = e.cast;
+      e.cast = null;
+      this.castBossSkill(e, c.s, c.pre);
+      return;
+    }
     const cdMul = e.p2 && def.phase2 ? def.phase2.cd || 1 : 1;
     for (let k = 0; k < def.skills.length; k++) {
       const s = def.skills[k];
-      if (s.k === 'blink') {
-        this.skillBlink(e, s);
-        continue;
-      }
+      if (s.k === 'blink') continue;
       st[k] -= dt;
       if (st[k] > 0) continue;
       st[k] = s.every * cdMul;
       // 지금은 쓸 수 없는 자리(돌진할 수 없는 모서리 등)면 잠시 뒤 다시 시도
-      if (this.castBossSkill(e, s) === false) st[k] = 0.4;
+      if (this.beginSkill(e, s) === false) st[k] = 0.4;
+      else if (e.cast) break;
     }
   };
-  P.castBossSkill = function (e, s) {
+  // 경고만 띄우는 오래된 기믹(잠수·닻)용
+  P.warnCast = function (e, id, name, t) {
+    e.castInfo = { k: id, name, t, T: t };
+    this.emit({ k: 'castStart', id, name, boss: e.def.name, x: e.x, y: e.y, t, main: e === this.boss });
+  };
+  P.beginSkill = function (e, s) {
+    const w = s.wind != null ? s.wind : WIND[s.k] || 0;
+    let pre = null;
+    if (w > 0) {
+      pre = this.prepSkill(e, s);
+      if (pre === false) return false;
+      e.cast = { s, t: w, T: w, pre };
+    } else {
+      if (this.castBossSkill(e, s) === false) return false;
+      if (s.warn) e.castInfo = { k: s.k, name: s.name, t: s.warn, T: s.warn };
+    }
+    this.emit({ k: 'castStart', id: s.k, name: s.name, boss: e.def.name, x: e.x, y: e.y, t: w || s.warn || 0, seal: pre && pre.seal ? pre.seal.length : 0, main: e === this.boss });
+    return true;
+  };
+  // 준비를 시작할 때 대상을 미리 정해 둔다 (봉인할 유닛, 자리를 바꿀 칸)
+  P.prepSkill = function (e, s) {
+    const pre = {};
+    switch (s.k) {
+      case 'shuffle': {
+        const board = this.run.board;
+        const used = {};
+        const occ = [];
+        for (let i = 0; i < F.SIZE; i++) if (board[i]) occ.push(i);
+        if (occ.length < 2) return false;
+        pre.pairs = [];
+        for (let k = 0; k < s.n && occ.length; k++) {
+          const a = occ.splice(this.rng.int(occ.length), 1)[0];
+          if (used[a]) continue;
+          const free = [];
+          for (let i = 0; i < F.SIZE; i++) if (i !== a && !used[i]) free.push(i);
+          if (!free.length) break;
+          const b2 = free[this.rng.int(free.length)];
+          used[a] = used[b2] = 1;
+          pre.pairs.push([a, b2]);
+        }
+        if (!pre.pairs.length) return false;
+        break;
+      }
+      case 'shield':
+        if (s.seal) pre.seal = this.pickSeal(s.seal + (e.p2 && e.def.phase2 && e.def.phase2.seal ? e.def.phase2.seal : 0));
+        break;
+      case 'mend':
+        if (!(e.hp < e.maxHp * (s.below || 1))) return false;
+        break;
+    }
+    return pre;
+  };
+  P.castBossSkill = function (e, s, pre) {
     const said = (id) => this.emit({ k: 'bossSkill', id, x: e.x, y: e.y, name: s.name, boss: e.def.name });
     switch (s.k) {
       case 'glue': {
@@ -505,7 +593,7 @@
         e.shield = Math.max(e.shield || 0, e.maxHp * s.pct);
         e.shieldMax = Math.max(e.shieldMax || 0, e.maxHp * s.pct);
         said('shield');
-        if (s.seal) this.sealUnits(e, s.seal + (e.p2 && e.def.phase2 && e.def.phase2.seal ? e.def.phase2.seal : 0));
+        if (s.seal) this.sealUnits(e, pre && pre.seal ? pre.seal : this.pickSeal(s.seal));
         break;
       case 'cross': {
         // 보드를 가로질러 돌진: 위쪽 길이면 아래쪽 길로, 오른쪽 길이면 왼쪽 길로 (늘 앞으로 건너뛴다)
@@ -533,15 +621,9 @@
         return true;
       }
       case 'shuffle': {
-        // 유닛 몇 기의 자리를 뒤섞는다 (빈칸으로 옮겨질 수도 있다)
-        const occ = [];
-        for (let i = 0; i < F.SIZE; i++) if (this.run.board[i]) occ.push(i);
-        if (occ.length < 2) return false;
+        // 표시해 둔 칸끼리 유닛 자리를 바꾼다 (빈칸으로 옮겨질 수도 있다)
         const moved = [];
-        for (let k = 0; k < s.n && occ.length; k++) {
-          const a = occ.splice(this.rng.int(occ.length), 1)[0];
-          let b2 = this.rng.int(F.SIZE);
-          if (b2 === a) b2 = (b2 + 1 + this.rng.int(F.SIZE - 1)) % F.SIZE;
+        for (const [a, b2] of pre.pairs) {
           this.swap(a, b2);
           moved.push(a, b2);
         }
@@ -551,7 +633,10 @@
       }
       case 'plunder': {
         const g = Math.min(s.max, Math.floor(this.run.gold * s.pct));
-        if (g <= 0) return false;
+        if (g <= 0) {
+          this.emit({ k: 'msg', text: '빼앗을 골드가 없다! 약탈을 피했다' });
+          break;
+        }
         this.run.gold -= g;
         this.emit({ k: 'plunder', g, x: e.x, y: e.y });
         said('plunder');
@@ -578,6 +663,16 @@
         }
         this.emit({ k: 'haste', x: e.x, y: e.y, r: 60 });
         said('rally');
+        break;
+      case 'doze':
+        // 깊은 잠: 제자리에 멈춰 회복하지만, 그동안 받는 피해 한도가 커진다
+        e.dozeT = s.dur;
+        e.dozeT0 = s.dur;
+        e.dozeHeal = s.heal;
+        e.dozeCap = s.cap;
+        e.capLeft = Math.max(e.capLeft, e.maxHp * e.def.dpsCap * 0.5 * s.cap);
+        this.emit({ k: 'doze', x: e.x, y: e.y, dur: s.dur });
+        said('doze');
         break;
       case 'mend':
         if (e.hp < e.maxHp * (s.below || 1)) {
@@ -636,31 +731,45 @@
   };
 
   // 봉인: 높은 등급일수록 잘 걸린다 (신화는 봉인되지 않는다). 칸이 아니라 유닛에 붙어서 자리를 옮겨도 따라간다
-  P.sealUnits = function (e, n) {
+  P.pickSeal = function (n) {
     const board = this.run.board;
     const cands = [];
     for (let i = 0; i < F.SIZE; i++) {
       const u = board[i];
-      if (u && !u.sealed && u.tier < RS.TOP_TIER) cands.push(i);
+      if (u && !u.sealed && u.tier < RS.TOP_TIER) cands.push(u);
     }
-    const slots = [];
+    const out = [];
+    const w = (u) => Math.pow(u.tier + 1, 2) * u.n;
     for (let k = 0; k < n && cands.length; k++) {
       let tot = 0;
-      for (const i of cands) tot += Math.pow(board[i].tier + 1, 2) * board[i].n;
+      for (const u of cands) tot += w(u);
       let r = this.rng.next() * tot;
-      let pickIdx = 0;
+      let pickIdx = cands.length - 1;
       for (let j = 0; j < cands.length; j++) {
-        r -= Math.pow(board[cands[j]].tier + 1, 2) * board[cands[j]].n;
+        r -= w(cands[j]);
         if (r <= 0) {
           pickIdx = j;
           break;
         }
       }
-      const i = cands.splice(pickIdx, 1)[0];
-      board[i].sealed = true;
+      out.push(cands.splice(pickIdx, 1)[0]);
+    }
+    return out;
+  };
+  // 표시해 둔 유닛을 봉인한다. 그사이 합성으로 신화가 됐거나 사라진 유닛은 빠져나간다
+  P.sealUnits = function (e, units) {
+    const board = this.run.board;
+    const slots = [];
+    for (const u of units) {
+      const i = board.indexOf(u);
+      if (i < 0 || u.sealed || u.tier >= RS.TOP_TIER) continue;
+      u.sealed = true;
       slots.push(i);
     }
-    if (!slots.length) return;
+    if (!slots.length) {
+      if (units.length) this.emit({ k: 'msg', text: '봉인이 빗나갔다! 표시된 유닛이 빠져나갔다' });
+      return;
+    }
     this.sealT = 30;
     this.statsDirty = true;
     this.emit({ k: 'seal', slots, boss: e.def.name });
@@ -1088,6 +1197,13 @@
     if (e.burning === 'armor') dm *= 0.75;
     // 고대신 옴네크: 0.5초마다 받을 수 있는 피해에 한도가 있다
     if (def.dpsCap) {
+      if (dm > e.capLeft && !e.capped) {
+        e.capped = true;
+        if (!this.capSeen) {
+          this.capSeen = true;
+          this.emit({ k: 'capHit', x: e.x, y: e.y });
+        }
+      }
       dm = Math.min(dm, e.capLeft);
       e.capLeft -= dm;
     }

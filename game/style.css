@@ -270,6 +270,21 @@ img { max-width: 100%; }
 #bossbar #boss-sh { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: #a8ecff; opacity: 0.9; }
 #bossbar .bar i { display: block; height: 100%; background: var(--red); width: 100%; }
 #bossbar.enraged { animation: warn 0.4s steps(2) infinite; }
+/* 체력바 눈금: 각성·분열·순간이동이 일어나는 체력 */
+#boss-ticks { position: absolute; inset: 0; pointer-events: none; }
+#boss-ticks b { position: absolute; top: -2px; bottom: -2px; width: 1px; background: #ffe46b; box-shadow: 0 0 0 1px rgba(21,17,29,0.8); }
+#boss-ticks b.done { background: #6b5a7a; }
+/* 보스 기술 예고: 보스 바의 두 번째 줄 (보스전 내내 자리를 잡아 두어 캔버스 크기가 바뀌지 않는다) */
+#bossbar { flex-wrap: wrap; row-gap: 1px; }
+#boss-cast { position: relative; flex-basis: 100%; min-height: 15px; padding: 0 0 2px; font-size: 11px; display: flex; gap: 6px; align-items: baseline; pointer-events: none; overflow: hidden; }
+#boss-cast b { color: var(--cc, #ffe46b); white-space: nowrap; }
+#boss-cast span { color: var(--text, #fff6e6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#boss-cast i { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--cc, #ffe46b); }
+#boss-cast.idle b, #boss-cast.idle span { color: var(--dim); }
+#boss-cast.idle i { display: none; }
+#boss-cast.now { animation: warn 0.3s steps(2) infinite; }
+.hud .stat.plunder { animation: warn 0.3s steps(2) infinite; }
+.hud .stat.plunder b { color: #f5c44a; }
 #boss-name { color: var(--pink); white-space: nowrap; }
 #boss-t { font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; white-space: nowrap; }
 #dock { position: relative; margin: 6px 8px 0; }
@@ -606,7 +621,7 @@ img { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .maplines .ln.open { animation: none; }
-  .bob, .node.avail, .hud .stat.danger, #bossbar.enraged, #controls .btn.pulse, #h-life.hit { animation: none; }
+  .bob, .node.avail, .hud .stat.danger, #bossbar.enraged, #controls .btn.pulse, #h-life.hit, #boss-cast.now, .hud .stat.plunder { animation: none; }
 }
 
 /* 강화된 칸(룬) 표시 */

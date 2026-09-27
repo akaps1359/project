@@ -602,6 +602,30 @@
     '........................',
   ]);
 
+  // 잠든 고대신: 눈꺼풀이 내려와 감긴 눈
+  def('riftHeart_z', [
+    '........................',
+    '........PPPPPPPP........',
+    '......PPkkkkkkkkPP......',
+    '.....PkkkkkkkkkkkkP.....',
+    '....PkkkkkkkkkkkkkkP....',
+    '....PkkkkkkkkkkkkkkP....',
+    '...PkkkkkkkkkkkkkkkkP...',
+    '...PkkKKKKKKKKKKKKkkP...',
+    '...PkkkKPkPkkPkPKkkkP...',
+    '...PkkkkkkkkkkkkkkkkP...',
+    '....PkkkkkkkkkkkkkkP....',
+    '....PkkkkkkkkkkkkkkP....',
+    '.....PkkkkkkkkkkkkP.....',
+    '......PPkkkkkkkkPP......',
+    '.....nN.PkkPPkkP.Nn.....',
+    '....nN..nPkkkkPn..Nn....',
+    '...nN..nN.nkkn.Nn..Nn...',
+    '...N..nN..nN.Nn.Nn..N...',
+    '......N...N...N...N.....',
+    '........................',
+  ]);
+
   // 새 아이콘 (유물·증강·열쇠)
   I('anchor', ['...mm....', '..m..m...', '...mm....', 'mmmmmmmm.', '...mm....', 'm..mm..m.', 'mm.mm.mm.', '.mmmmmm..']);
   I('pack', ['..bbbb..', '.b....b.', 'bbbbbbbb', 'bBbggbBb', 'bbbggbbb', 'bbbbbbbb', 'bBBBBBBb', '.bbbbbb.']);

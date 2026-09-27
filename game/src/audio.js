@@ -157,6 +157,8 @@
     blink: () => { tone(1200, 0.12, 'sine', 0.1, 300); tone(300, 0.14, 'sine', 0.08, 1200, 0.1); },
     charge: () => { tone(90, 0.5, 'sawtooth', 0.12, 180); noise(0.4, 0.08, 'lowpass', 400, 1500); },
     seal: () => { tone(110, 0.4, 'square', 0.1, 70); tone(165, 0.4, 'triangle', 0.1, 104, 0.05); tone(233, 0.5, 'sine', 0.08, 147, 0.1); },
+    cast: () => { tone(880, 0.06, 'square', 0.07); tone(880, 0.06, 'square', 0.07, null, 0.12); },
+    doze: () => { tone(330, 0.3, 'sine', 0.1, 220); tone(247, 0.4, 'sine', 0.08, 165, 0.2); },
     unseal: () => { [523, 784, 1047, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.1, null, i * 0.05)); },
   };
   const GAP = { kill: 0.06, leak: 0.12, coin: 0.05, summon: 0.04 };

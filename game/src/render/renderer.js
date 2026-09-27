@@ -605,6 +605,19 @@
             this.fxs.push({ k: 'flash', t: 0.18, max: 0.18, col: '#a061e8' });
           }
           break;
+        case 'castStart': {
+          // 기술 준비: 보스 둘레에 기술 색의 고리가 조여든다
+          const col = CAST_COL[ev.seal ? 'seal' : ev.id] || '#ffe46b';
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 20, t: 0.35, max: 0.35, col, glow: true });
+          break;
+        }
+        case 'doze':
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 22, t: 0.6, max: 0.6, col: '#d7e6ff', glow: true });
+          break;
+        case 'wake':
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 26, t: 0.45, max: 0.45, col: '#e05ad0', glow: true });
+          this.shake = Math.max(this.shake, 0.15);
+          break;
         case 'crossWarn':
           // 돌진 경고: 가로지를 길에 붉은 화살표
           this.fxs.push({ k: 'crossLine', x1: ev.x1, y1: ev.y1, x2: ev.x2, y2: ev.y2, t: ev.t + 0.2, max: ev.t + 0.2 });
@@ -759,6 +772,7 @@
       this.drawRift(ctx, b);
       this.drawSlots(ctx, b, dt);
       this.drawEnemies(ctx, b, dt);
+      this.drawCasts(ctx, b, dt);
     }
     this.drawShots(ctx, dt);
     this.drawFx(ctx, dt);
@@ -1224,6 +1238,208 @@
     return pose;
   };
 
+  // ── 보스 기술 예고 ──
+  // 머리 위 ! 와 준비 막대, 그리고 기술마다 대상을 미리 보여 준다 (봉인될 유닛, 자리가 바뀔 칸 등)
+  const CAST_COL = {
+    seal: '#c58cf0', shield: '#a8ecff', shuffle: '#6be0d0', plunder: '#f5c44a', rally: '#ef6166', mend: '#9ee06a',
+    spawn: '#c58cf0', doze: '#d7e6ff', pulse: '#e05ad0', glue: '#9ee06a', cross: '#ef6166', rift: '#a061e8',
+    submerge: '#a8ecff', anchor: '#d8cbb0',
+  };
+  RS.CAST_COL = CAST_COL;
+  const PAIR_COL = ['#6be0d0', '#f5c44a', '#ef8fd0', '#9ee06a', '#a8ecff'];
+  // 칸 네 귀퉁이에 꺾쇠 (in: 안쪽으로 들어온 정도)
+  function brackets(ctx, i, col, inset) {
+    const x = F.GX + (i % F.COLS) * F.SLOT + inset;
+    const y = F.GY + Math.floor(i / F.COLS) * F.SLOT + inset;
+    const s = F.SLOT - inset * 2;
+    const L = 5;
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, L, 1);
+    ctx.fillRect(x, y, 1, L);
+    ctx.fillRect(x + s - L, y, L, 1);
+    ctx.fillRect(x + s - 1, y, 1, L);
+    ctx.fillRect(x, y + s - 1, L, 1);
+    ctx.fillRect(x, y + s - L, 1, L);
+    ctx.fillRect(x + s - L, y + s - 1, L, 1);
+    ctx.fillRect(x + s - 1, y + s - L, 1, L);
+  }
+  function zGlyph(ctx, x, y, col, a) {
+    ctx.globalAlpha = a;
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, 4, 1);
+    ctx.fillRect(x + 2, y + 1, 1, 1);
+    ctx.fillRect(x + 1, y + 2, 1, 1);
+    ctx.fillRect(x, y + 3, 4, 1);
+    ctx.globalAlpha = 1;
+  }
+  RS.castOf = function (e) {
+    if (e.cast) return { k: e.cast.s.k === 'shield' && e.cast.pre && e.cast.pre.seal && e.cast.pre.seal.length ? 'seal' : e.cast.s.k, name: e.cast.s.name, t: e.cast.t, T: e.cast.T, pre: e.cast.pre };
+    return e.castInfo;
+  };
+  P.drawCasts = function (ctx, b, dt) {
+    const t = this.t;
+    const board = b.run.board;
+    for (const e of b.enemies) {
+      if (e.dead || e.subT > 0) continue;
+      const top = e._top != null ? e._top : e.y - 10;
+      // 잠든 고대신: Z가 피어오르고 남은 잠 시간 막대
+      if (e.dozeT > 0) {
+        for (let j = 0; j < 3; j++) {
+          const q = (t * 0.7 + j / 3) % 1;
+          const zx = e.x > F.W - 30 ? e.x - 12 - q * 6 - j : e.x + 6 + q * 6 + j;
+          zGlyph(ctx, zx, Math.max(1, top - 2 - q * 12), '#d7e6ff', 1 - q);
+        }
+        const k = e.dozeT / (e.dozeT0 || 1);
+        const by = Math.max(1, top - 5);
+        ctx.fillStyle = '#15111d';
+        ctx.fillRect(e.x - 8, by, 16, 3);
+        ctx.fillStyle = '#9ee06a';
+        ctx.fillRect(e.x - 7, by + 1, 14 * k, 1);
+        ctx.glow(e.x, top + 8, 16, '#9ee06a', 0.12 + 0.05 * Math.sin(t * 3));
+        if (dt > 0 && Math.random() < dt * 8) this.emit(e.x + rnd(-8, 8), e.y - 2, 1, { sp: [4, 10], ang: -Math.PI / 2, spread: 0.4, life: [0.5, 0.8], cols: ['#9ee06a', '#d7e6ff'], glow: 2 });
+      }
+      // 피해 한도에 걸렸다: 몸 둘레에 회색 결이 번쩍인다
+      if (e.capped && e.def.dpsCap) {
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 20);
+        ctx.fillStyle = '#d8d0e8';
+        const r = 13;
+        for (let j = 0; j < 12; j++) {
+          if ((j + Math.floor(t * 10)) % 2) continue;
+          const a2 = (j / 12) * Math.PI * 2 + t;
+          ctx.fillRect(e.x + Math.cos(a2) * r, e.y - 6 + Math.sin(a2) * r * 0.8, 1, 1);
+        }
+        ctx.globalAlpha = 1;
+      }
+      const c = RS.castOf(e);
+      if (!c || !(c.T > 0)) continue;
+      const col = CAST_COL[c.k] || '#ffe46b';
+      const p = Math.max(0, Math.min(1, 1 - c.t / c.T));
+      const blink = Math.floor(t * (6 + p * 10)) % 2 === 0;
+      // 머리 위 ! (끝나갈수록 빨리 깜빡인다)
+      // 위쪽 길에서는 머리 위가 화면 밖이라 옆에 띄운다
+      let gx = Math.round(e.x);
+      let gy = Math.round(top - 13);
+      if (gy < 2) {
+        gx = Math.round(e.x > F.W - 30 ? e.x - 18 : e.x + 18);
+        gy = Math.round(e.y - 8);
+      }
+      ctx.fillStyle = '#15111d';
+      ctx.fillRect(gx - 3, gy - 1, 7, 11);
+      ctx.fillStyle = blink ? '#ffffff' : col;
+      ctx.fillRect(gx, gy + 1, 1, 5);
+      ctx.fillRect(gx, gy + 7, 1, 1);
+      ctx.fillStyle = col;
+      ctx.fillRect(gx - 2, gy, 5, 1);
+      ctx.fillRect(gx - 2, gy + 9, 5, 1);
+      ctx.fillRect(gx - 3, gy, 1, 10);
+      ctx.fillRect(gx + 3, gy, 1, 10);
+      // 준비 막대
+      ctx.fillStyle = '#15111d';
+      ctx.fillRect(gx - 7, gy + 11, 15, 3);
+      ctx.fillStyle = col;
+      ctx.fillRect(gx - 6, gy + 12, 13 * p, 1);
+      ctx.glow(gx, gy + 4, 7, col, 0.3 + 0.2 * (blink ? 1 : 0));
+      const pre = c.pre;
+      switch (c.k) {
+        case 'seal':
+          // 봉인될 유닛: 보랏빛 조준 꺾쇠가 좁혀 들어오고 자물쇠가 깜빡인다
+          for (const u of pre.seal) {
+            const i = board.indexOf(u);
+            if (i < 0 || u.tier >= RS.TOP_TIER) continue;
+            const ins = 1 + Math.round((1 - p) * 4);
+            brackets(ctx, i, blink ? '#ffffff' : '#e0b0ff', ins);
+            brackets(ctx, i, '#a061e8', ins + 1);
+            const cc = RS.slotCenter(i);
+            ctx.globalAlpha = 0.25 + 0.2 * p;
+            ctx.fillStyle = '#5e3593';
+            ctx.fillRect(cc.x - F.SLOT / 2 + 2, cc.y - F.SLOT / 2 + 2, F.SLOT - 4, F.SLOT - 4);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = col;
+            ctx.fillRect(cc.x + 6, cc.y - 10, 4, 3);
+            ctx.fillRect(cc.x + 7, cc.y - 12, 2, 2);
+            ctx.glow(cc.x, cc.y, 10, '#a061e8', 0.2 + 0.25 * p);
+            // 보스에서 대상까지 가는 사슬
+            const n = 10;
+            for (let j = 1; j < n; j++) {
+              if ((j + Math.floor(t * 12)) % 3 === 0) continue;
+              const q = j / n;
+              ctx.fillStyle = '#a061e8';
+              ctx.fillRect(e.x + (cc.x - e.x) * q, e.y - 6 + (cc.y - e.y + 6) * q, 1, 1);
+            }
+          }
+          break;
+        case 'shuffle':
+          // 자리가 바뀔 두 칸: 짝마다 색이 다른 꺾쇠와 점선
+          pre.pairs.forEach(([a, b2], j) => {
+            const pc = PAIR_COL[j % PAIR_COL.length];
+            brackets(ctx, a, blink ? '#ffffff' : pc, 2);
+            brackets(ctx, b2, blink ? '#ffffff' : pc, 2);
+            const ca = RS.slotCenter(a);
+            const cb = RS.slotCenter(b2);
+            const len = Math.hypot(cb.x - ca.x, cb.y - ca.y);
+            const n = Math.max(3, Math.round(len / 3));
+            ctx.fillStyle = pc;
+            for (let k = 0; k <= n; k++) {
+              if ((k + Math.floor(t * 10)) % 3 === 0) continue;
+              const q = k / n;
+              ctx.fillRect(ca.x + (cb.x - ca.x) * q, ca.y + (cb.y - ca.y) * q, 1, 1);
+            }
+          });
+          break;
+        case 'plunder':
+          // 금화가 보스 둘레를 돈다
+          for (let j = 0; j < 4; j++) {
+            const a2 = t * 4 + (j * Math.PI) / 2;
+            const x = e.x + Math.cos(a2) * 11;
+            const y = e.y - 8 + Math.sin(a2) * 6;
+            ctx.fillStyle = '#f5c44a';
+            ctx.fillRect(x - 1, y - 1, 3, 3);
+            ctx.fillStyle = '#ffe46b';
+            ctx.fillRect(x - 1, y - 1, 1, 1);
+          }
+          ctx.glow(e.x, e.y - 8, 14, '#f5c44a', 0.2 + 0.2 * p);
+          break;
+        case 'rally':
+        case 'pulse': {
+          const r = 6 + 22 * ((t * 1.6) % 1);
+          const n = Math.round(r * 2);
+          ctx.globalAlpha = 0.7 * (1 - ((t * 1.6) % 1));
+          ctx.fillStyle = col;
+          for (let j = 0; j < n; j++) {
+            const a2 = (j / n) * Math.PI * 2;
+            ctx.fillRect(e.x + Math.cos(a2) * r, e.y - 6 + Math.sin(a2) * r * 0.85, 1, 1);
+          }
+          ctx.globalAlpha = 1;
+          if (c.k === 'pulse') ctx.glow(e.x, e.y - 8, 10 + 8 * p, '#e05ad0', 0.3 + 0.3 * p);
+          break;
+        }
+        case 'mend':
+        case 'shield':
+        case 'spawn':
+        case 'doze': {
+          // 힘을 모은다: 점이 둘레에서 몸으로 모여든다
+          const r = 4 + 16 * (1 - ((t * 1.3) % 1));
+          ctx.fillStyle = col;
+          for (let j = 0; j < 8; j++) {
+            const a2 = (j / 8) * Math.PI * 2 + t * 2;
+            ctx.fillRect(e.x + Math.cos(a2) * r, e.y - 6 + Math.sin(a2) * r * 0.85, 1, 1);
+          }
+          if (c.k === 'spawn') {
+            // 뒤쪽 길에 소환진
+            ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 8);
+            for (let j = 0; j < 14; j++) {
+              const a2 = (j / 14) * Math.PI * 2 + t;
+              ctx.fillRect(e.x + Math.cos(a2) * 8, e.y + 4 + Math.sin(a2) * 3, 1, 1);
+            }
+            ctx.globalAlpha = 1;
+          }
+          if (c.k === 'doze') for (let j = 0; j < 2; j++) zGlyph(ctx, e.x + 6 + j * 4, top - 4 - j * 4, '#d7e6ff', 0.5 + 0.5 * p);
+          break;
+        }
+      }
+    }
+  };
+
   P.drawEnemies = function (ctx, b, dt) {
     const list = this.sorted || (this.sorted = []);
     list.length = 0;
@@ -1253,6 +1469,7 @@
         name = 'frog2'; // 뛰기 직전·직후 웅크린 모습
         if (e.hopT < 0.25) pose.oy -= Math.sin((e.hopT / 0.25) * Math.PI) * 3;
       }
+      if (e.dozeT > 0 && RS.SPR[name + '_z']) name += '_z';
       const spr = RS.SPR[name];
       const w = spr.width;
       const h = spr.height;
