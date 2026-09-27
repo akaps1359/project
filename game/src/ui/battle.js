@@ -867,6 +867,9 @@
       case 'msg':
         UI.toast(ev.text, ev.warn ? 'warn' : '');
         break;
+      case 'shot':
+        if (RS.sfxAttack) RS.sfxAttack(ev.cls, ev.crit);
+        break;
       case 'kill':
         RS.sfx(ev.big ? 'big' : 'kill');
         break;

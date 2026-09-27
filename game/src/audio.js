@@ -94,6 +94,43 @@
     o.stop(t0 + dur + 0.02);
   }
 
+  // 짧은 잡음 (칼바람·폭발). 버퍼는 한 번 만들어 재사용한다
+  let noiseBuf = null;
+  function noise(dur, vol, filter, freq, freqTo, delay, q) {
+    const t0 = ctx.currentTime + (delay || 0);
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter();
+    f.type = filter || 'bandpass';
+    f.Q.value = q || 1.2;
+    f.frequency.setValueAtTime(freq, t0);
+    if (freqTo) f.frequency.exponentialRampToValueAtTime(freqTo, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(f);
+    f.connect(g);
+    g.connect(master);
+    src.start(t0, Math.random() * 0.3);
+    src.stop(t0 + dur + 0.02);
+  }
+
+  // 공격음: 클래스마다 다른 소리, 음높이를 조금씩 흔들어 반복이 덜 거슬리게
+  const jit = () => 0.93 + Math.random() * 0.14;
+  const ATK = {
+    knight: (j) => { noise(0.09, 0.16, 'bandpass', 2200 * j, 700, 0, 0.9); tone(150 * j, 0.06, 'square', 0.05, 90, 0.03); },
+    archer: (j) => { tone(1500 * j, 0.05, 'triangle', 0.07, 700); noise(0.04, 0.06, 'highpass', 4000, null, 0.01); },
+    mage: (j) => { tone(260 * j, 0.14, 'sine', 0.13, 70); noise(0.16, 0.1, 'lowpass', 1400, 200, 0.02, 0.7); },
+    rogue: (j) => { noise(0.035, 0.12, 'highpass', 3200 * j, null, 0, 0.8); tone(900 * j, 0.03, 'square', 0.04, 1300, 0.02); },
+    frost: (j) => { tone(1900 * j, 0.1, 'triangle', 0.06, 1200); tone(2850 * j, 0.07, 'sine', 0.04, null, 0.03); },
+  };
+  const crit = () => { tone(1760, 0.05, 'square', 0.05); tone(2350, 0.08, 'square', 0.04, null, 0.04); };
+
   const SFX = {
     click: () => tone(660, 0.05, 'square', 0.08),
     summon: () => { tone(520, 0.07, 'square', 0.1, 780); tone(780, 0.08, 'square', 0.08, 1040, 0.06); },
@@ -125,6 +162,27 @@
       /* 소리는 실패해도 게임은 계속 */
     }
   }
+
+  // 전투 공격음. 한꺼번에 쏟아지면 시끄러우니 클래스별·전체 간격을 둔다
+  const atkLast = {};
+  let atkAny = 0;
+  let critLast = 0;
+  RS.sfxAttack = function (cls, isCrit) {
+    if (muted || !ctx || ctx.state !== 'running' || !ATK[cls]) return;
+    const now = ctx.currentTime;
+    if (isCrit && now - critLast > 0.18) {
+      critLast = now;
+      try { crit(); } catch (e) { /* 무시 */ }
+    }
+    if (now - atkAny < 0.05 || (atkLast[cls] && now - atkLast[cls] < 0.11)) return;
+    atkAny = now;
+    atkLast[cls] = now;
+    try {
+      ATK[cls](jit());
+    } catch (e) {
+      /* 소리는 실패해도 게임은 계속 */
+    }
+  };
 
   RS.sfx = function (name) {
     if (muted) return;

@@ -50,7 +50,8 @@ body {
   background:
     radial-gradient(120% 60% at 50% 0%, #2a1f3f 0%, rgba(21, 17, 29, 0) 70%),
     var(--bg);
-  touch-action: none;
+  /* none 이면 iOS 사파리에서 안쪽 스크롤 영역까지 막힌다. 전장 캔버스는 따로 none */
+  touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -435,7 +436,7 @@ img { max-width: 100%; }
 .dmgrow .bar { height: 10px; background: var(--bg2); box-shadow: 0 0 0 1px var(--line); }
 .dmgrow .bar i { display: block; height: 100%; background: var(--gold); }
 .dmgrow b { font-weight: normal; text-align: right; font-variant-numeric: tabular-nums; }
-.end .row2 { margin-top: 20px; }
+.end-foot > .btn { flex: 1; }
 .end .strip.wrap { justify-content: center; }
 
 /* ── 모달 ── */

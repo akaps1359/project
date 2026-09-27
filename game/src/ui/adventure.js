@@ -886,8 +886,9 @@
         }),
       ),
       h('p', { class: 'dim small' }, `시드 ${run.seed}`),
-      h('div', { class: 'row2' }, btn('타이틀로', () => UI.showTitle()), btn('새 모험', () => UI.showCommanders(), 'gold')),
     ));
+    // 버튼은 스크롤 밖 아래에 고정 (내용이 길어도 바로 누를 수 있게)
+    append(scr, h('div', { class: 'page-foot end-foot' }, btn('타이틀로', () => UI.showTitle()), btn('새 모험', () => UI.showCommanders(), 'gold')));
     UI.show('scr-page');
     UI.lockInput(400);
   };
