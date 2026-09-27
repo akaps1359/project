@@ -165,6 +165,9 @@
   G.route = function () {
     const run = G.run;
     releaseWake();
+    // 상황별 배경 음악 (고르기 화면은 이전 곡을 이어 간다)
+    const BGM = { neow: 'event', map: 'map', reward: 'map', treasure: 'map', shop: 'shop', event: 'event', rest: 'rest', actStart: 'event', over: 'lose', victory: 'win' };
+    if (BGM[run.phase]) RS.bgm(BGM[run.phase]);
     switch (run.phase) {
       case 'neow': UI.showNeow(); break;
       case 'map': UI.showMap(); break;
@@ -219,6 +222,7 @@
   G.startBattle = function () {
     const run = G.run;
     G.battle = new RS.Battle(run, run.pending.stage);
+    RS.bgm(run.pending.stage.type === 'boss' ? 'boss' : 'battle');
     G.renderer.reset();
     G.renderer.setTheme(RS.actDef(run).theme);
     G.acc = 0;
@@ -349,6 +353,8 @@
     for (const ev of ['pointerdown', 'touchend', 'click']) document.addEventListener(ev, () => RS.unlockAudio(), { passive: true });
     document.addEventListener('visibilitychange', () => {
       G.hidden = document.hidden;
+      // 앱을 내리면 음악도 멈춘다 (돌아오면 다음 터치에서 다시)
+      if (RS.audioHidden) RS.audioHidden(document.hidden);
       if (document.hidden && G.battle && !G.modalOpen) UI.openPause();
       if (!document.hidden && G.battle) requestWake();
     });

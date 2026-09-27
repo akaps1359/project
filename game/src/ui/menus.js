@@ -8,6 +8,7 @@
   // ── 타이틀 ──
   UI.showTitle = function () {
     const G = UI.G;
+    RS.bgm('title');
     const scr = $('#scr-title');
     scr.innerHTML = '';
     const meta = G.meta;
@@ -34,6 +35,10 @@
             RS.setMuted(!RS.isMuted());
             e.currentTarget.textContent = RS.isMuted() ? '소리 꺼짐' : '소리 켜짐';
           }, 'sm'),
+          btn(RS.isBgmOff() ? '음악 꺼짐' : '음악 켜짐', (e) => {
+            RS.setBgmOff(!RS.isBgmOff());
+            e.currentTarget.textContent = RS.isBgmOff() ? '음악 꺼짐' : '음악 켜짐';
+          }, 'sm'),
         ),
         h('p', { class: 'record' }, meta.runs ? `모험 ${meta.runs}회 · 클리어 ${meta.wins}회 · 최고 ${meta.bestAct}막 ${meta.bestFloor}층 · 승천 ${meta.maxAsc || 0}` : '3막 꼭대기의 균열의 군주를 쓰러뜨리세요'),
       ),
@@ -51,6 +56,7 @@
   // ── 지휘관 선택 + 승천 ──
   UI.showCommanders = function () {
     const G = UI.G;
+    RS.bgm('title');
     const meta = G.meta;
     const scr = $('#scr-page');
     const prev = scr.querySelector('.page');
@@ -120,10 +126,16 @@
       btn('게임 방법', () => UI.openHelp(back)),
       btn('도감', () => UI.openCodex(back)),
       G.run ? btn('빌드 보기', () => UI.openBuild(back)) : null,
-      btn(RS.isMuted() ? '소리 켜기' : '소리 끄기', (e) => {
-        RS.setMuted(!RS.isMuted());
-        e.currentTarget.textContent = RS.isMuted() ? '소리 켜기' : '소리 끄기';
-      }),
+      h('div', { class: 'row2' },
+        btn(RS.isMuted() ? '소리 켜기' : '소리 끄기', (e) => {
+          RS.setMuted(!RS.isMuted());
+          e.currentTarget.textContent = RS.isMuted() ? '소리 켜기' : '소리 끄기';
+        }),
+        btn(RS.isBgmOff() ? '음악 켜기' : '음악 끄기', (e) => {
+          RS.setBgmOff(!RS.isBgmOff());
+          e.currentTarget.textContent = RS.isBgmOff() ? '음악 켜기' : '음악 끄기';
+        }),
+      ),
       G.run ? btn(inBattle ? '타이틀로 (이 전투는 처음부터)' : '타이틀로 (진행은 자동 저장돼요)', () => {
         UI.onModalClose = null;
         UI.closeModal();

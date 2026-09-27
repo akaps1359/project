@@ -217,6 +217,229 @@
   };
   let primed = false;
 
+  // ── 배경 음악: 파일 없이 칩튠을 실시간으로 연주한다 ──
+  // 곡 = 템포 + 마디별 화음 + 베이스·아르페지오·드럼 한 마디 패턴 + 멜로디(한 칸 = 한 스텝)
+  const TRACKS = {
+    title: {
+      bpm: 76, sub: 2, chords: ['Am', 'F', 'C', 'E'],
+      bass: '1---5---', arp: '13585313', lead: 'triangle',
+      mel: 'E5 - - - C5 - D5 - | C5 - A4 - - - . . | G4 - C5 - E5 - D5 - | B4 - - - G#4 - - -',
+    },
+    map: {
+      bpm: 104, sub: 2, chords: ['Dm', 'C', 'Bb', 'C', 'Dm', 'C', 'Bb', 'A'],
+      bass: '1-5-8-5-', drum: 'k.h.s.h.', lead: 'square',
+      mel: 'D5 - F5 - A5 - G5 - | E5 - - - C5 - . . | D5 - F5 - Bb5 - A5 - | G5 - - - - - . . |' +
+        'A5 - G5 - F5 - E5 - | D5 - E5 - C5 - . . | D5 - - - F5 - E5 - | C#5 - - - A4 - - -',
+    },
+    battle: {
+      bpm: 148, sub: 4, chords: ['Em', 'C', 'D', 'B'],
+      bass: '1.1.8.1.1.1.8.5.', drum: 'k.h.s.h.k.hks.h.', lead: 'square',
+      mel: 'E5 - - - B4 - E5 - G5 - F#5 - E5 - D5 - | E5 - - - - - . . C5 - D5 - E5 - G5 - |' +
+        'F#5 - - - D5 - F#5 - A5 - G5 - F#5 - E5 - | D#5 - - - - - - - B4 - C5 - D#5 - F#5 -',
+    },
+    boss: {
+      bpm: 160, sub: 4, chords: ['Cm', 'Db', 'Cm', 'G'],
+      bass: '1.1.8.1.1.1.8.1.', drum: 'k.hsk.h.k.hsk.ss', lead: 'sawtooth',
+      mel: 'C5 - Eb5 - G5 - - - F5 - Eb5 - D5 - Eb5 - | F5 - - - Ab5 - - - G5 - F5 - Db5 - - - |' +
+        'Eb5 - G5 - C6 - - - Bb5 - G5 - Eb5 - G5 - | B4 - D5 - F5 - - - Ab5 - G5 - F5 - D5 -',
+    },
+    shop: {
+      bpm: 116, sub: 2, chords: ['F', 'Dm', 'Gm', 'C'],
+      bass: '1.5.8.5.', drum: 'k.h.s.h.', lead: 'triangle',
+      mel: 'A5 - C6 - A5 - F5 - | F5 - A5 - D5 - - - | Bb4 - D5 - G5 - F5 - | E5 - G5 - C5 - - -',
+    },
+    rest: {
+      bpm: 66, sub: 2, chords: ['C', 'Am', 'F', 'G'],
+      bass: '1-------', arp: '13581358', lead: 'sine',
+      mel: 'E5 - - - G5 - - - | A5 - - - E5 - - - | F5 - - - A5 - C6 - | B5 - - - G5 - - -',
+    },
+    event: {
+      bpm: 88, sub: 2, chords: ['Em', 'C', 'Am', 'B'],
+      bass: '1---5---', arp: '1358', lead: 'triangle',
+      mel: 'G5 - - - F#5 - E5 - | E5 - - - G5 - - - | C6 - B5 - A5 - E5 - | D#5 - - - F#5 - - -',
+    },
+    win: {
+      bpm: 120, sub: 2, chords: ['C', 'F', 'G', 'C'],
+      bass: '1.5.8.5.', drum: 'k.h.s.h.', lead: 'square',
+      mel: 'C5 - E5 - G5 - C6 - | A5 - - - F5 - A5 - | G5 - B5 - D6 - B5 - | C6 - - - - - . .',
+    },
+    lose: {
+      bpm: 64, sub: 2, chords: ['Am', 'Dm', 'E', 'Am'],
+      bass: '1-------', arp: '1358', lead: 'sine',
+      mel: 'E5 - - - C5 - - - | D5 - - - F5 - - - | E5 - - - G#4 - B4 - | A4 - - - - - - -',
+    },
+  };
+
+  const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const midiOf = (n) => {
+    const m = /^([A-G])([#b]?)(-?\d)$/.exec(n);
+    if (!m) return null;
+    return 12 * (+m[3] + 1) + NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+  };
+  const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
+  // 'Am' → [A2, C3, E3, A3] (베이스 음역의 근음·3도·5도·옥타브)
+  function chordTones(name) {
+    const m = /^([A-G])([#b]?)(m?)/.exec(name);
+    const root = 45 + ((NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) - 9 + 12) % 12);
+    return { 1: root, 3: root + (m[3] ? 3 : 4), 5: root + 7, 8: root + 12 };
+  }
+  // 멜로디 문자열 → 스텝별 {midi, len}
+  function parseMel(str) {
+    const toks = str.replace(/\|/g, ' ').trim().split(/\s+/);
+    const out = new Array(toks.length).fill(null);
+    let last = -1;
+    toks.forEach((t, i) => {
+      if (t === '-') {
+        if (last >= 0) out[last].len++;
+      } else if (t === '.') last = -1;
+      else {
+        out[i] = { midi: midiOf(t), len: 1 };
+        last = i;
+      }
+    });
+    return out;
+  }
+  for (const k in TRACKS) {
+    const T = TRACKS[k];
+    T.notes = parseMel(T.mel);
+    T.bar = T.sub * 4;
+    T.len = T.notes.length;
+    T.tones = T.chords.map(chordTones);
+  }
+
+  let bgmOff = false;
+  try {
+    bgmOff = localStorage.getItem('rs_bgm_off') === '1';
+  } catch (e) {
+    /* 기본값 */
+  }
+  let want = null; // 지금 틀어야 할 곡
+  let cur = null; // { name, T, bus, step, t }
+  let timer = null;
+
+  function voice(bus, type, f, t0, dur, vol, slide) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(vol * 0.55, t0 + Math.min(dur, 0.12));
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(bus);
+    o.start(t0);
+    o.stop(t0 + dur + 0.02);
+  }
+  function drumHit(bus, ch, t0) {
+    if (ch === 'k') voice(bus, 'triangle', 220, t0, 0.12, 0.45, 55);
+    else if (ch === 's' || ch === 'h') {
+      if (!noiseBuf) noise(0.01, 0.0001, 'highpass', 5000); // 잡음 버퍼 준비
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter();
+      f.type = ch === 's' ? 'bandpass' : 'highpass';
+      f.frequency.value = ch === 's' ? 1800 : 7000;
+      const g = ctx.createGain();
+      const v = ch === 's' ? 0.28 : 0.08;
+      const d = ch === 's' ? 0.12 : 0.035;
+      g.gain.setValueAtTime(v, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      src.connect(f);
+      f.connect(g);
+      g.connect(bus);
+      src.start(t0, Math.random() * 0.3);
+      src.stop(t0 + d + 0.02);
+    }
+  }
+
+  function playStep(c, st, t0) {
+    const T = c.T;
+    const sd = 60 / T.bpm / T.sub;
+    const inBar = st % T.bar;
+    const barIdx = Math.floor(st / T.bar) % T.tones.length;
+    const tones = T.tones[barIdx];
+    const n = T.notes[st % T.len];
+    if (n && n.midi) voice(c.bus, T.lead, hz(n.midi), t0, n.len * sd * 0.95, T.lead === 'sawtooth' ? 0.1 : T.lead === 'square' ? 0.13 : 0.22);
+    const b = T.bass[inBar % T.bass.length];
+    if (tones[b]) {
+      let len = 1;
+      while (T.bass[(inBar + len) % T.bass.length] === '-' && len < T.bass.length) len++;
+      // 폰 스피커에서도 들리게 한 옥타브 올린 베이스
+      voice(c.bus, 'triangle', hz(tones[b] + 12), t0, len * sd * 0.9, 0.3);
+    }
+    if (T.arp) {
+      const a = T.arp[st % T.arp.length];
+      if (tones[a]) voice(c.bus, 'square', hz(tones[a] + 24), t0, sd * 0.8, 0.045);
+    }
+    if (T.drum) drumHit(c.bus, T.drum[inBar % T.drum.length], t0);
+  }
+
+  function startTrack(name) {
+    if (cur) {
+      // 이전 곡은 짧게 줄이며 끊는다
+      const old = cur.bus;
+      const now = ctx.currentTime;
+      old.gain.cancelScheduledValues(now);
+      old.gain.setValueAtTime(old.gain.value, now);
+      old.gain.linearRampToValueAtTime(0, now + 0.35);
+      setTimeout(() => old.disconnect(), 600);
+      cur = null;
+    }
+    if (!name || !TRACKS[name]) return;
+    const bus = ctx.createGain();
+    bus.gain.value = 0.2; // 효과음보다 한 발 뒤에
+    bus.connect(master);
+    cur = { name, T: TRACKS[name], bus, step: 0, t: ctx.currentTime + 0.4 };
+  }
+
+  function tick() {
+    if (!ctx || ctx.state !== 'running') return;
+    const target = muted || bgmOff ? null : want;
+    if ((cur ? cur.name : null) !== target) startTrack(target);
+    if (!cur) return;
+    const now = ctx.currentTime;
+    if (cur.t < now - 0.2) cur.t = now + 0.05; // 멈췄다 돌아오면 밀린 음을 몰아 치지 않는다
+    const sd = 60 / cur.T.bpm / cur.T.sub;
+    while (cur.t < now + 0.3) {
+      try {
+        playStep(cur, cur.step, cur.t);
+      } catch (e) {
+        /* 음 하나 실패는 무시 */
+      }
+      cur.step++;
+      cur.t += sd;
+    }
+  }
+
+  RS.bgm = function (name) {
+    want = name || null;
+    if (!timer && typeof setInterval === 'function') timer = setInterval(tick, 80);
+    tick();
+  };
+  RS.audioHidden = function (hidden) {
+    if (!ctx) return;
+    try {
+      const p = hidden ? ctx.suspend() : ctx.resume();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {
+      /* 무시 */
+    }
+  };
+  RS.isBgmOff = () => bgmOff;
+  RS.bgmNow = () => (cur ? cur.name : null);
+  RS.setBgmOff = function (off) {
+    bgmOff = off;
+    try {
+      localStorage.setItem('rs_bgm_off', off ? '1' : '0');
+    } catch (e) {
+      /* 무시 */
+    }
+    if (!off) RS.unlockAudio();
+    tick();
+  };
+
   RS.isMuted = () => muted;
   RS.setMuted = function (m) {
     muted = m;
@@ -226,5 +449,6 @@
       /* 무시 */
     }
     if (!m) RS.unlockAudio();
+    if (RS.bgm) RS.bgm(want);
   };
 })((globalThis.RS = globalThis.RS || {}));

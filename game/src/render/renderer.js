@@ -49,6 +49,7 @@
     this.fxs = [];
     this.nums = [];
     this.lunge = new Float32Array(F.SIZE);
+    this.lungeBig = new Uint8Array(F.SIZE).fill(1);
     this.lungeDir = [];
     for (let i = 0; i < F.SIZE; i++) this.lungeDir.push({ x: 0, y: 0 });
     this.pop = new Float32Array(F.SIZE);
@@ -154,8 +155,14 @@
       switch (ev.k) {
         case 'shot':
           this.addShot(ev);
+          if (ev.cls === 'knight') {
+            // 베기의 여파: 광역 베기 범위를 보여 주는 충격파, 치명타면 살짝 흔들림
+            if (this.fxs.length < 60) this.fxs.push({ k: 'ring', x: ev.x2, y: ev.y2 - 3, r: RS.CLASS.knight.cleaveR, t: 0.18, max: 0.18, col: ev.crit ? '#ffe46b' : RS.TIER[ev.tier].light });
+            if (ev.crit) this.shake = Math.max(this.shake, 0.08);
+          }
           if (ev.slot >= 0) {
-            this.lunge[ev.slot] = 0.09;
+            this.lunge[ev.slot] = ev.cls === 'knight' ? 0.14 : 0.09;
+            this.lungeBig[ev.slot] = ev.cls === 'knight' ? 2 : 1;
             const d = this.lungeDir[ev.slot];
             const dx = ev.x2 - ev.x1;
             const dy = ev.y2 - ev.y1;
@@ -229,8 +236,10 @@
 
   P.addShot = function (ev) {
     if (this.shots.length > 90) return;
-    const dur = ev.cls === 'knight' || ev.cls === 'rogue' ? 0.1 : ev.cls === 'mage' ? 0.16 : 0.12;
-    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit });
+    const dur = ev.cls === 'knight' ? (ev.crit ? 0.26 : 0.2) : ev.cls === 'rogue' ? 0.1 : ev.cls === 'mage' ? 0.16 : 0.12;
+    // 전사는 번갈아 가며 반대 방향으로 벤다
+    this.slashFlip = !this.slashFlip;
+    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip });
   };
 
   // ── 그리기 ──
@@ -344,8 +353,8 @@
       let ox = 0;
       let oy = bob;
       if (this.lunge[i] > 0) {
-        ox += this.lungeDir[i].x;
-        oy += this.lungeDir[i].y;
+        ox += this.lungeDir[i].x * this.lungeBig[i];
+        oy += this.lungeDir[i].y * this.lungeBig[i];
       }
       if (this.pop[i] > 0) oy -= Math.round(this.pop[i] * 8);
       let draggedAway = false;
@@ -561,19 +570,68 @@
           ctx.fillStyle = s.crit ? '#ffe46b' : '#d3dbe6';
           ctx.fillRect(x, y, 2, 1);
           break;
-        case 'knight': {
-          // 표적 위 베기
-          const a0 = p * 3;
-          ctx.fillStyle = s.crit ? '#ffe46b' : '#f6f1e8';
-          for (let k2 = 0; k2 < 4; k2++) {
-            const a = a0 + k2 * 0.35;
-            ctx.fillRect(Math.round(s.x2 + Math.cos(a) * 6), Math.round(s.y2 - 3 + Math.sin(a) * 6), 1, 1);
-          }
+        case 'knight':
+          this.drawSlash(ctx, s, p, T);
           break;
-        }
       }
     }
     this.shots.length = w;
+  };
+
+  // 전사 베기: 표적을 가로지르는 굵은 사선 칼자국 + 맞는 순간 불꽃
+  P.drawSlash = function (ctx, s, p, T) {
+    const cx = s.x2;
+    const cy = s.y2 - 3;
+    const face = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    const ang = face + (s.flip ? 1 : -1) * 1.05; // 공격 방향에 비스듬히
+    const ux = Math.cos(ang);
+    const uy = Math.sin(ang);
+    const nx = -uy;
+    const ny = ux;
+    const L = s.crit ? 28 : 22;
+    // 0~0.3: 한쪽 끝에서 반대쪽으로 그어지고, 이후 가늘어지며 사라진다
+    const grow = Math.min(1, p / 0.3);
+    const thin = p < 0.3 ? 1 : Math.max(0, 1 - (p - 0.3) / 0.7);
+    const edge = s.crit ? '#ffe46b' : '#ffffff';
+    const inner = s.crit ? '#ff9a3d' : T.light;
+    const from = -L / 2;
+    const to = from + L * grow;
+    for (let d = from; d <= to; d += 0.5) {
+      const tn = 1 - Math.abs(d) / (L / 2); // 가운데 1, 끝 0
+      const w = Math.max(0, Math.round((tn * 2.2 + 0.4) * thin)); // 반폭
+      const bx = cx + ux * d;
+      const by = cy + uy * d;
+      if (w >= 2) {
+        ctx.fillStyle = '#1d1428';
+        ctx.fillRect(Math.round(bx + nx * (w + 1)), Math.round(by + ny * (w + 1)), 1, 1);
+        ctx.fillRect(Math.round(bx - nx * (w + 1)), Math.round(by - ny * (w + 1)), 1, 1);
+      }
+      for (let o = -w; o <= w; o++) {
+        ctx.fillStyle = Math.abs(o) === w && w > 0 ? inner : edge;
+        ctx.fillRect(Math.round(bx + nx * o), Math.round(by + ny * o), 1, 1);
+      }
+    }
+    // 칼이 표적을 지나는 순간(중반) 튀는 불꽃
+    if (p > 0.25 && p < 0.7) {
+      const q = (p - 0.25) / 0.45;
+      const r = 1 + Math.round(q * (s.crit ? 5 : 3));
+      ctx.fillStyle = q < 0.5 ? '#ffffff' : edge;
+      ctx.fillRect(cx - r, cy, 1, 1);
+      ctx.fillRect(cx + r, cy, 1, 1);
+      ctx.fillRect(cx, cy - r, 1, 1);
+      ctx.fillRect(cx, cy + r, 1, 1);
+      if (s.crit || q < 0.4) {
+        const d = Math.max(1, r - 1);
+        ctx.fillRect(cx - d, cy - d, 1, 1);
+        ctx.fillRect(cx + d, cy - d, 1, 1);
+        ctx.fillRect(cx - d, cy + d, 1, 1);
+        ctx.fillRect(cx + d, cy + d, 1, 1);
+      }
+      if (q < 0.3) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cx - 1, cy - 1, 3, 3);
+      }
+    }
   };
 
   P.drawFx = function (ctx, dt) {

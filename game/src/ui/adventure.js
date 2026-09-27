@@ -44,7 +44,8 @@
     const isAvail = (f, l) => avail.some((c) => c.f === f && c.lane === l);
     const isWing = (f, l) => wings.some((c) => c.f === f && c.lane === l);
     const pad = 46;
-    const H = Math.max(box.clientHeight, nF * 70 + pad * 2);
+    // 층 사이를 넉넉히 벌려 칸 사이 연결선(대각선 포함)이 충분히 보이게
+    const H = Math.max(box.clientHeight, nF * 96 + pad * 2);
     const rowH = (H - pad * 2) / nF;
     const inner = h('div', { class: 'mapinner', style: `height:${H}px` });
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -54,25 +55,46 @@
     svg.setAttribute('height', String(H));
     const laneX = (l) => 10 + l * (80 / (W - 1));
     const rowY = (f) => Math.round(pad + (nF - f) * rowH + rowH / 2 - 8);
+    // 지금 갈 수 있는 칸에서 이어지는 모든 칸 (앞으로 탈 수 있는 길)
+    const reach = new Set();
+    const stack = avail.map((c) => [c.f, c.lane]);
+    while (stack.length) {
+      const [f, l] = stack.pop();
+      const k = f + ':' + l;
+      if (reach.has(k)) continue;
+      reach.add(k);
+      const n = f <= nF && floors[f - 1][l];
+      if (n) for (const nl of n.next) if (f < nF) stack.push([f + 1, nl]);
+    }
+    const addLine = (x1, y1, x2, y2, cls) => {
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', x1 + '%');
+      line.setAttribute('y1', String(y1));
+      line.setAttribute('x2', x2 + '%');
+      line.setAttribute('y2', String(y2));
+      line.setAttribute('class', cls);
+      svg.appendChild(line);
+    };
+    const edges = [];
     for (let f = 1; f < nF; f++) {
       for (let l = 0; l < W; l++) {
         const n = floors[f - 1][l];
         if (!n) continue;
         for (const nl of n.next) {
-          const line = document.createElementNS(svgNS, 'line');
-          line.setAttribute('x1', laneX(l) + '%');
-          line.setAttribute('y1', String(rowY(f)));
-          line.setAttribute('x2', laneX(nl) + '%');
-          line.setAttribute('y2', String(rowY(f + 1)));
           const target = floors[f][nl];
-          let cls = 'ln';
-          if (n.visited && target && target.visited) cls += ' done';
-          else if (f === run.floor && l === run.lane) cls += ' open';
-          line.setAttribute('class', cls);
-          svg.appendChild(line);
+          let cls = 'ln far';
+          if (n.visited && target && target.visited) cls = 'ln done';
+          else if (f === run.floor && l === run.lane) cls = 'ln open';
+          else if (reach.has(f + ':' + l) && reach.has(f + 1 + ':' + nl)) cls = 'ln reach';
+          edges.push([laneX(l), rowY(f), laneX(nl), rowY(f + 1), cls]);
         }
       }
     }
+    // 흐린 길 → 갈 수 있는 길 → 지나온 길·다음 길 순서로 그려 밝은 선이 위에 오게
+    const order = { 'ln far': 0, 'ln reach': 1, 'ln done': 2, 'ln open': 3 };
+    edges.sort((a, b) => order[a[4]] - order[b[4]]);
+    for (const e of edges) addLine(e[0], e[1], e[2], e[3], 'lnb ' + e[4].slice(3));
+    for (const e of edges) addLine(...e);
     inner.appendChild(svg);
     const bossDef = RS.ENEMY[act.boss];
     for (let f = 1; f <= nF; f++) {
@@ -84,6 +106,7 @@
         const here = f === run.floor && l === run.lane;
         const can = isAvail(f, l);
         const wing = !can && isWing(f, l);
+        const far = !n.visited && !here && !wing && !reach.has(f + ':' + l);
         const isBoss = n.type === 'boss';
         let label = n.type === 'unknown' ? (n.resolved ? `?·${RS.NODE_INFO[n.resolved].name}` : null) : info.name;
         if (isBoss && bossDef) label = bossDef.name;
@@ -99,7 +122,7 @@
           ? h('img', { class: 'ic', src: RS.iconURL(act.boss, 3), alt: '' })
           : icon(n.type === 'unknown' && !n.resolved ? 'n_event' : info.icon, '', 3);
         inner.appendChild(h('button', {
-          class: `node t-${n.type}${n.visited ? ' visited' : ''}${here ? ' here' : ''}${can ? ' avail' : ''}${wing ? ' wing' : ''}`,
+          class: `node t-${n.type}${n.visited ? ' visited' : ''}${here ? ' here' : ''}${can ? ' avail' : ''}${wing ? ' wing' : ''}${far ? ' far' : ''}`,
           style: `left:${laneX(l)}%;top:${rowY(f)}px`,
           'aria-label': label || '?',
           onclick(e) {

@@ -858,6 +858,7 @@
       }
       case 'boss':
         RS.sfx('boss');
+        RS.bgm('boss');
         UI.toast(`${ev.name} 등장!`, 'warn');
         break;
       case 'bossDown':
@@ -894,6 +895,7 @@
         if (ev.free) RS.sfx('summon');
         break;
       case 'won':
+        RS.bgm(null);
         if (UI.G.battle && UI.G.battle.trialFailed) {
           RS.sfx('lose');
           break;
@@ -902,6 +904,7 @@
         UI.toast('승리!', 'good');
         break;
       case 'lost':
+        RS.bgm(null);
         RS.sfx('lose');
         UI.toast(ev.reason === 'cap' ? '적이 너무 많습니다!' : '생명이 다했습니다', 'warn');
         break;

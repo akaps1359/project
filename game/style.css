@@ -168,9 +168,16 @@ img { max-width: 100%; }
 .mapchip { display: inline-block; margin: 0 6px 2px 0; padding: 1px 7px; font-size: 11px; color: var(--pink); background: var(--panel); box-shadow: var(--px); white-space: nowrap; }
 .mapinner { position: relative; width: 100%; }
 .maplines { position: absolute; inset: 0; pointer-events: none; }
-.maplines .ln { stroke: #4a3d66; stroke-width: 2; stroke-dasharray: 3 5; }
-.maplines .ln.done { stroke: var(--gold); stroke-dasharray: none; opacity: 0.8; }
-.maplines .ln.open { stroke: var(--text); stroke-dasharray: 4 4; }
+/* 연결선: 어두운 밑줄 위에 색 선을 겹쳐 배경과 구분되게 */
+.maplines line { stroke-linecap: round; }
+.maplines .lnb { stroke: #0c0912; stroke-width: 7; }
+.maplines .lnb.far { stroke-width: 5; opacity: 0.6; }
+.maplines .ln { stroke-width: 3; }
+.maplines .ln.far { stroke: #4a3d66; stroke-width: 2; opacity: 0.7; }
+.maplines .ln.reach { stroke: #a893dc; }
+.maplines .ln.done { stroke: var(--gold); opacity: 0.85; }
+.maplines .ln.open { stroke: #fff6e6; stroke-width: 4; stroke-dasharray: 8 6; animation: march 0.6s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -14; } }
 .node {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -187,13 +194,14 @@ img { max-width: 100%; }
   touch-action: manipulation;
 }
 .node .ic { width: 27px; height: 27px; }
-.node .nlabel { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1.2; color: var(--dim); white-space: nowrap; background: var(--bg); padding: 0 3px; }
+.node .nlabel { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1.2; color: var(--dim); white-space: nowrap; padding: 0 3px; text-shadow: 1px 0 0 var(--bg), -1px 0 0 var(--bg), 0 1px 0 var(--bg), 0 -1px 0 var(--bg); }
 .node.t-boss { width: 64px; height: 64px; background: #3a1d2c; }
 .node.t-boss .ic { width: 40px; height: 40px; }
 .node.t-boss .nlabel { top: 66px; }
 .node.t-elite { background: #3a2022; }
-.node.visited { opacity: 0.45; }
-.node.here { opacity: 1; box-shadow: var(--px), 0 0 0 4px var(--gold); }
+.node.visited { filter: brightness(0.55); }
+.node.far { filter: brightness(0.5) saturate(0.4); }
+.node.here { filter: none; box-shadow: var(--px), 0 0 0 4px var(--gold); }
 .node.avail { animation: pulse 1s steps(2) infinite; background: var(--panel2); }
 .node.avail .nlabel { color: var(--text); }
 @keyframes pulse { 50% { box-shadow: var(--px), 0 0 0 4px var(--text); } }
@@ -592,5 +600,6 @@ img { max-width: 100%; }
   .hud .btn.sm { min-width: 34px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .maplines .ln.open { animation: none; }
   .bob, .node.avail, .hud .stat.danger, #bossbar.enraged, #controls .btn.pulse, #h-life.hit { animation: none; }
 }
