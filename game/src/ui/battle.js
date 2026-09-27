@@ -242,7 +242,15 @@
           RS.sfx('click');
           UI.select(i);
           if (!reachAt(s, i)) warnDrop();
-        } else UI.select(-1);
+        } else {
+          UI.select(-1);
+          // 룬이 새겨진 빈칸을 누르면 룬 설명
+          const rid = G.run.runes && G.run.runes[i];
+          if (rid && RS.RUNE[rid]) {
+            const R = RS.RUNE[rid];
+            UI.tipAt(e.clientX, e.clientY, R.bad ? R.name : `${R.name} (강화된 칸)`, R.desc, R.bad ? '상점의 [룬]으로 덮어 새기면 없어져요' : '이 칸에 놓인 유닛이 효과를 받아요. 유닛을 옮겨도 룬은 칸에 남아요');
+          }
+        }
         return;
       }
       drag = { from: i, over: i, moved: false, x0: p.x, y0: p.y, x: p.x, y: p.y, id: e.pointerId, overReach: true, lastOver: i };
@@ -547,7 +555,9 @@
       append(p, h('div', { class: 'punit' },
         unitImg(s.cls, s.tier, 'big'),
         h('div', { class: 'pinfo' },
-          h('div', { class: 'pname' }, h('b', { class: 'tier' + s.tier }, `${T.name} ${C.name}`), ` ×${s.n}`, (refs.dps = h('span', { class: 'pdps' }))),
+          h('div', { class: 'pname' }, h('b', { class: 'tier' + s.tier }, `${T.name} ${C.name}`), ` ×${s.n}`,
+            run.runes[i] && RS.RUNE[run.runes[i]] ? h('span', { class: 'runebadge' + (RS.RUNE[run.runes[i]].bad ? ' bad' : ''), style: `--rune:${RS.RUNE[run.runes[i]].color}` }, RS.RUNE[run.runes[i]].name) : null,
+            (refs.dps = h('span', { class: 'pdps' }))),
           (refs.stats = h('div', { class: 'pstats' })),
           (refs.desc = h('p', { class: 'pdesc' })),
         ),

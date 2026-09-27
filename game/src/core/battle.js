@@ -604,6 +604,11 @@
   P.hitWith = function (i, s, st, e, c, u, mul) {
     const M = this.M;
     const rng = this.rng;
+    // 눈가리개: 일정 확률로 빗나간다 (공격 모션만 나고 피해·효과 없음)
+    if (M.missChance && rng.next() < M.missChance) {
+      if (this.fxOn) this.fx.push({ k: 'shot', cls: s.cls, tier: s.tier, slot: i, u, x1: c.x, y1: c.y, x2: e.x + (rng.next() < 0.5 ? -7 : 7), y2: e.y - 4, crit: false, miss: true });
+      return;
+    }
     const cls = s.cls;
     const C = RS.CLASS[cls];
     let dmg = st.dmg * (mul || 1);

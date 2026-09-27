@@ -603,3 +603,15 @@ img { max-width: 100%; }
   .maplines .ln.open { animation: none; }
   .bob, .node.avail, .hud .stat.danger, #bossbar.enraged, #controls .btn.pulse, #h-life.hit { animation: none; }
 }
+
+/* 강화된 칸(룬) 표시 */
+.runebadge { margin-left: 4px; padding: 0 4px; font-size: 10px; color: #15111d; background: var(--rune); white-space: nowrap; }
+.runebadge.bad { color: var(--text); background: #3a2a44; }
+/* 저주 설명 */
+.cursenote { margin-top: 4px; padding: 4px 6px; background: rgba(239, 97, 102, 0.1); box-shadow: inset 2px 0 0 var(--red); text-align: left; }
+.cursenote p { margin: 0; font-size: 11px; line-height: 1.45; color: #f0c9cb; }
+.cursenote b { color: var(--red); font-weight: normal; }
+.cursepool { margin: 8px 0; text-align: left; }
+.cursepool p { margin: 2px 0; font-size: 11px; line-height: 1.45; }
+.cursepool b { color: var(--red); font-weight: normal; }
+.btn.option.cursed b::after { content: ' · 저주'; color: var(--red); font-size: 11px; }

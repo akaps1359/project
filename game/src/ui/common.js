@@ -175,12 +175,67 @@
     UI.tip({ getBoundingClientRect: () => rect }, title, desc, extra, action);
   };
 
+  // ── 저주 설명: 글 속 '저주 [이름]' 과 '무작위 저주' 를 찾아 무엇인지 풀어 준다 ──
+  UI.curseRefs = function (text) {
+    const list = [];
+    let random = false;
+    if (!text) return null;
+    const re = /저주 \[([^\]]+)\]/g;
+    let m;
+    while ((m = re.exec(text))) {
+      const c = RS.CURSES.find((x) => x.name === m[1]);
+      if (c && list.indexOf(c) < 0) list.push(c);
+    }
+    if (/무작위 저주|저주 하나와|저주도 숨어|· 저주 ·|저주를 받는다/.test(text)) random = true;
+    return list.length || random ? { list, random } : null;
+  };
+  const RANDOM_POOL = () => RS.CURSES.filter((c) => !c.permanent);
+  // 카드·선택지 안에 넣는 짧은 설명
+  UI.curseNote = function (text) {
+    const r = UI.curseRefs(text);
+    if (!r) return null;
+    return h('div', { class: 'cursenote' },
+      r.list.map((c) => h('p', null, h('b', null, `저주 [${c.name}]`), ' ' + c.desc)),
+      r.random ? h('p', null, h('b', null, '무작위 저주'), ` 1개: ${RANDOM_POOL().map((c) => c.name).join('·')} 중 하나`) : null,
+    );
+  };
+  // 툴팁용 글: '저주 [후회]' → '저주 [후회: 전투를 시작할 때 생명 -1]'
+  UI.curseText = function (text) {
+    if (!text) return text;
+    return text.replace(/저주 \[([^\]]+)\]/g, (all, name) => {
+      const c = RS.CURSES.find((x) => x.name === name);
+      return c ? `저주 [${name}: ${c.desc}]` : all;
+    });
+  };
+  // 저주가 걸린 선택: 고르기 전에 저주를 자세히 보여 주고 한 번 더 묻는다
+  UI.curseConfirm = function (label, text, onOk) {
+    const r = UI.curseRefs(text);
+    if (!r) return onOk();
+    const cards = r.list.map((c) => h('div', { class: 'card curse' }, UI.icon('curse', 'cic', 4),
+      h('div', { class: 'cbody' }, h('div', { class: 'ctop' }, h('span', { class: 'rar' }, c.permanent ? '저주 · 없앨 수 없음' : c.fades ? '저주 · 저절로 사라짐' : '저주'), h('b', null, c.name)), h('p', null, c.desc))));
+    const pool = r.random ? h('div', { class: 'cursepool' }, h('p', { class: 'dim' }, '무작위 저주는 아래 중 하나가 나옵니다'),
+      RANDOM_POOL().map((c) => h('p', null, h('b', null, c.name), ' · ' + c.desc))) : null;
+    UI.modal('저주 확인', h('div', { class: 'confirm' },
+      h('p', null, `[${label}] 을(를) 고르면 아래 저주를 받습니다.`),
+      h('div', { class: 'cards' }, cards), pool,
+      h('p', { class: 'dim small' }, '저주는 상점의 [제거]나 일부 이벤트로 없앨 수 있어요' + (r.list.some((c) => c.permanent) ? ' (없앨 수 없는 것 제외)' : '') + '. 부적이 있으면 막아 줘요.'),
+      h('div', { class: 'row2' },
+        UI.btn('취소', () => UI.closeModal()),
+        UI.btn('그래도 고른다', () => {
+          UI.onModalClose = null;
+          UI.closeModal();
+          onOk();
+        }, 'gold'),
+      ),
+    ));
+  };
+
   // ── 카드·칩 ──
   UI.relicTitle = (r) => `${r.name} · ${RS.RARITY_NAME.relic[r.rarity]} 유물`;
 
   UI.relicChip = function (id, run) {
     const r = RS.REL[id];
-    let extra = r.cost ? '대가 · ' + r.cost : null;
+    let extra = r.cost ? '대가 · ' + UI.curseText(r.cost) : null;
     const st = run && run.relicState[id];
     if (st && st.uses != null) extra = `남은 횟수 ${st.uses}`;
     else if (st && st.charges != null) extra = `남은 충전 ${st.charges}`;
@@ -204,6 +259,7 @@
         h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.aug[a.rarity]), h('b', null, a.name + (up ? '+' : '')), a.unique ? null : h('small', { class: 'stack' }, '중첩 가능')),
         h('p', null, a.desc + (up ? ' (연마: 효과 ×1.5)' : '')),
         a.cost ? h('p', { class: 'cost' }, '대가 · ' + a.cost) : null,
+        a.cost ? UI.curseNote(a.cost) : null,
         extra || null,
       ),
     );
@@ -217,6 +273,7 @@
         h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.relic[r.rarity] + ' 유물'), h('b', null, r.name)),
         h('p', null, r.desc),
         r.cost ? h('p', { class: 'cost' }, '대가 · ' + r.cost) : null,
+        r.cost ? UI.curseNote(r.cost) : null,
       ),
       price != null ? h('span', { class: 'price' }, UI.icon('coin', '', 2), price) : null,
     );
@@ -360,12 +417,12 @@
     const a = RS.augDef(id);
     const up = RS.isUpgraded(id);
     return h('div', { class: `lrow r${a.rarity}` }, UI.icon(a.icon, '', 3),
-      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc + (up ? ' (연마: ×1.5)' : '')), a.cost ? h('p', { class: 'cost' }, '대가 · ' + a.cost) : null));
+      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc + (up ? ' (연마: ×1.5)' : '')), a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
   };
   UI.relicRow = function (id) {
     const r = RS.REL[id];
     return h('div', { class: `lrow rr${r.rarity}` }, UI.icon(r.icon, '', 3),
-      h('div', null, h('b', null, `${r.name} · ${RS.RARITY_NAME.relic[r.rarity]}`), h('p', null, r.desc), r.cost ? h('p', { class: 'cost' }, '대가 · ' + r.cost) : null));
+      h('div', null, h('b', null, `${r.name} · ${RS.RARITY_NAME.relic[r.rarity]}`), h('p', null, r.desc), r.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(r.cost)) : null));
   };
 
   // 보드 미리보기 (칸 고르기용)

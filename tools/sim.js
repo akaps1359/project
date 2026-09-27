@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 밸런스 시뮬레이터: 봇이 게임 로직을 그대로 돌려 여러 판을 플레이한다.
 //   node tools/sim.js [판수=200] [봇=smart|basic|random] [--bot=smart|basic|random] [--seed=N] [--cmd=leon|all] [--asc=N] [--keys]
-//                     [--bp=이름=값 ...] [--trace] [--set key=value ...]
+//                     [--bp=이름=값 ...] [--trace] [--relic=id,id] [--set key=value ...]
 // 봇: smart  = 가치 함수로 판단 (강화·소환 효율 비교, 이벤트·상점·휴식을 복제해 미리 굴려 봄, 길 계획)
 //     basic  = 예전 smart 봇 (비교용)
 //     random = 모든 선택을 무작위로
@@ -181,6 +181,9 @@ function main() {
     const eq = kv.indexOf('=');
     params[kv.slice(0, eq)] = JSON.parse(kv.slice(eq + 1));
   }
+  // --relic=a,b : 시작할 때 유물을 쥐여 준다 (유물 가치 측정용)
+  const startRelics = arg('relic') ? arg('relic').split(',').filter(Boolean) : [];
+  const onStart = startRelics.length ? (run, R) => { for (const id of startRelics) R.addRelic(run, id); } : null;
   const cmds = cmdArg === 'all' ? RS.COMMANDERS.map((c) => c.id) : [cmdArg];
   const t0 = Date.now();
   let wins = 0;
@@ -199,7 +202,7 @@ function main() {
   const extra = { upgrades: 0, summons: 0, upgRuns: 0, shopVisits: 0, shopSpend: 0, shopGold: 0, rests: {}, nodes: {}, dv: {}, skips: 0, corr: 0, corrWon: 0 };
   for (let k = 0; k < n; k++) {
     const commander = cmds[k % cmds.length];
-    const { run, log, won, bot } = playRun(RS, base + k, kind, { commander, asc, keys, params, trace });
+    const { run, log, won, bot } = playRun(RS, base + k, kind, { commander, asc, keys, params, trace, onStart });
     if (won) wins++;
     if (run.act === 4) {
       act4++;

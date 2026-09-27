@@ -189,7 +189,9 @@
           UI.keepScroll = true;
           UI.showNeow();
         },
-      }, h('b', null, t.text), t.cost ? h('small', { class: 'cost' }, '대가 · ' + t.cost) : h('small', null, { small: '작은 축복', mid: '축복', big: '큰 축복', swap: '시작 유물 교환' }[b.kind])));
+      }, h('b', null, t.text), t.cost ? h('small', { class: 'cost' }, '대가 · ' + t.cost) : h('small', null, { small: '작은 축복', mid: '축복', big: '큰 축복', swap: '시작 유물 교환' }[b.kind]),
+      // 고른 선택지에 저주가 있으면 무엇인지 바로 아래에 풀어 준다
+      sel === k ? UI.curseNote(t.text + ' ' + (t.cost || '')) : null));
     });
     body.appendChild(opts);
     const pickT = sel != null ? RS.blessingText(list[sel]).text : null;
@@ -240,7 +242,8 @@
               UI.keepScroll = true;
               UI.showActStart();
             },
-          }, h('b', null, bo.name), h('small', null, bo.desc), bo.cost ? h('small', { class: 'cost' }, '대가 · ' + bo.cost) : null);
+          }, h('b', null, bo.name), h('small', null, bo.desc), bo.cost ? h('small', { class: 'cost' }, '대가 · ' + bo.cost) : null,
+          selIdx === bi ? UI.curseNote(bo.desc + ' ' + (bo.cost || '')) : null);
         })),
       ));
       const bo = sel ? RS.ancientBoon(sel) : null;
@@ -710,10 +713,22 @@
       RS.eventOptions(run).forEach((o, i) => {
         const ok = RS.optionEnabled(run, o);
         if (ok) anyOn = true;
+        const label = RS.optionLabel(run, o);
+        const desc = RS.optionDesc(run, o);
         opts.appendChild(h('button', {
-          class: 'btn option',
+          class: 'btn option' + (UI.curseRefs(desc) ? ' cursed' : ''),
           disabled: !ok,
           onclick() {
+            // 저주가 걸린 선택지는 저주를 먼저 보여 주고 한 번 더 묻는다
+            if (UI.curseRefs(desc)) {
+              RS.sfx('click');
+              return UI.curseConfirm(label, desc, choose);
+            }
+            choose();
+          },
+        }, h('b', null, label), h('small', null, desc)));
+        function choose() {
+          {
             // 한 번 고르면 다시 그릴 때까지 모든 선택지를 잠근다
             UI.lockAll(opts);
             RS.sfx('click');
@@ -724,8 +739,8 @@
             G.save();
             if (run.phase !== 'event') G.route();
             else UI.showEvent();
-          },
-        }, h('b', null, RS.optionLabel(run, o)), h('small', null, RS.optionDesc(run, o))));
+          }
+        }
       });
       body.appendChild(opts);
       // 지난 단계의 결과는 선택지 아래에 (선택지가 손가락 밑에서 밀리지 않게)

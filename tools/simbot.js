@@ -417,6 +417,7 @@ function makeSmartBot(RS, rng, opts) {
     let f = 1;
     f /= Math.pow(1 - Math.min(0.6, M.enemySpeedPct || 0), 0.7);
     f /= 1 + Math.max(-0.5, M.enemyHpPct || 0);
+    f *= 1 - Math.min(0.9, M.missChance || 0);
     f *= 1 + (M.firstStrike || 0) * 0.06;
     f *= 1 + (M.freezeChance || 0) * 1.5;
     f *= 1 + (M.noxious || 0) * 30;

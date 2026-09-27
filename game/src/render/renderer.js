@@ -155,7 +155,7 @@
       switch (ev.k) {
         case 'shot':
           this.addShot(ev);
-          if (ev.cls === 'knight') {
+          if (ev.cls === 'knight' && !ev.miss) {
             // 베기의 여파: 광역 베기 범위를 보여 주는 충격파, 치명타면 살짝 흔들림
             if (this.fxs.length < 60) this.fxs.push({ k: 'ring', x: ev.x2, y: ev.y2 - 3, r: RS.CLASS.knight.cleaveR, t: 0.18, max: 0.18, col: ev.crit ? '#ffe46b' : RS.TIER[ev.tier].light });
             if (ev.crit) this.shake = Math.max(this.shake, 0.08);
@@ -239,7 +239,7 @@
     const dur = ev.cls === 'knight' ? (ev.crit ? 0.26 : 0.2) : ev.cls === 'rogue' ? 0.1 : ev.cls === 'mage' ? 0.16 : 0.12;
     // 전사는 번갈아 가며 반대 방향으로 벤다
     this.slashFlip = !this.slashFlip;
-    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip });
+    this.shots.push({ cls: ev.cls, tier: ev.tier, x1: ev.x1, y1: ev.y1 - 3, x2: ev.x2, y2: ev.y2, t: dur, max: dur, crit: ev.crit, flip: this.slashFlip, miss: ev.miss });
   };
 
   // ── 그리기 ──
@@ -298,12 +298,27 @@
   const CRACK = [[7, 4], [8, 5], [8, 6], [9, 7], [10, 8], [10, 9], [9, 10], [10, 11], [11, 12], [12, 13], [12, 14], [13, 15], [14, 16], [14, 17]];
   P.drawRune = function (ctx, R, x, y) {
     if (R.bad) {
+      ctx.fillStyle = 'rgba(239,97,102,0.18)';
+      ctx.fillRect(x + 1, y + 1, F.SLOT - 2, F.SLOT - 2);
       ctx.fillStyle = '#1d1428';
       for (const p of CRACK) ctx.fillRect(x + p[0], y + p[1], 1, 1);
       return;
     }
     const a = 2;
     const z = F.SLOT - 3;
+    // 강화된 칸: 룬 색으로 칸을 물들이고 테두리를 두른 뒤, 왼쪽 위에 룬 문양
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = R.color;
+    ctx.fillRect(x + 1, y + 1, F.SLOT - 2, F.SLOT - 2);
+    ctx.globalAlpha = 0.55;
+    ctx.fillRect(x + 1, y + 1, F.SLOT - 2, 1);
+    ctx.fillRect(x + 1, y + F.SLOT - 2, F.SLOT - 2, 1);
+    ctx.fillRect(x + 1, y + 1, 1, F.SLOT - 2);
+    ctx.fillRect(x + F.SLOT - 2, y + 1, 1, F.SLOT - 2);
+    ctx.globalAlpha = 1;
+    ctx.fillRect(x + 3, y + 2, 1, 1);
+    ctx.fillRect(x + 2, y + 3, 3, 1);
+    ctx.fillRect(x + 3, y + 4, 1, 1);
     ctx.globalAlpha = 0.75 + 0.25 * Math.sin(this.t * 3);
     ctx.fillStyle = R.color;
     ctx.fillRect(x + a, y + a, 3, 1);
@@ -592,8 +607,9 @@
     // 0~0.3: 한쪽 끝에서 반대쪽으로 그어지고, 이후 가늘어지며 사라진다
     const grow = Math.min(1, p / 0.3);
     const thin = p < 0.3 ? 1 : Math.max(0, 1 - (p - 0.3) / 0.7);
-    const edge = s.crit ? '#ffe46b' : '#ffffff';
-    const inner = s.crit ? '#ff9a3d' : T.light;
+    // 빗나가면 흐린 회색 헛손질
+    const edge = s.miss ? '#8a93a3' : s.crit ? '#ffe46b' : '#ffffff';
+    const inner = s.miss ? '#5b6272' : s.crit ? '#ff9a3d' : T.light;
     const from = -L / 2;
     const to = from + L * grow;
     for (let d = from; d <= to; d += 0.5) {
@@ -612,7 +628,7 @@
       }
     }
     // 칼이 표적을 지나는 순간(중반) 튀는 불꽃
-    if (p > 0.25 && p < 0.7) {
+    if (p > 0.25 && p < 0.7 && !s.miss) {
       const q = (p - 0.25) / 0.45;
       const r = 1 + Math.round(q * (s.crit ? 5 : 3));
       ctx.fillStyle = q < 0.5 ? '#ffffff' : edge;

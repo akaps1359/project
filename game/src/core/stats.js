@@ -18,7 +18,7 @@
       itemSlots: 0, bossTimeAdd: 0, battleStartGold: 0, battleStartLifeLoss: 0,
       winHeal: 0, eliteKillHeal: 0, eliteKillMaxLife: 0,
       augChoices: 0, augRerolls: 0, restTrainBonus: 0, pocketWatch: 0,
-      diversity: 0, purity: 0, eliteSquad: 0, rich: 0, berserk: 0, legendAura: 0,
+      diversity: 0, purity: 0, eliteSquad: 0, rich: 0, berserk: 0, legendAura: 0, missChance: 0,
     };
   };
 
