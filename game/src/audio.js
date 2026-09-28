@@ -1,4 +1,5 @@
-// 간단한 효과음 합성 (파일 없이 WebAudio 로 만든다)
+// 소리: 효과음·배경 음악은 CC0 음원 파일(assets/audio, 출처는 CREDITS.md)을 쓰고,
+// 파일이 아직 안 왔거나 못 받으면 WebAudio 로 합성한 소리로 대신한다
 (function (RS) {
   'use strict';
 
@@ -168,7 +169,7 @@
     if (last[name] && now - last[name] < (GAP[name] || 0.03)) return;
     last[name] = now;
     try {
-      SFX[name] && SFX[name]();
+      if (!playSample(name)) SFX[name] && SFX[name]();
     } catch (e) {
       /* 소리는 실패해도 게임은 계속 */
     }
@@ -183,13 +184,16 @@
     const now = ctx.currentTime;
     if (isCrit && now - critLast > 0.18) {
       critLast = now;
-      try { crit(); } catch (e) { /* 무시 */ }
+      try {
+        if (!playSample('crit')) crit();
+      } catch (e) { /* 무시 */ }
     }
     if (now - atkAny < 0.05 || (atkLast[cls] && now - atkLast[cls] < 0.11)) return;
     atkAny = now;
     atkLast[cls] = now;
     try {
-      ATK[cls](jit());
+      const j = jit();
+      if (!playSample('atk_' + cls, j)) ATK[cls](j);
     } catch (e) {
       /* 소리는 실패해도 게임은 계속 */
     }
@@ -224,98 +228,147 @@
     if (c && !primed) {
       primed = true;
       primeBuffer(c);
+      preloadSfx();
     }
   };
   let primed = false;
 
-  // ── 배경 음악: 파일 없이 칩튠을 실시간으로 연주한다 ──
-  // 곡 = 템포 + 마디별 화음 + 베이스·아르페지오·드럼 한 마디 패턴 + 멜로디(한 칸 = 한 스텝)
-  const TRACKS = {
-    title: {
-      bpm: 76, sub: 2, chords: ['Am', 'F', 'C', 'E'],
-      bass: '1---5---', arp: '13585313', lead: 'triangle',
-      mel: 'E5 - - - C5 - D5 - | C5 - A4 - - - . . | G4 - C5 - E5 - D5 - | B4 - - - G#4 - - -',
-    },
-    map: {
-      bpm: 104, sub: 2, chords: ['Dm', 'C', 'Bb', 'C', 'Dm', 'C', 'Bb', 'A'],
-      bass: '1-5-8-5-', drum: 'k.h.s.h.', lead: 'square',
-      mel: 'D5 - F5 - A5 - G5 - | E5 - - - C5 - . . | D5 - F5 - Bb5 - A5 - | G5 - - - - - . . |' +
-        'A5 - G5 - F5 - E5 - | D5 - E5 - C5 - . . | D5 - - - F5 - E5 - | C#5 - - - A4 - - -',
-    },
-    battle: {
-      bpm: 148, sub: 4, chords: ['Em', 'C', 'D', 'B'],
-      bass: '1.1.8.1.1.1.8.5.', drum: 'k.h.s.h.k.hks.h.', lead: 'square',
-      mel: 'E5 - - - B4 - E5 - G5 - F#5 - E5 - D5 - | E5 - - - - - . . C5 - D5 - E5 - G5 - |' +
-        'F#5 - - - D5 - F#5 - A5 - G5 - F#5 - E5 - | D#5 - - - - - - - B4 - C5 - D#5 - F#5 -',
-    },
-    boss: {
-      bpm: 160, sub: 4, chords: ['Cm', 'Db', 'Cm', 'G'],
-      bass: '1.1.8.1.1.1.8.1.', drum: 'k.hsk.h.k.hsk.ss', lead: 'sawtooth',
-      mel: 'C5 - Eb5 - G5 - - - F5 - Eb5 - D5 - Eb5 - | F5 - - - Ab5 - - - G5 - F5 - Db5 - - - |' +
-        'Eb5 - G5 - C6 - - - Bb5 - G5 - Eb5 - G5 - | B4 - D5 - F5 - - - Ab5 - G5 - F5 - D5 -',
-    },
-    shop: {
-      bpm: 116, sub: 2, chords: ['F', 'Dm', 'Gm', 'C'],
-      bass: '1.5.8.5.', drum: 'k.h.s.h.', lead: 'triangle',
-      mel: 'A5 - C6 - A5 - F5 - | F5 - A5 - D5 - - - | Bb4 - D5 - G5 - F5 - | E5 - G5 - C5 - - -',
-    },
-    rest: {
-      bpm: 66, sub: 2, chords: ['C', 'Am', 'F', 'G'],
-      bass: '1-------', arp: '13581358', lead: 'sine',
-      mel: 'E5 - - - G5 - - - | A5 - - - E5 - - - | F5 - - - A5 - C6 - | B5 - - - G5 - - -',
-    },
-    event: {
-      bpm: 88, sub: 2, chords: ['Em', 'C', 'Am', 'B'],
-      bass: '1---5---', arp: '1358', lead: 'triangle',
-      mel: 'G5 - - - F#5 - E5 - | E5 - - - G5 - - - | C6 - B5 - A5 - E5 - | D#5 - - - F#5 - - -',
-    },
-    win: {
-      bpm: 120, sub: 2, chords: ['C', 'F', 'G', 'C'],
-      bass: '1.5.8.5.', drum: 'k.h.s.h.', lead: 'square',
-      mel: 'C5 - E5 - G5 - C6 - | A5 - - - F5 - A5 - | G5 - B5 - D6 - B5 - | C6 - - - - - . .',
-    },
-    lose: {
-      bpm: 64, sub: 2, chords: ['Am', 'Dm', 'E', 'Am'],
-      bass: '1-------', arp: '1358', lead: 'sine',
-      mel: 'E5 - - - C5 - - - | D5 - - - F5 - - - | E5 - - - G#4 - B4 - | A4 - - - - - - -',
-    },
-  };
+  // ── 음원 파일 ──
+  const MAN = RS.AUDIO_MANIFEST || { bgm: {}, sfx: {} };
+  const BASE = RS.AUDIO_BASE || 'assets/audio/';
+  const THR = 1e-3;
 
-  const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-  const midiOf = (n) => {
-    const m = /^([A-G])([#b]?)(-?\d)$/.exec(n);
-    if (!m) return null;
-    return 12 * (+m[3] + 1) + NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
-  };
-  const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
-  // 'Am' → [A2, C3, E3, A3] (베이스 음역의 근음·3도·5도·옥타브)
-  function chordTones(name) {
-    const m = /^([A-G])([#b]?)(m?)/.exec(name);
-    const root = 45 + ((NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) - 9 + 12) % 12);
-    return { 1: root, 3: root + (m[3] ? 3 : 4), 5: root + 7, 8: root + 12 };
+  // mp3 는 디코더마다 앞에 빈 여백을 붙이기도 해서, 첫 소리 위치를 원본(lead)과 맞춰 시작점을 찾는다
+  function firstSound(buf) {
+    const d = buf.getChannelData(0);
+    const lim = Math.min(d.length, Math.floor(buf.sampleRate * 0.3));
+    for (let i = 0; i < lim; i++) if (d[i] > THR || d[i] < -THR) return i / buf.sampleRate;
+    return 0;
   }
-  // 멜로디 문자열 → 스텝별 {midi, len}
-  function parseMel(str) {
-    const toks = str.replace(/\|/g, ' ').trim().split(/\s+/);
-    const out = new Array(toks.length).fill(null);
-    let last = -1;
-    toks.forEach((t, i) => {
-      if (t === '-') {
-        if (last >= 0) out[last].len++;
-      } else if (t === '.') last = -1;
-      else {
-        out[i] = { midi: midiOf(t), len: 1 };
-        last = i;
+  function decode(bytes) {
+    return new Promise((ok, bad) => {
+      try {
+        const p = ctx.decodeAudioData(bytes, ok, bad);
+        if (p && p.catch) p.catch(bad);
+      } catch (e) {
+        bad(e);
       }
     });
-    return out;
   }
-  for (const k in TRACKS) {
-    const T = TRACKS[k];
-    T.notes = parseMel(T.mel);
-    T.bar = T.sub * 4;
-    T.len = T.notes.length;
-    T.tones = T.chords.map(chordTones);
+  function fetchBytes(url) {
+    if (typeof fetch !== 'function') return Promise.reject(new Error('no fetch'));
+    return fetch(url).then((r) => {
+      if (!r.ok) throw new Error(r.status);
+      return r.arrayBuffer();
+    });
+  }
+
+  // ── 효과음 ──
+  const SFX_GAIN = {
+    click: 0.3, error: 0.4, summon: 0.45, rare: 0.5, merge: 0.5, legend: 0.55, upgrade: 0.45, kill: 0.16, big: 0.5,
+    leak: 0.5, coin: 0.3, wave: 0.35, boss: 0.5, bomb: 0.55, freeze: 0.35, lose: 0.45, glue: 0.35, shield: 0.35,
+    shieldBreak: 0.5, blink: 0.35, charge: 0.4, seal: 0.45, cast: 0.3, doze: 0.3, unseal: 0.45, crit: 0.28,
+    atk_knight: 0.2, atk_rogue: 0.18, atk_archer: 0.1, atk_mage: 0.18, atk_frost: 0.12,
+  };
+  const sfxBuf = {}; // 이름 → [{ buf, off, dur }]
+  let sfxLoading = false;
+  function preloadSfx() {
+    if (sfxLoading || !ctx) return;
+    sfxLoading = true;
+    for (const name in MAN.sfx) {
+      MAN.sfx[name].forEach((it) => {
+        fetchBytes(BASE + 'sfx/' + it.f)
+          .then(decode)
+          .then((buf) => {
+            const off = Math.max(0, firstSound(buf) - it.lead);
+            (sfxBuf[name] = sfxBuf[name] || []).push({ buf, off, dur: Math.min(it.dur, buf.duration - off) });
+          })
+          .catch(() => {
+            /* 합성음으로 대신 */
+          });
+      });
+    }
+  }
+  let sfxBus = null;
+  function playSample(name, rate) {
+    const list = sfxBuf[name];
+    if (!list || !list.length) return false;
+    const it = list[(Math.random() * list.length) | 0];
+    if (!sfxBus) {
+      sfxBus = ctx.createGain();
+      sfxBus.gain.value = 1.6; // master(0.35) 뒤에서 합성음과 비슷한 크기
+      sfxBus.connect(master);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = it.buf;
+    if (rate) src.playbackRate.value = rate;
+    // (재생 속도를 흔들면 길이도 바뀌지만 짧은 소리라 괜찮다)
+    const g = ctx.createGain();
+    g.gain.value = SFX_GAIN[name] || 0.4;
+    src.connect(g);
+    g.connect(sfxBus);
+    src.start(ctx.currentTime, it.off, it.dur + 0.02);
+    return true;
+  }
+
+  // ── 배경 음악: 장면·막마다 곡을 고르고, 원본 루프 지점대로 끊김 없이 되풀이한다 ──
+  const pickOf = (arr) => arr[(Math.random() * arr.length) | 0];
+  function trackFor(scene, act) {
+    const a = Math.max(1, Math.min(4, act || 1));
+    switch (scene) {
+      case 'battle': return a >= 4 ? pickOf(['a4', 'a4b']) : pickOf(['a' + a, 'a' + a + 'b']);
+      case 'elite': return 'elite';
+      case 'boss': return a >= 4 ? 'god' : a >= 3 ? 'boss3' : 'boss1';
+      case 'map': return 'select';
+      case 'win': return 'title';
+      default: return MAN.bgm[scene] ? scene : null;
+    }
+  }
+  // 다음에 나올 법한 곡을 미리 받아 둔다 (압축된 파일만. 풀어 두는 건 틀 때)
+  function nextOf(scene, act) {
+    const a = Math.max(1, Math.min(4, act || 1));
+    if (scene === 'title') return ['select', 'a1', 'a1b'];
+    if (scene === 'map' || scene === 'event' || scene === 'shop' || scene === 'rest') return a >= 4 ? ['a4', 'a4b', 'god'] : ['a' + a, 'a' + a + 'b', 'elite', a >= 3 ? 'boss3' : 'boss1'];
+    if (scene === 'battle' || scene === 'elite') return ['select', a >= 4 ? 'god' : a >= 3 ? 'boss3' : 'boss1'];
+    return ['select'];
+  }
+
+  const raw = {}; // 곡 id → 받은 mp3 (Promise<ArrayBuffer>)
+  const decoded = new Map(); // 곡 id → { buf, off, dur } (최근 3곡만: 폰 메모리)
+  function getRaw(id) {
+    if (!raw[id]) raw[id] = fetchBytes(BASE + 'bgm/' + id + '.mp3').catch((e) => { delete raw[id]; throw e; });
+    return raw[id];
+  }
+  function getTrack(id) {
+    if (decoded.has(id)) {
+      const v = decoded.get(id);
+      decoded.delete(id);
+      decoded.set(id, v); // 최근 사용으로
+      return Promise.resolve(v);
+    }
+    const info = MAN.bgm[id];
+    return getRaw(id)
+      .then((bytes) => decode(bytes.slice(0)))
+      .then((buf) => {
+        // 한 채널로 합쳐 메모리를 반으로
+        let b = buf;
+        if (buf.numberOfChannels > 1) {
+          b = ctx.createBuffer(1, buf.length, buf.sampleRate);
+          const o = b.getChannelData(0);
+          const l = buf.getChannelData(0);
+          const r = buf.getChannelData(1);
+          for (let i = 0; i < o.length; i++) o[i] = (l[i] + r[i]) * 0.5;
+        }
+        const off = Math.max(0, firstSound(b) - info.lead);
+        const v = { buf: b, off, dur: Math.min(info.dur, b.duration - off) };
+        decoded.set(id, v);
+        while (decoded.size > 3) {
+          const oldest = decoded.keys().next().value;
+          if (cur && cur.id === oldest) break;
+          decoded.delete(oldest);
+        }
+        return v;
+      });
   }
 
   let bgmOff = false;
@@ -324,111 +377,106 @@
   } catch (e) {
     /* 기본값 */
   }
-  let want = null; // 지금 틀어야 할 곡
-  let cur = null; // { name, T, bus, step, t }
-  let timer = null;
+  let want = null; // { scene, act }
+  let cur = null; // { scene, act, id, src, gain }
+  let musicBus = null;
+  let jingle = null;
+  let reqSeq = 0;
+  let pend = null; // 받는 중인 { scene, act }
 
-  function voice(bus, type, f, t0, dur, vol, slide) {
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(f, t0);
-    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.008);
-    g.gain.exponentialRampToValueAtTime(vol * 0.55, t0 + Math.min(dur, 0.12));
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g);
-    g.connect(bus);
-    o.start(t0);
-    o.stop(t0 + dur + 0.02);
+  function stopCur(fade) {
+    if (!cur) return;
+    const { src, gain } = cur;
+    const now = ctx.currentTime;
+    try {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(0, now + fade);
+      src.stop(now + fade + 0.05);
+    } catch (e) {
+      /* 이미 멈춤 */
+    }
+    cur = null;
   }
-  function drumHit(bus, ch, t0) {
-    if (ch === 'k') voice(bus, 'triangle', 220, t0, 0.12, 0.45, 55);
-    else if (ch === 's' || ch === 'h') {
-      if (!noiseBuf) noise(0.01, 0.0001, 'highpass', 5000); // 잡음 버퍼 준비
-      const src = ctx.createBufferSource();
-      src.buffer = noiseBuf;
-      const f = ctx.createBiquadFilter();
-      f.type = ch === 's' ? 'bandpass' : 'highpass';
-      f.frequency.value = ch === 's' ? 1800 : 7000;
-      const g = ctx.createGain();
-      const v = ch === 's' ? 0.28 : 0.08;
-      const d = ch === 's' ? 0.12 : 0.035;
-      g.gain.setValueAtTime(v, t0);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-      src.connect(f);
-      f.connect(g);
-      g.connect(bus);
-      src.start(t0, Math.random() * 0.3);
-      src.stop(t0 + d + 0.02);
-    }
+  function startId(scene, act, id, delay) {
+    const seq = ++reqSeq;
+    pend = { scene, act };
+    getTrack(id)
+      .then((t) => {
+        if (seq !== reqSeq || !ctx) return; // 그사이 다른 곡으로 바뀜
+        pend = null;
+        if (!musicBus) {
+          musicBus = ctx.createGain();
+          musicBus.gain.value = 0.75;
+          musicBus.connect(master);
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = t.buf;
+        src.loop = true;
+        src.loopStart = t.off;
+        src.loopEnd = t.off + t.dur;
+        const gain = ctx.createGain();
+        const t0 = ctx.currentTime + (delay || 0.05);
+        gain.gain.setValueAtTime(0, t0);
+        gain.gain.linearRampToValueAtTime(1, t0 + 0.6);
+        src.connect(gain);
+        gain.connect(musicBus);
+        src.start(t0, t.off);
+        cur = { scene, act, id, src, gain };
+      })
+      .catch(() => {
+        if (seq === reqSeq) pend = null; // 못 받으면 조용히 (효과음은 계속). 나중에 다시 시도
+      });
   }
-
-  function playStep(c, st, t0) {
-    const T = c.T;
-    const sd = 60 / T.bpm / T.sub;
-    const inBar = st % T.bar;
-    const barIdx = Math.floor(st / T.bar) % T.tones.length;
-    const tones = T.tones[barIdx];
-    const n = T.notes[st % T.len];
-    if (n && n.midi) voice(c.bus, T.lead, hz(n.midi), t0, n.len * sd * 0.95, T.lead === 'sawtooth' ? 0.1 : T.lead === 'square' ? 0.13 : 0.22);
-    const b = T.bass[inBar % T.bass.length];
-    if (tones[b]) {
-      let len = 1;
-      while (T.bass[(inBar + len) % T.bass.length] === '-' && len < T.bass.length) len++;
-      // 폰 스피커에서도 들리게 한 옥타브 올린 베이스
-      voice(c.bus, 'triangle', hz(tones[b] + 12), t0, len * sd * 0.9, 0.3);
-    }
-    if (T.arp) {
-      const a = T.arp[st % T.arp.length];
-      if (tones[a]) voice(c.bus, 'square', hz(tones[a] + 24), t0, sd * 0.8, 0.045);
-    }
-    if (T.drum) drumHit(c.bus, T.drum[inBar % T.drum.length], t0);
-  }
-
-  function startTrack(name) {
-    if (cur) {
-      // 이전 곡은 짧게 줄이며 끊는다
-      const old = cur.bus;
-      const now = ctx.currentTime;
-      old.gain.cancelScheduledValues(now);
-      old.gain.setValueAtTime(old.gain.value, now);
-      old.gain.linearRampToValueAtTime(0, now + 0.35);
-      setTimeout(() => old.disconnect(), 600);
-      cur = null;
-    }
-    if (!name || !TRACKS[name]) return;
-    const bus = ctx.createGain();
-    bus.gain.value = 0.2; // 효과음보다 한 발 뒤에
-    bus.connect(master);
-    cur = { name, T: TRACKS[name], bus, step: 0, t: ctx.currentTime + 0.4 };
+  function playJingle() {
+    const info = MAN.bgm.winJingle;
+    if (!info) return 0;
+    getTrack('winJingle')
+      .then((t) => {
+        const src = ctx.createBufferSource();
+        src.buffer = t.buf;
+        const g = ctx.createGain();
+        g.gain.value = 0.9;
+        src.connect(g);
+        g.connect(musicBus || master);
+        src.start(ctx.currentTime + 0.05, t.off, t.dur);
+        jingle = src;
+      })
+      .catch(() => {});
+    return info.dur;
   }
 
-  function tick() {
+  function apply() {
     if (!ctx || ctx.state !== 'running') return;
     const target = muted || bgmOff ? null : want;
-    if ((cur ? cur.name : null) !== target) startTrack(target);
-    if (!cur) return;
-    const now = ctx.currentTime;
-    if (cur.t < now - 0.2) cur.t = now + 0.05; // 멈췄다 돌아오면 밀린 음을 몰아 치지 않는다
-    const sd = 60 / cur.T.bpm / cur.T.sub;
-    while (cur.t < now + 0.3) {
-      try {
-        playStep(cur, cur.step, cur.t);
-      } catch (e) {
-        /* 음 하나 실패는 무시 */
-      }
-      cur.step++;
-      cur.t += sd;
+    if (!target) {
+      reqSeq++;
+      pend = null;
+      stopCur(0.4);
+      return;
     }
+    if (pend && pend.scene === target.scene && pend.act === target.act) return;
+    // 같은 장면(같은 막)이면 틀던 곡을 그대로 둔다
+    if (cur && cur.scene === target.scene && cur.act === target.act) return;
+    const id = trackFor(target.scene, target.act);
+    if (!id) return;
+    stopCur(0.8);
+    let delay = 0.05;
+    if (target.scene === 'win') delay = playJingle() + 0.2;
+    startId(target.scene, target.act, id, delay);
+    for (const n of nextOf(target.scene, target.act)) if (MAN.bgm[n]) getRaw(n).catch(() => {});
   }
 
-  RS.bgm = function (name) {
-    want = name || null;
-    if (!timer && typeof setInterval === 'function') timer = setInterval(tick, 80);
-    tick();
+  // scene: title·map·battle·elite·boss·shop·rest·event·win·lose. act 로 막마다 곡이 바뀐다
+  RS.bgm = function (scene, act) {
+    want = scene ? { scene, act: act || (want && want.act) || 1 } : null;
+    apply();
   };
+  // 터치로 오디오가 깨어난 뒤에도 원하는 곡이 나오게 가끔 확인한다
+  if (typeof setInterval === 'function') setInterval(() => {
+    if (ctx && ctx.state === 'running' && want && !cur && !bgmOff && !muted) apply();
+  }, 700);
+
   RS.audioHidden = function (hidden) {
     if (!ctx) return;
     try {
@@ -439,7 +487,9 @@
     }
   };
   RS.isBgmOff = () => bgmOff;
-  RS.bgmNow = () => (cur ? cur.name : null);
+  RS.bgmNow = () => (cur ? cur.id : null);
+  // 점검용: 받아 둔 효과음 종류 수, 풀어 둔 곡, 루프 시작점
+  RS.audioStats = () => ({ sfx: Object.keys(sfxBuf).length, decoded: [...decoded.keys()], off: cur ? decoded.get(cur.id) && decoded.get(cur.id).off : null, state: ctx ? ctx.state : 'none' });
   RS.setBgmOff = function (off) {
     bgmOff = off;
     try {
@@ -448,7 +498,7 @@
       /* 무시 */
     }
     if (!off) RS.unlockAudio();
-    tick();
+    apply();
   };
 
   RS.isMuted = () => muted;
@@ -460,6 +510,6 @@
       /* 무시 */
     }
     if (!m) RS.unlockAudio();
-    if (RS.bgm) RS.bgm(want);
+    apply();
   };
 })((globalThis.RS = globalThis.RS || {}));

@@ -286,6 +286,7 @@
         li('상성', '돌골렘·철갑 게·흑기사는 궁수·도적 피해 절반. 유령·리치는 물리 피해에 강합니다.'),
         li('심연', '클리어하면 열리는 추가 난이도. 단계마다 불리한 규칙이 더해집니다.'),
         li('저장', '칸을 옮길 때마다 자동 저장. 전투 도중 나가면 그 전투를 처음부터 다시 합니다.'),
+        li('음악·효과음', 'Juhani Junkala · HydroGene · SketchyLogic · spring-spring · qubodup · haeldb 의 CC0(퍼블릭 도메인) 음원을 씁니다 (OpenGameArt.org).'),
       ),
     ), typeof onClose === 'function' ? onClose : null);
   };

@@ -49,6 +49,8 @@
   <div id="rotate">화면을 세로로 돌려 주세요</div>
 </div>
 <!-- BODY END -->
+<!-- 개발용: 음원은 배포 폴더(docs/assets/audio)에 한 벌만 둔다. 빌드된 docs/index.html 은 assets/audio/ 를 읽는다 -->
+<script>window.RS = { AUDIO_BASE: "../docs/assets/audio/" };</script>
 <!-- SCRIPTS START -->
 <script src="src/core/rng.js"></script>
 <script src="src/data/units.js"></script>
@@ -64,6 +66,7 @@
 <script src="src/core/run.js"></script>
 <script src="src/render/sprites.js"></script>
 <script src="src/render/renderer.js"></script>
+<script src="src/data/audiomap.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/ui/common.js"></script>
 <script src="src/ui/battle.js"></script>

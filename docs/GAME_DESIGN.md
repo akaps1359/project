@@ -751,11 +751,11 @@ game/
   assets/fonts/         Galmuri11 (OFL 라이선스 포함)
   src/core/             rng, board(보드·판매 가치), stage(웨이브 생성), battle(전투), run(맵·보상·상점·휴식·선택 대기열·환불·저장), stats(효과 합산·룬)
   src/data/             units(밸런스 상수·유닛·적·지역), content(증강·소모품·저주), relics, ancients(차원 방랑자),
-                        meta(지휘관·심연·별점술사), events
+                        meta(지휘관·심연·별점술사), events, audiomap(음원 길이·루프 지점, audio_prep.py 가 만든다)
   src/render/           sprites(도트 데이터·굽기), renderer(캔버스)
   src/ui/               common(공용 부품), battle(전투 화면), adventure(맵·보상·상점·이벤트·휴식·보물),
                         menus(타이틀·지휘관·빌드·도감·연대기)
-  src/audio.js          효과음 합성 (파일 없음)
+  src/audio.js          배경 음악(장면·막별, 끊김 없는 루프)·효과음 재생. 음원이 없으면 합성음으로 대신
   src/main.js           루프·저장·화면 전환·메타 기록
 tools/
   build.js              한 파일 빌드 → docs/index.html, build/artifact.html
@@ -774,9 +774,11 @@ tools/
   relicpicks.js         보스 유물·방랑자 선택 비율과 고른 판 승률
   cmdval.js             지휘관별 승률 (여러 코어)
   enemystats.js         적 종류별 승률·잃은 생명·강타·빠져나감·지역별 사망률
+  audio_prep.py         CC0 음원을 받아 다듬고 MP3·루프 지점 목록을 만든다 (ffmpeg·numpy·soundfile)
 docs/
   index.html            빌드 결과 (그대로 플레이 가능, GitHub Pages가 이 폴더를 올린다)
   GAME_DESIGN.md        이 문서
+  assets/audio/         배경 음악 19곡·효과음 36개 (CC0, 출처는 CREDITS.md). 장면마다 필요한 곡만 받는다
   audit/                증강·유물·적 감사 보고서 (v2.11)
 ```
 
@@ -805,4 +807,3 @@ docs/
 - 지휘관별 전용 증강 풀 (슬더스의 캐릭터별 카드풀처럼)
 - 3막 대체 지역, 심연 11~20
 - 홈 화면 아이콘·오프라인 캐시(PWA)
-- 배경 음악, 효과음 다듬기

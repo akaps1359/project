@@ -186,7 +186,7 @@
     if (run.phase !== 'choice' && run.phase !== 'event' && run.phase !== 'rest' && run.phase !== 'neow' && run.phase !== 'actStart') G.backSnap = null;
     // 상황별 배경 음악 (고르기 화면은 이전 곡을 이어 간다)
     const BGM = { neow: 'event', map: 'map', reward: 'map', treasure: 'map', shop: 'shop', event: 'event', rest: 'rest', actStart: 'event', over: 'lose', victory: 'win' };
-    if (BGM[run.phase]) RS.bgm(BGM[run.phase]);
+    if (BGM[run.phase]) RS.bgm(BGM[run.phase], run.act);
     switch (run.phase) {
       case 'neow': UI.showNeow(); break;
       case 'map': UI.showMap(); break;
@@ -242,7 +242,8 @@
   G.startBattle = function () {
     const run = G.run;
     G.battle = new RS.Battle(run, run.pending.stage);
-    RS.bgm(run.pending.stage.type === 'boss' ? 'boss' : 'battle');
+    const stype = run.pending.stage.type;
+    RS.bgm(stype === 'boss' ? 'boss' : stype === 'elite' ? 'elite' : 'battle', run.act);
     G.renderer.reset();
     G.renderer.setTheme(RS.actDef(run).theme);
     G.acc = 0;

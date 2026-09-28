@@ -1086,7 +1086,7 @@
       }
       case 'boss':
         RS.sfx('boss');
-        RS.bgm('boss');
+        RS.bgm('boss', UI.G.run ? UI.G.run.act : 1);
         UI.toast(`${ev.name} 등장!`, 'warn');
         break;
       case 'bossDown':
