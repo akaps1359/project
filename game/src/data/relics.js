@@ -77,14 +77,16 @@
     R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { helix: 1 }),
 
     // ── 보스 (강력하지만 대가가 따르는 것이 많다) ──
-    R('cursedCrown', '저주받은 왕관', 3, 'crown', '전투를 시작할 때 골드 +30×막', { battleStartGold: 30 }, {
+    R('cursedCrown', '저주받은 왕관', 3, 'crown', '전투를 시작할 때 골드 +35×막', { battleStartGold: 35 }, {
       cost: '최대 생명 -4',
       onPick(run) { RS.changeMaxLife(run, -4); },
     }),
     R('riftShard', '균열 파편', 3, 'shard', '보스 체력 -25%, 엘리트 체력 -20%', { bossHpPct: 0.25, eliteHpPct: -0.2 }),
-    R('warHorn', '전쟁 나팔', 3, 'horn', '모든 유닛 공격 속도 +15%, 사거리 +4', { aspdPct: 0.15, rangeAdd: 4 }),
-    R('ectoHeart', '유령 젤리', 3, 'ecto', '웨이브가 시작될 때마다 60% 확률로 무료 소환 1회', { waveFreeSummon: 0.6, noKillGold: 1 }, {
-      cost: '적을 처치해도 골드를 얻지 못한다',
+    R('warHorn', '전쟁 나팔', 3, 'horn', '모든 유닛 공격 속도 +15%, 사거리 +4', { aspdPct: 0.15, rangeAdd: 4, strikeReduce: -1 }, {
+      cost: '엘리트·보스의 강타로 잃는 생명 +1',
+    }),
+    R('ectoHeart', '유령 젤리', 3, 'ecto', '웨이브가 시작될 때마다 60% 확률로 무료 소환 1회', { waveFreeSummon: 0.6, killGoldPct: -0.7 }, {
+      cost: '처치 골드 -70%',
     }),
     R('stimulant', '각성제', 3, 'cup', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, noRestHeal: 1 }, {
       cost: '휴식처에서 휴식할 수 없다',
@@ -100,16 +102,16 @@
       cost: '증강 선택지 -1',
     }),
     // 실시간 디펜스라 정보를 가리는 것만으로는 대가가 되지 않는다 → 실제로 빗나가게 한다 (심연 5 봇: 없음 54% · 예전 68% · 지금 60%)
-    R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +45%', { dmgPct: 0.45, blindfold: 1, missChance: 0.07 }, {
-      cost: '모든 공격이 7% 확률로 빗나간다 · 적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
+    R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +60%', { dmgPct: 0.6, blindfold: 1, missChance: 0.05 }, {
+      cost: '모든 공격이 5% 확률로 빗나간다 · 적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
     }),
-    R('philStone', '붉은 연금석', 3, 'redgem', '소환 비용 -35%', { summonCostPct: -0.35, enemyHpPct: 0.15 }, {
-      cost: '모든 적 체력 +15%',
+    R('philStone', '붉은 연금석', 3, 'redgem', '소환 비용 -35%', { summonCostPct: -0.35, enemyHpPct: 0.1 }, {
+      cost: '모든 적 체력 +10%',
     }),
     R('velvetChoker', '비단 목띠', 3, 'choker', '소환 비용 -30%', { summonCostPct: -0.3, upgradeCostPct: 0.6 }, {
       cost: '강화 비용 +60%',
     }),
-    R('snakeEye', '홀린 뱀눈', 3, 'snake', '소환 시 희귀 확률 +15%, 영웅 확률 +2%', { rareChance: 0.15, epicChance: 0.02, snakeEye: 1 }, {
+    R('snakeEye', '홀린 뱀눈', 3, 'snake', '소환 시 희귀 확률 +18%, 영웅 확률 +2%', { rareChance: 0.18, epicChance: 0.02, snakeEye: 1 }, {
       cost: '소환 비용이 매번 50~200% 사이에서 무작위',
     }),
     R('cursedKey', '도굴꾼의 열쇠', 3, 'key', '웨이브 시작 골드 2배, 이자 한도 +3', { waveGoldPct: 1, interestCap: 3, cursedKey: 1 }, {
@@ -120,10 +122,10 @@
     }),
     R('slaverCollar', '검투사 목줄', 3, 'collar', '엘리트·보스전에서 모든 유닛 피해 +60%', { bigBattleDmg: 0.6 }),
     R('blackStar', '그믐 별', 3, 'blackstar', '엘리트가 주는 유물 2개를 모두 얻는다', { blackStar: 1 }),
-    R('callingBell', '요술 방울', 3, 'bell', '즉시 일반 유물 1개, 희귀 유물 2개', {}, {
+    R('callingBell', '요술 방울', 3, 'bell', '즉시 희귀 유물 3개', {}, {
       cost: '저주 [불면]',
       onPick(run) {
-        RS.grantRandomRelic(run, [1]);
+        RS.grantRandomRelic(run, [2]);
         RS.grantRandomRelic(run, [2]);
         RS.grantRandomRelic(run, [2]);
         RS.addCurse(run, 'regret');
@@ -143,20 +145,24 @@
         if (a.length) RS.pickAugment(run, a[0]);
       },
     }),
-    R('orrery', '행성 모빌', 3, 'planet', '증강을 3번 연달아 고른다', {}, {
-      onPick(run) { for (let k = 0; k < 3; k++) RS.enqueue(run, { k: 'aug', w: [0, 40, 45, 15], title: '행성 모빌' }); },
+    R('orrery', '행성 모빌', 3, 'planet', '증강을 2번 연달아 고른다 (황금·프리즘 위주)', {}, {
+      onPick(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'aug', w: [0, 25, 55, 20], title: '행성 모빌' }); },
     }),
-    R('sacredBark', '당산나무 껍질', 3, 'bark', '소모품 효과 2배', { itemPotency: 1 }),
-    R('emptyCage', '풀어 준 새장', 3, 'cage', '증강·저주를 2개까지 골라 없앤다', {}, {
-      onPick(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'remove', title: '풀어 준 새장' }); },
+    R('sacredBark', '당산나무 껍질', 3, 'bark', '소모품 효과 2배, 소모품 칸 +1', { itemPotency: 1, itemSlots: 1 }),
+    R('emptyCage', '풀어 준 새장', 3, 'cage', '증강·저주를 2개까지 골라 없애고, 최대 생명 +6', {}, {
+      onPick(run) {
+        RS.changeMaxLife(run, 6);
+        RS.heal(run, 6);
+        for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'remove', title: '풀어 준 새장' });
+      },
     }),
 
     // ── 시작 유물 (지휘관) ──
-    R('mercContract', '용병 계약서', 5, 'scroll', '전투에서 이기면 골드 +15×막', { winGold: 15 }),
-    R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +40%, 전사 기절 확률 +5%p, 도적 치명타 확률 +5%p', { cls: { knight: { dmg: 0.4, stun: 0.05 }, rogue: { dmg: 0.4, crit: 0.05 } } }),
-    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +50%, 범위 +2 (서리술사는 영웅 등급부터). 마법사 공격이 화상 (초당 피해의 15%)', { cls: { mage: { dmg: 0.5, splash: 2 }, frost: { dmg: 0.5, splash: 2 } }, burn: 0.15 }),
-    R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +8, 공격 속도 +15%', { cls: { archer: { range: 8, aspd: 0.15 } } }),
-    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +1, 전투 후 소모품이 나올 확률 +30%', { itemSlots: 1, itemDropBonus: 0.3 }),
+    R('mercContract', '용병 계약서', 5, 'scroll', '전투에서 이기면 골드 +22×막', { winGold: 22 }),
+    R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +50%, 전사 기절 확률 +5%p, 도적 치명타 확률 +5%p', { cls: { knight: { dmg: 0.5, stun: 0.05 }, rogue: { dmg: 0.5, crit: 0.05 } } }),
+    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +60%, 범위 +2 (서리술사는 영웅 등급부터). 마법사 공격이 화상 (초당 피해의 15%)', { cls: { mage: { dmg: 0.6, splash: 2 }, frost: { dmg: 0.6, splash: 2 } }, burn: 0.15 }),
+    R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +6, 공격 속도 +10%', { cls: { archer: { range: 6, aspd: 0.1 } } }),
+    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +2, 전투 후 소모품이 나올 확률 +50%. 소모품을 쓸 때마다 이번 전투 동안 모든 유닛 피해 +15% (누적)', { itemSlots: 2, itemDropBonus: 0.5, itemDmg: 0.15 }),
     R('soulJar', '영혼 항아리', 5, 'vial', '적을 50마리 처치할 때마다 유닛 1기가 무료로 일어난다 (소환 비용이 오르지 않는다)', { souls: 50 }),
     R('starScepter', '별의 왕홀', 5, 'star', '웨이브마다 별 +1 (전투가 끝나도 남고, 최대 5). 별 3개로 [별똥별]: 모든 적에게 큰 피해', { stars: 1 }, { state: { n: 0 } }),
 
