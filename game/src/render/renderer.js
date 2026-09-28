@@ -807,6 +807,7 @@
       this.drawRift(ctx, b);
       this.drawSlots(ctx, b, dt);
       this.drawEnemies(ctx, b, dt);
+      this.drawFocus(ctx, b, dt);
       this.drawCasts(ctx, b, dt);
     }
     this.drawShots(ctx, dt);
@@ -1217,6 +1218,7 @@
   };
 
   // 적 한 마리의 걸음새 (속도가 느려지면 걸음도 느려지고, 기절하면 멈춘다)
+  const bigScale = (e) => (e.boss ? 1.5 : e.elite ? 1.3 : 1);
   P.enemyPose = function (e, dt) {
     const gait = GAIT[e.type] || 'walk';
     const rate = e.stunT > 0 ? 0 : Math.max(0.25, 1 - (e.slow || 0));
@@ -1296,7 +1298,56 @@
     // 가로로 움직일 때 가는 쪽을 본다
     if (e.dir === 0) e._f = 1;
     else if (e.dir === 2) e._f = -1;
+    // 엘리트·보스는 크게 (보스전 하는 맛)
+    const S = bigScale(e);
+    if (S !== 1) {
+      pose.sx *= S;
+      pose.sy *= S;
+      pose.big = S;
+    }
     return pose;
+  };
+
+  // ── 강타 집중 ──
+  // 강타를 준비하는 적 둘레만 밝게 두고 나머지를 어둡게. 그 적에게 닿는 유닛 칸에 금색 꺾쇠
+  P.drawFocus = function (ctx, b, dt) {
+    const f = b.strikeFocus ? b.strikeFocus() : null;
+    this.focusK = Math.max(0, Math.min(1, (this.focusK || 0) + (f ? dt * 6 : -dt * 4)));
+    if (f) this.focusE = f;
+    const e = this.focusE;
+    if (this.focusK <= 0 || !e) return;
+    const k = this.focusK;
+    const raw = this.raw;
+    const S = ctx.S || 1;
+    raw.save();
+    raw.setTransform(1, 0, 0, 1, 0, 0);
+    raw.fillStyle = `rgba(10,4,18,${0.5 * k})`;
+    raw.beginPath();
+    raw.rect(0, 0, this.canvas.width, this.canvas.height);
+    raw.arc(e.x * S, (e.y - 6) * S, 24 * S, 0, Math.PI * 2, true);
+    raw.fill('evenodd');
+    raw.restore();
+    if (!f) return;
+    const board = b.run.board;
+    const blink = Math.floor(this.t * 6) % 2 === 0;
+    for (let i = 0; i < F.SIZE; i++) {
+      const s = board[i];
+      const st = b.slotStats[i];
+      if (!s || !st || s.sealed) continue;
+      const c = RS.slotCenter(i);
+      if (Math.hypot(c.x - e.x, c.y - e.y) > st.range) continue;
+      brackets(ctx, i, blink ? '#ffe46b' : '#f5c44a', 1);
+      ctx.glow(c.x, c.y, 9, '#ffe46b', 0.18);
+    }
+    // 적 둘레에 조여드는 붉은 고리
+    const r = 14 + 6 * (1 - ((this.t * 2) % 1));
+    const n = 24;
+    ctx.fillStyle = '#ff4d5a';
+    for (let j = 0; j < n; j++) {
+      if (j % 2) continue;
+      const a = (j / n) * Math.PI * 2 + this.t;
+      ctx.fillRect(e.x + Math.cos(a) * r, e.y - 6 + Math.sin(a) * r * 0.85, 1, 1);
+    }
   };
 
   // ── 보스 기술 예고 ──
@@ -1534,7 +1585,7 @@
     for (const e of list) {
       if (e.subT > 0) continue;
       const spr = RS.SPR[e.type];
-      const w = Math.max(6, Math.round(spr.width * 0.6));
+      const w = Math.max(6, Math.round(spr.width * 0.6 * bigScale(e)));
       const fl = GAIT[e.type] === 'fly' || GAIT[e.type] === 'float';
       const sw = fl ? w * 0.7 : w;
       ctx.globalAlpha = fl ? 0.2 : 0.3;
@@ -1553,10 +1604,11 @@
       }
       if (e.dozeT > 0 && RS.SPR[name + '_z']) name += '_z';
       const spr = RS.SPR[name];
-      const w = spr.width;
-      const h = spr.height;
+      const w = spr.width * (pose.big || 1);
+      const h = spr.height * (pose.big || 1);
       const ax = e.x + pose.ox;
-      const ay = e.y + 5 + pose.oy - pose.fly;
+      // 큰 엘리트·보스가 위쪽 길에서 화면 밖으로 잘리지 않게 살짝 내린다
+      const ay = Math.max(e.y + 5 + pose.oy - pose.fly, pose.big ? h + 1 : -99);
       const flip = e._f === -1;
       // 물속에 잠긴 늪의 여왕: 흐릿한 모습과 물결만
       if (e.subT > 0) {

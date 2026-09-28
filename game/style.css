@@ -306,6 +306,17 @@ img { max-width: 100%; }
 @keyframes toast { 0% { transform: translateY(6px); opacity: 0; } 12% { transform: none; opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
 .page-toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 5; }
 
+/* 강타 집중: 패널 위를 잠시 덮는 붉은 띠 */
+#strikebar { position: absolute; inset: 0; z-index: 3; background: rgba(40, 8, 16, 0.94); box-shadow: var(--px), inset 0 0 0 2px #ff4d5a; padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; gap: 5px; pointer-events: none; animation: sbIn 0.2s steps(3); }
+#strikebar[hidden] { display: none; }
+#strikebar .sb-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+#strikebar .sb-name { color: #ffb0b5; font-weight: normal; font-size: 14px; }
+#strikebar .sb-dmg { color: #ff4d5a; font-size: 18px; }
+#strikebar .sb-bar { height: 10px; background: #1d1428; box-shadow: 0 0 0 1px #ff4d5a; }
+#strikebar .sb-bar i { display: block; height: 100%; width: 0; background: #ffe46b; }
+#strikebar .sb-bar.hot i { background: #ffffff; }
+#strikebar .sb-hint { margin: 0; font-size: 11px; color: #f0dcc4; line-height: 1.35; }
+@keyframes sbIn { from { opacity: 0; transform: translateY(4px); } }
 #panel { height: 90px; background: var(--panel); box-shadow: var(--px); display: flex; overflow: hidden; }
 #panel > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
 .pidle { flex-wrap: wrap; justify-content: space-around; align-content: center; }

@@ -99,6 +99,7 @@
 
   const P = Battle.prototype;
   const PRESSURE_FROM = 0.25; // 한 바퀴의 이 지점(오른쪽 길)부터 균열 게이지를 채운다
+  RS.FOCUS_SLOW = 0.4; // 강타 준비 중 시간 배속
 
   P.emit = function (ev) {
     if (this.fxOn) this.fx.push(ev);
@@ -829,6 +830,8 @@
     const run = this.run;
     const nW = this.stage.waves.length;
     let dmg = (e.def.leak + M.leakAdd) * M.leakMult;
+    // 엘리트·보스는 처음엔 조금, 다시 돌 때마다 두 배로 (1 → 2 → 4 → 8 …)
+    if (e.elite || e.boss) dmg *= Math.pow(2, Math.min(5, Math.max(0, e.laps - 1)));
     if ((e.elite || e.boss) && run.asc >= 5) dmg += 1;
     if (e.boss && this.enraged) dmg *= 2;
     if (M.lastWaveLeakMult && this.waveIdx >= nW) dmg *= 2;
@@ -881,7 +884,11 @@
       if (p > PRESSURE_FROM) w += (p - PRESSURE_FROM) / (1 - PRESSURE_FROM);
     }
     this.pressureW = w;
-    if (w <= 0) return;
+    // 뒤쪽 길에 적이 없으면 게이지가 서서히 가라앉는다
+    if (w <= 0) {
+      if (this.pressure > 0) this.pressure = Math.max(0, this.pressure - dt * RS.BAL.pressureDecay);
+      return;
+    }
     // 유령 망토가 펼쳐진 동안은 게이지가 차지 않는다
     if (this.ghostT > 0) return;
     this.pressure += (w * dt) / fill;
@@ -920,6 +927,11 @@
       this.damage(e, e.maxHp * 0.05, null, false, true);
     }
     this.emit({ k: 'stagger', x: e.x, y: e.y, why, heal: M.counterStrike || 0 });
+  };
+  // 지금 강타를 준비 중인 적 (없으면 null) — 화면 집중·슬로 모션용
+  P.strikeFocus = function () {
+    for (const e of this.enemies) if (!e.dead && e.cast && e.cast.s.k === 'strike') return e;
+    return null;
   };
   // 누수·강타 공통: 생명을 잃고, 0이 되면 진다
   P.loseLife = function (dmg) {
@@ -1337,6 +1349,18 @@
     }
     const dealt = Math.min(dm, e.hp);
     e.hp -= dm;
+    // 흡혈: 엘리트·보스에게 준 피해로 생명 회복 (최대 체력 100%를 깎을 때마다 leech 만큼)
+    if (M.leech && (e.elite || e.boss) && dealt > 0) {
+      e.leechAcc = (e.leechAcc || 0) + (dealt / e.maxHp) * M.leech;
+      if (e.leechAcc >= 1) {
+        const n = Math.floor(e.leechAcc);
+        e.leechAcc -= n;
+        if (this.run.life < this.run.maxLife) {
+          RS.heal(this.run, n);
+          this.emit({ k: 'leech', x: e.x, y: e.y, v: n });
+        }
+      }
+    }
     this.stats.dmg += dealt;
     if (cls) this.stats.clsDmg[cls] += dealt;
     if (!isDot) e.flash = 0.08;

@@ -78,7 +78,7 @@
     // ── 프리즘 ──
     A('twinSummon', '쌍둥이 소환', 3, 'twin', '소환할 때 20% 확률로 같은 유닛 1기 추가', { twinChance: 0.2 }, { unique: true }),
     A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 8% 확률로 2단계 상승', { mergeDouble: 0.08 }, { unique: true }),
-    A('berserk', '광전사', 3, 'rage', '잃은 생명 1당 모든 유닛 피해 +5%, 공격 속도 +1.5% (최대 +100% / +30%)', { berserk: 1 }, { unique: true }),
+    A('berserk', '광전사', 3, 'rage', '잃은 생명 1당 모든 유닛 피해 +5%, 공격 속도 +1.5% (최대 +100% / +30%). 흡혈: 엘리트·보스 체력을 1/6 깎을 때마다 생명 +1', { berserk: 1, leech: 6 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
     A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12% (신화는 전설 4기로 친다)', { legendAura: 0.12 }, { unique: true }),
     A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +50%', { killGoldPct: 0.5, sellPct: 0.5 }, { unique: true }),

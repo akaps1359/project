@@ -43,7 +43,7 @@
     R('juzu', '고요의 구슬', 1, 'beads', '? 칸에서 전투가 나오지 않고, ? 칸에 들어설 때마다 생명 +2', { juzu: 1 }),
     R('tinyChest', '꼬마 궤짝', 1, 'chest', '? 칸에 3번째로 들어갈 때마다 보물이 나온다', { tinyChest: 1 }),
     R('ceramicFish', '비단잉어', 1, 'fish', '증강을 얻을 때마다 골드 +15', { ceramicFish: 15 }),
-    R('redSkull', '붉은 해골', 1, 'skull', '생명이 절반 이하면 모든 유닛 피해 +30%', { lowLifeDmg: 0.3 }),
+    R('redSkull', '붉은 해골', 1, 'skull', '생명이 절반 이하면 모든 유닛 피해 +30%. 흡혈: 엘리트·보스 체력을 1/4 깎을 때마다 생명 +1', { lowLifeDmg: 0.3, leech: 4 }),
     R('bronzeShield', '청동 방패', 1, 'shield2', '적의 강타로 잃는 생명 -1, 최대 생명 +3', { strikeReduce: 1 }, {
       onPick(run) { RS.changeMaxLife(run, 3); RS.heal(run, 3); },
     }),
@@ -73,6 +73,7 @@
     R('courier', '보부상', 2, 'box', '상점 가격 20% 할인, 산 자리에 새 물건이 들어온다', { shopDiscount: 0.2, courier: 1 }),
     R('wingBoots', '축지 장화', 2, 'boots', '길을 무시하고 다음 층 아무 칸으로 이동 (3회)', {}, { state: { uses: 3 } }),
     R('pantograph', '결전 나침반', 2, 'compass', '보스전을 시작할 때 생명 +6', { pantograph: 6 }),
+    R('bloodGrail', '피의 성배', 2, 'chalice', '흡혈: 엘리트·보스 체력을 1/8 깎을 때마다 생명 +1 (한 마리를 쓰러뜨리면 +8)', { leech: 8 }),
     R('voodoo', '저주 인형', 2, 'voodoo', '저주 1개당 모든 유닛 피해 +10% (심연의 짐 포함)', { curseDmg: 0.1 }),
     R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { helix: 1 }),
 

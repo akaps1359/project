@@ -310,8 +310,12 @@
     if (!b) return;
     // 가로 회전 안내가 떠 있는 동안에도 멈춘다
     const running = !G.paused && !G.modalOpen && !G.hidden && !G.rotated;
+    // 강타 집중: 엘리트·보스가 강타를 준비하는 동안 시간이 느려진다 (유닛을 옮겨 몰아칠 틈)
+    const focus = running && b.strikeFocus && b.strikeFocus();
+    const want = focus ? RS.FOCUS_SLOW : 1;
+    G.slow = G.slow == null ? 1 : G.slow + (want - G.slow) * Math.min(1, dt * (focus ? 10 : 4));
     if (running) {
-      G.acc += dt * G.speed;
+      G.acc += dt * G.speed * G.slow;
       let steps = 0;
       while (G.acc >= STEP && steps < MAX_STEPS) {
         b.update(STEP);
@@ -331,7 +335,7 @@
         return;
       }
     }
-    G.renderer.draw(b, running ? dt * Math.min(G.speed, 2) : 0);
+    G.renderer.draw(b, running ? dt * Math.min(G.speed, 2) * G.slow : 0);
   }
 
   function boot(hotData) {

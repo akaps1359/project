@@ -164,6 +164,7 @@
     const bossId = bossIdOf(b);
     UI.bossReserved = !!bossId;
     bb.classList.remove('enraged');
+    $('#strikebar').hidden = true;
     $('#boss-cast').classList.add('idle');
     $('#boss-cast b').textContent = bossId ? '특성' : '';
     $('#boss-cast span').textContent = bossId ? RS.ENEMY[bossId].trait || '' : '';
@@ -221,7 +222,8 @@
     if (M.leakReduce) leak = Math.max(1, leak - M.leakReduce);
     const hp = M.blindfold ? '?' : Math.max(1, Math.ceil((100 * Math.max(0, e.hp)) / e.maxHp));
     const big = e.boss || e.elite;
-    const lapTxt = big ? `한 바퀴마다 생명 -${Math.round(leak * 10) / 10} (다시 나와 계속 돈다)` : `빠져나가면 생명 -${Math.round(leak * 10) / 10}`;
+    const nextLap = big ? leak * Math.pow(2, Math.min(5, e.laps || 0)) : leak;
+    const lapTxt = big ? `이번 바퀴를 돌면 생명 -${Math.round(nextLap * 10) / 10} (돌 때마다 두 배: 1→2→4→8)` : `빠져나가면 생명 -${Math.round(leak * 10) / 10}`;
     UI.tipAt(cx, cy, def.name + (e.boss ? ' · 보스' : e.elite ? ' · 엘리트' : ''), `체력 ${hp}${hp === '?' ? '' : '%'} · ${lapTxt}`, def.trait || null);
   }
 
@@ -310,6 +312,15 @@
           UI.select(d.over);
           if (!d.overReach) warnDrop();
         }
+      } else if (UI.sel >= 0 && UI.sel !== d.from && board[UI.sel]) {
+        // 유닛을 고른 채 다른 유닛을 누르면 두 자리를 바꾼다
+        const s = board[UI.sel];
+        const from = UI.sel;
+        G.battle.swap(from, d.from);
+        RS.sfx('click');
+        UI.select(d.from);
+        if (!reachAt(s, d.from)) warnDrop();
+        UI.onceTip('tapSwap', '자리를 바꿨어요! 유닛을 고른 채 다른 칸(빈칸·유닛)을 누르면 옮기거나 바꿔요. 다른 유닛을 보려면 고른 유닛을 한 번 더 눌러 선택을 푸세요');
       } else {
         // 합성할 수 있는 선택된 칸을 다시 누르면 선택을 풀지 않는다
         if (UI.sel === d.from && !RS.canMerge(board, d.from)) UI.select(-1);
@@ -837,6 +848,7 @@
     }
     // 보스
     updateBossBar(b, c, blind);
+    updateStrikeBar(b, c);
     // 패널
     const refs = UI.panelRefs || {};
     if (UI.panelMode === 'idle' && refs.dps) {
@@ -905,6 +917,30 @@
       setCls(bb, 'enr', 'enraged', false);
     }
   }
+
+  // 강타 집중 띠: 패널 위에 누가·얼마나·경직이 얼마나 찼는지
+  function updateStrikeBar(b, c) {
+    const el = $('#strikebar');
+    const f = b.strikeFocus ? b.strikeFocus() : null;
+    setAttrHidden(el, 'sbh', !f);
+    if (!f) return;
+    const pre = f.cast.pre;
+    setText(el.querySelector('.sb-name'), 'sbn', `${f.def.name} · ${f.cast.s.name} ${Math.max(0, f.cast.t).toFixed(1)}`);
+    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${pre.dmg}`);
+    const k = Math.min(1, pre.taken / Math.max(1, pre.need));
+    const w = (k * 100).toFixed(0) + '%';
+    if (c.sbw !== w) {
+      c.sbw = w;
+      el.querySelector('.sb-bar i').style.width = w;
+    }
+    setCls(el.querySelector('.sb-bar'), 'sbhot', 'hot', k > 0.7);
+  }
+  const setAttrHidden = (el, key, on) => {
+    if (UI.hudCache[key] !== on) {
+      UI.hudCache[key] = on;
+      el.hidden = on;
+    }
+  };
 
   // 보스 바 아래 기술 예고: 무엇을·언제 쓰는지 (잠든 동안은 남은 시간)
   const CAST_TXT = {
@@ -1008,7 +1044,8 @@
       case 'castStart': {
         // 기술 예고: 처음 보는 기술이면 무엇이 오는지 한 번 설명한다
         const b = UI.G.battle;
-        if (ev.t > 0.6 && ev.id !== 'cross') RS.sfx('cast');
+        if (ev.id === 'strike') RS.sfx('heartbeat');
+        else if (ev.t > 0.6 && ev.id !== 'cross') RS.sfx('cast');
         const nm = ev.name || CAST_NAME[ev.id];
         const key = ev.seal ? 'seal' : ev.id;
         if (b && nm && ev.id !== 'spawn') {
@@ -1054,6 +1091,9 @@
         UI.onceTip('pressure', '균열 게이지가 찼어요! 적이 균열로 돌아오는 길(오른쪽·아래·왼쪽)에 오래 머물수록 문 둘레 고리가 차고, 가득 차면 생명 -1');
         break;
       }
+      case 'leech':
+        UI.hudFloat($('#h-life'), '+' + ev.v, 'good');
+        break;
       case 'stagger': {
         RS.sfx('shieldBreak');
         const b = UI.G.battle;

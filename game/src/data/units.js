@@ -8,6 +8,7 @@
     startLife: 25,
     fieldCap: 60, // 필드 위 적이 이 수에 도달하면 즉시 패배
     normalHpMul: [0, 1.2, 1.2, 1, 1], // [막] 일반 적 체력 배율 (엘리트·보스 제외)
+    pressureDecay: 0.05, // 뒤쪽 길에 적이 없을 때 게이지가 초당 줄어드는 양 (20초면 다 빠진다)
     pressureFill: 25, // 균열 게이지: 한 바퀴 뒤쪽에 머문 적의 가중 시간(초)이 이만큼 쌓이면 생명 -1
     eliteStrikeStep: 0.5, // 엘리트 강타가 막마다 세지는 정도 (0.5면 3막에서 +1)
     summonBase: 10, // 소환 비용 = base + step × (지금까지 소환 횟수)
@@ -117,18 +118,18 @@
     imp: { name: '임프', hp: 0.8, speed: 36, gold: 1, leak: 1, countMul: 1.1 },
     shaman: { name: '고블린 주술사', hp: 1.5, speed: 24, gold: 2, leak: 1, countMul: 0.5, gap: 0.9, heal: { every: 3, pct: 0.06, r: 32 }, trait: '주변 적 체력 회복' },
     // 엘리트
-    ogre: { name: '오우거', hp: 12, speed: 20, gold: 8, leak: 4, elite: true, skills: [{ k: 'strike', name: '몽둥이 찍기', every: 8, wind: 2.4, dmg: 1, brk: 0.08, first: 5 }], trait: '몽둥이 찍기: 경고 뒤 생명을 친다 (막마다 세진다). 준비 중에 체력 8%를 깎거나 기절시키면 끊긴다' },
-    darkKnight: { name: '흑기사', hp: 9.5, speed: 22, gold: 8, leak: 4, elite: true, armorLight: 0.5, skills: [{ k: 'strike', name: '흑검 베기', every: 9, wind: 2.0, dmg: 1, brk: 0.07, first: 6 }], trait: '궁수·도적 피해 50% 감소. 흑검 베기: 경고 뒤 생명을 친다 (준비 중 체력 7% 또는 기절로 끊김)' },
-    witch: { name: '마녀', hp: 8, speed: 26, gold: 8, leak: 4, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, skills: [{ k: 'strike', name: '저주 화살', every: 10, wind: 2.2, dmg: 1, brk: 0.08, first: 6 }], trait: '주변 적 가속. 저주 화살: 경고 뒤 생명을 친다 (준비 중 체력 8% 또는 기절로 끊김)' },
-    bigSlime: { name: '왕슬라임', hp: 8, speed: 20, gold: 8, leak: 4, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, skills: [{ k: 'strike', name: '산성 뱉기', every: 8, wind: 2.4, dmg: 1, brk: 0.1, first: 5 }], trait: '죽으면 분열. 산성 뱉기: 경고 뒤 생명을 친다 (준비 중 체력 10% 또는 기절로 끊김)' },
+    ogre: { name: '오우거', hp: 12, speed: 20, gold: 8, leak: 1, elite: true, skills: [{ k: 'strike', name: '몽둥이 찍기', every: 8, wind: 2.4, dmg: 1, brk: 0.08, first: 5 }], trait: '몽둥이 찍기: 경고 뒤 생명을 친다 (막마다 세진다). 준비 중에 체력 8%를 깎거나 기절시키면 끊긴다' },
+    darkKnight: { name: '흑기사', hp: 9.5, speed: 22, gold: 8, leak: 1, elite: true, armorLight: 0.5, skills: [{ k: 'strike', name: '흑검 베기', every: 9, wind: 2.0, dmg: 1, brk: 0.07, first: 6 }], trait: '궁수·도적 피해 50% 감소. 흑검 베기: 경고 뒤 생명을 친다 (준비 중 체력 7% 또는 기절로 끊김)' },
+    witch: { name: '마녀', hp: 8, speed: 26, gold: 8, leak: 1, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, skills: [{ k: 'strike', name: '저주 화살', every: 10, wind: 2.2, dmg: 1, brk: 0.08, first: 6 }], trait: '주변 적 가속. 저주 화살: 경고 뒤 생명을 친다 (준비 중 체력 8% 또는 기절로 끊김)' },
+    bigSlime: { name: '왕슬라임', hp: 8, speed: 20, gold: 8, leak: 1, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, skills: [{ k: 'strike', name: '산성 뱉기', every: 8, wind: 2.4, dmg: 1, brk: 0.1, first: 5 }], trait: '죽으면 분열. 산성 뱉기: 경고 뒤 생명을 친다 (준비 중 체력 10% 또는 기절로 끊김)' },
     // 보스
     slimeKing: {
-      name: '슬라임 킹', hp: 10, speed: 13, gold: 40, leak: 8, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 3, splitHp: 0.5,
+      name: '슬라임 킹', hp: 13, speed: 13, gold: 40, leak: 3, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 3, splitHp: 0.5,
       skills: [{ k: 'glue', name: '끈적한 점액', every: 9, warn: 1.1, dur: 4, amt: 0.5, size: 2 }, { k: 'strike', name: '짓누르기', every: 15, wind: 2.5, dmg: 2, brk: 0.04, first: 8 }],
       trait: '체력이 줄 때마다 슬라임을 뱉고, 점액을 뿌려 2×2 칸의 공격을 4초 동안 절반으로 늦춘다. 짓누르기: 경고 뒤 생명 -2 (준비 중 체력 4%를 깎으면 끊김)',
     },
     lich: {
-      name: '리치', hp: 9.5, speed: 14, gold: 40, leak: 8, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
+      name: '리치', hp: 12.5, speed: 14, gold: 40, leak: 3, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
       skills: [{ k: 'shield', name: '뼈 방벽', every: 13, pct: 0.12 }, { k: 'strike', name: '영혼 착취', every: 14, wind: 2.5, dmg: 3, brk: 0.05, first: 9 }],
       feed: { r: 44, pct: 0.012 },
       phase2: { at: 0.4, speed: 1.2, cd: 0.7, msg: '리치가 죽음의 힘을 끌어올린다! (더 빨라지고 방벽을 자주 친다)' },
@@ -138,29 +139,29 @@
     frog: { name: '늪 개구리', hp: 0.9, speed: 24, gold: 1, leak: 1, hop: { every: 3.5, dist: 26 }, trait: '가끔 앞으로 크게 뛴다' },
     crab: { name: '철갑 게', hp: 2, speed: 19, gold: 2, leak: 1, armorLight: 0.5, countMul: 0.7, gap: 0.7, trait: '궁수·도적 피해 50% 감소' },
     bogQueen: {
-      name: '늪의 여왕', hp: 10, speed: 14, gold: 40, leak: 8, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.04 },
+      name: '늪의 여왕', hp: 13, speed: 14, gold: 40, leak: 3, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.04 },
       skills: [{ k: 'glue', name: '늪 진흙', every: 11, warn: 1.1, dur: 3.5, amt: 0.45, size: 2 }, { k: 'strike', name: '늪 물기', every: 15, wind: 2.5, dmg: 2, brk: 0.04, first: 8 }],
       trait: '개구리를 부르고, 물속에 잠겨 공격받지 않으며 체력 4%를 회복한다. 진흙으로 칸의 공격을 늦춘다. 늪 물기: 경고 뒤 생명 -2 (준비 중 체력 4%를 깎으면 끊김)',
     },
     captain: {
-      name: '해골 선장', hp: 9.5, speed: 14, gold: 40, leak: 8, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
+      name: '해골 선장', hp: 12.5, speed: 14, gold: 40, leak: 3, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
       skills: [{ k: 'rally', name: '럼 한 모금', every: 12, pct: 0.35, dur: 3 }, { k: 'plunder', name: '약탈', every: 14, pct: 0.15, max: 40 }, { k: 'strike', name: '대포 사격', every: 12, wind: 2.5, dmg: 3, brk: 0.05, first: 7 }],
       trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다. 12초마다 모든 적이 3초 동안 35% 빨라지고, 14초마다 가진 골드의 15%(최대 40)를 약탈한다. 대포 사격: 경고 뒤 생명 -3 (준비 중 체력 5%를 깎으면 끊김)',
     },
     dummy: { name: '낡은 허수아비', hp: 1, speed: 11, gold: 0, leak: 0, trait: '시간 안에 쓰러뜨려야 하는 시험 대상' },
     // 4막
     spireShield: {
-      name: '방패 사도', hp: 10.5, speed: 16, gold: 10, leak: 4, elite: true, armorLight: 0.5, physRes: 0.2,
+      name: '방패 사도', hp: 10.5, speed: 16, gold: 10, leak: 1, elite: true, armorLight: 0.5, physRes: 0.2,
       skills: [{ k: 'cross', name: '돌진', every: 8, warn: 1.0, stun: 2.2, selfStun: 2.2, speed: 100, first: 5 }],
       trait: '궁수·도적 피해 50%, 물리 20% 감소. 8초마다 보드를 가로질러 돌진해 지나간 칸을 2.2초 기절시키고, 도착하면 스스로 2.2초 기절',
     },
     spireSpear: {
-      name: '창 사도', hp: 8.5, speed: 30, gold: 10, leak: 4, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 },
+      name: '창 사도', hp: 8.5, speed: 30, gold: 10, leak: 1, elite: true, haste: { every: 4, pct: 0.35, dur: 2, r: 50 },
       skills: [{ k: 'cross', name: '꿰뚫기', every: 6, warn: 0.8, stun: 1.6, selfStun: 1.8, speed: 140, first: 4 }],
       trait: '빠르고 주변 적을 가속. 6초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 1.8초 기절',
     },
     riftHeart: {
-      name: '고대신 옴네크', hp: 34, speed: 14, gold: 0, leak: 14, boss: true, dpsCap: 0.028, bossTimeAdd: 25,
+      name: '고대신 옴네크', hp: 34, speed: 14, gold: 0, leak: 9, boss: true, dpsCap: 0.028, bossTimeAdd: 25,
       skills: [
         { k: 'pulse', name: '광기의 시선', every: 9, warn: 0.9, dur: 2.5, amt: 0.35 },
         { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6, wind: 0 },
@@ -175,7 +176,7 @@
       trait: '고대의 몸: 1초에 최대 체력의 2.8%까지만 피해를 받는다. 17초마다 4.5초 동안 깊은 잠에 빠져 제자리에 멈추고 초당 1%씩 회복하지만, 그동안은 초당 4.2%까지 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 신의 손길: 경고 뒤 생명 -4 (준비 중 체력 5%를 깎으면 끊김, 잠든 틈을 노려라). 체력 절반에서 완전히 깨어난다',
     },
     riftLord: {
-      name: '균열의 군주', hp: 14, speed: 14, gold: 40, leak: 8, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
+      name: '균열의 군주', hp: 18, speed: 14, gold: 40, leak: 3, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
       skills: [{ k: 'blink', at: [0.7, 0.4], dist: 0.2 }, { k: 'shield', name: '균열 장막', every: 16, pct: 0.1 }, { k: 'shuffle', name: '차원 뒤섞기', every: 15, n: 3, first: 9 }, { k: 'strike', name: '균열 폭발', every: 13, wind: 2.5, dmg: 3, brk: 0.05, first: 6 }],
       trait: '균열로 유닛을 기절시키고 16초마다 장막을 두르며, 15초마다 유닛 3기의 자리를 뒤섞는다. 체력 70%·40%에서 앞으로 순간이동, 절반부터 가속. 균열 폭발: 경고 뒤 생명 -3 (준비 중 체력 5%를 깎으면 끊김)',
     },
