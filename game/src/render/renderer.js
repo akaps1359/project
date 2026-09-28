@@ -611,6 +611,35 @@
           this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 20, t: 0.35, max: 0.35, col, glow: true });
           break;
         }
+        case 'strike': {
+          // 강타가 균열(생명)에 꽂힌다: 붉은 번개 + 화면 흔들림
+          for (let j = 0; j <= 10; j++) {
+            const q = j / 10;
+            this.emit(ev.x + (F.L - ev.x) * q, ev.y - 6 + (F.T - ev.y + 6) * q, 1, { sp: [2, 8], life: [0.2, 0.4], cols: ['#ff4d5a', '#ffffff'], glow: 2 });
+          }
+          this.fxs.push({ k: 'leak', x: F.L, y: F.T, t: 0.5, max: 0.5 });
+          this.fxs.push({ k: 'flash', t: 0.22, max: 0.22, col: '#e04a52' });
+          this.nums.push({ x: F.L + 8, y: F.T + 4, vx: 6, vy: -16, s: '-' + Math.round(ev.v), c: 'r', t: 1, max: 1, big: 1.8 });
+          this.shake = Math.max(this.shake, 0.3);
+          break;
+        }
+        case 'stagger':
+          // 끊었다: 노란 별 + 고리
+          this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 16, t: 0.35, max: 0.35, col: '#ffe46b', glow: true });
+          this.fxs.push({ k: 'star', x: ev.x, y: ev.y - 8, t: 0.4, max: 0.4, col: '#ffe46b' });
+          this.emit(ev.x, ev.y - 6, 10, { sp: [20, 50], life: [0.25, 0.45], cols: ['#ffe46b', '#ffffff'], drag: 2, glow: 2 });
+          break;
+        case 'pressure':
+          // 균열 게이지가 가득 찼다: 문이 붉게 터지고 생명 -1
+          this.fxs.push({ k: 'leak', x: F.L, y: F.T, t: 0.45, max: 0.45 });
+          this.fxs.push({ k: 'ring', x: F.L, y: F.T, r: 16, t: 0.4, max: 0.4, col: '#ff4d5a', glow: true });
+          this.nums.push({ x: F.L + 6, y: F.T + 4, vx: 6, vy: -16, s: '-1', c: 'r', t: 0.9, max: 0.9, big: 1.4 });
+          this.shake = Math.max(this.shake, 0.12);
+          break;
+        case 'escape':
+          // 일반 적이 균열로 빠져나갔다
+          this.emit(F.L, F.T, 6, { sp: [8, 20], life: [0.3, 0.5], cols: ['#a061e8', '#5e3593', '#d3a0f7'], drag: 2, glow: 1.5 });
+          break;
         case 'plague':
           // 역병 확산: 쓰러진 자리에서 초록·주황 포자가 퍼진다
           this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 3, r: 20, t: 0.4, max: 0.4, col: '#9ee06a' });
@@ -773,6 +802,7 @@
     this.raw.fillRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.drawImage(this.bg, 0, 0);
     this.drawPortal(ctx, dt);
+    if (b) this.drawGauge(ctx, b);
     if (b) {
       this.drawRift(ctx, b);
       this.drawSlots(ctx, b, dt);
@@ -812,6 +842,32 @@
       const d = rnd(10, 15);
       this.parts.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, vx: -Math.cos(a) * d * 1.6, vy: -Math.sin(a) * d * 1.6, g: 0, drag: 0, life: 0.55, max: 0.55, col: pick(cols), size: 1, glow: 0 });
     }
+  };
+
+  // 균열 게이지: 문 둘레의 고리가 시계 방향으로 찬다. 적이 뒤쪽 길에 있으면 붉게 일렁이고, 가득 차면 생명 -1
+  P.drawGauge = function (ctx, b) {
+    const k = Math.max(0, Math.min(1, b.pressure || 0));
+    const hot = (b.pressureW || 0) > 0;
+    const cx = F.L;
+    const cy = F.T;
+    const r = 11;
+    const n = 28;
+    const on = Math.round(k * n);
+    for (let j = 0; j < n; j++) {
+      const a = -Math.PI / 2 + (j / n) * Math.PI * 2;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (j < on) {
+        ctx.fillStyle = k > 0.75 ? (Math.floor(this.t * 8) % 2 ? '#ffffff' : '#ff4d5a') : '#ff4d5a';
+        ctx.fillRect(x - 0.5, y - 0.5, 1.5, 1.5);
+      } else {
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#5e3593';
+        ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
+        ctx.globalAlpha = 1;
+      }
+    }
+    if (hot) ctx.glow(cx, cy, 14, '#ff4d5a', 0.12 + 0.25 * k + 0.08 * Math.sin(this.t * 9));
   };
 
   // 경고: 곧 기절(붉은 보라)·점액(초록)·고동(붉은) 칸
@@ -1248,7 +1304,7 @@
   const CAST_COL = {
     seal: '#c58cf0', shield: '#a8ecff', shuffle: '#6be0d0', plunder: '#f5c44a', rally: '#ef6166', mend: '#9ee06a',
     spawn: '#c58cf0', doze: '#d7e6ff', pulse: '#e05ad0', glue: '#9ee06a', cross: '#ef6166', rift: '#a061e8',
-    submerge: '#a8ecff', anchor: '#d8cbb0',
+    submerge: '#a8ecff', anchor: '#d8cbb0', strike: '#ff4d5a',
   };
   RS.CAST_COL = CAST_COL;
   const PAIR_COL = ['#6be0d0', '#f5c44a', '#ef8fd0', '#9ee06a', '#a8ecff'];
@@ -1346,6 +1402,27 @@
       ctx.glow(gx, gy + 4, 7, col, 0.3 + 0.2 * (blink ? 1 : 0));
       const pre = c.pre;
       switch (c.k) {
+        case 'strike': {
+          // 의도: 잃을 생명 숫자와 경직 막대 (채우면 끊긴다), 균열로 이어지는 붉은 점선
+          if (!pre) break;
+          RS.drawNum(ctx, '-' + pre.dmg, gx + 10, gy + 2, 'r', 1);
+          const k = Math.min(1, pre.taken / Math.max(1, pre.need));
+          ctx.fillStyle = '#15111d';
+          ctx.fillRect(gx - 7, gy + 14, 15, 3);
+          ctx.fillStyle = k > 0.7 ? '#ffffff' : '#ffe46b';
+          ctx.fillRect(gx - 6, gy + 15, 13 * k, 1);
+          const n = 14;
+          ctx.fillStyle = '#ff4d5a';
+          for (let j = 1; j < n; j++) {
+            if ((j + Math.floor(t * 14)) % 3) continue;
+            const q = j / n;
+            ctx.globalAlpha = 0.35 + 0.5 * p;
+            ctx.fillRect(e.x + (F.L - e.x) * q, e.y - 6 + (F.T - e.y + 6) * q, 1, 1);
+          }
+          ctx.globalAlpha = 1;
+          ctx.glow(e.x, e.y - 6, 10 + 6 * p, '#ff4d5a', 0.2 + 0.3 * p);
+          break;
+        }
         case 'seal':
           // 봉인될 유닛: 보랏빛 조준 꺾쇠가 좁혀 들어오고 자물쇠가 깜빡인다
           for (const u of pre.seal) {

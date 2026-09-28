@@ -54,7 +54,7 @@
     A('promotion', '승급', 2, 'up', '즉시 희귀 유닛 2기 소환', {}, {
       onPick(run) { RS.grantUnits(run, 1, 2); },
     }),
-    A('vampRite', '흡혈 의식', 2, 'fang', '엘리트·보스를 처치하면 생명 +4, 최대 생명 +1', { eliteKillHeal: 4, eliteKillMaxLife: 1 }),
+    A('vampRite', '흡혈 의식', 2, 'fang', '엘리트·보스를 처치하면 생명 +3, 최대 생명 +1', { eliteKillHeal: 3, eliteKillMaxLife: 1 }),
     A('bloodPact', '피의 계약', 2, 'blood', '모든 유닛 피해 +40%', { dmgPct: 0.4 }, {
       cost: '최대 생명 -4',
       onPick(run) { RS.changeMaxLife(run, -4); },
@@ -71,13 +71,14 @@
 
     // 키워드 보상: 이미 가진 것과 이어질 때 강해진다
     A('shatter', '얼음 깨기', 2, 'icecrack', '기절·빙결된 적에게 피해 +50%, 둔화된 적에게 +20%', { shatter: 0.5 }, { unique: true }),
+    A('counterStrike', '반격', 2, 'shield2', '적의 강타를 끊을 때마다 생명 +2, 그 적에게 최대 체력의 5% 피해', { counterStrike: 2 }, { unique: true }),
     A('bloodRush', '피의 흥분', 2, 'bloodrush', '치명타를 낸 유닛은 2초 동안 공격 속도 +30%', { critHaste: 0.3 }, { unique: true }),
     A('plague', '역병 확산', 2, 'plague', '화상·독·독안개 피해 +50%. 화상·독에 걸린 적이 쓰러지면 주변 적 3명에게 옮는다', { dotAmp: 0.5, contagion: 1 }, { unique: true }),
 
     // ── 프리즘 ──
     A('twinSummon', '쌍둥이 소환', 3, 'twin', '소환할 때 20% 확률로 같은 유닛 1기 추가', { twinChance: 0.2 }, { unique: true }),
     A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 8% 확률로 2단계 상승', { mergeDouble: 0.08 }, { unique: true }),
-    A('berserk', '광전사', 3, 'rage', '생명이 절반 이하면 피해 +60%, 공격 속도 +25%', { berserk: 1 }, { unique: true }),
+    A('berserk', '광전사', 3, 'rage', '잃은 생명 1당 모든 유닛 피해 +5%, 공격 속도 +1.5% (최대 +100% / +30%)', { berserk: 1 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
     A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12% (신화는 전설 4기로 친다)', { legendAura: 0.12 }, { unique: true }),
     A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +50%', { killGoldPct: 0.5, sellPct: 0.5 }, { unique: true }),

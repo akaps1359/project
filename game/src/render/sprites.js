@@ -683,6 +683,7 @@
   I('chip', ['.n.n.n..', 'nnnnnnn.', '.kkkkk..', 'nkyykkn.', '.kyykk..', 'nkkkkkn.', '.nnnnn..', '.n.n.n..']);
   I('gas', ['...t....', '..ttt.t.', '.ttTtttt', 'tttTTttt', '.tTttTt.', '..ttttt.', '...t.t..', '........']);
   // 시너지 키워드 아이콘
+  I('shield2', ['.GGGGGG.', 'GggggggG', 'GgyggggG', 'GggggggG', 'GggggggG', '.GggggG.', '..GggG..', '...GG...']);
   I('firearrow', ['......ay', '.....aya', '....bra.', '...b.r..', '..b.....', '.b......', 'bw......', 'ww......']);
   I('icecrack', ['..iiii..', '.iwiiIi.', 'iwikIiiI', 'iiiIkiiI', 'iiikiIiI', 'iIkiiiII', '.iiIIII.', '..IIII..']);
   I('bloodrush', ['.......w', '......wW', '..r..wW.', '.rr.wW..', 'rrrrW...', '.rrg....', '..r.g...', '.b......']);

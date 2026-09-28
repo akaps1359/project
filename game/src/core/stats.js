@@ -21,6 +21,7 @@
       diversity: 0, purity: 0, eliteSquad: 0, rich: 0, berserk: 0, legendAura: 0, missChance: 0,
       // 시너지 연결 고리 (키워드 보상)
       shatter: 0, critHaste: 0, burnArrow: 0, dotAmp: 0, contagion: 0, lowLifeDmg: 0, curseDmg: 0, itemDmg: 0,
+      strikeReduce: 0, counterStrike: 0,
     };
   };
 
@@ -129,14 +130,14 @@
   };
   const AUTO = {
     crit: ['critChance', 'critMult', 'critHaste'],
-    control: ['freezeChance', 'shatter'],
+    control: ['freezeChance', 'shatter', 'counterStrike'],
     slow: ['enemySpeedPct', 'shatter'],
     dot: ['burn', 'burnArrow', 'poison', 'noxious', 'dotAmp', 'contagion'],
     gold: ['killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus', 'combatGoldPct', 'rich', 'battleStartGold', 'winGold', 'ceramicFish', 'sellPct', 'skipGoldMul', 'freeFirstBuy', 'shopDiscount'],
-    life: ['berserk', 'lowLifeDmg', 'winHeal', 'eliteKillHeal', 'eliteKillMaxLife', 'restHealAdd', 'meatBone', 'pantograph', 'winMaxLife', 'battleStartLifeLoss'],
+    life: ['berserk', 'lowLifeDmg', 'winHeal', 'eliteKillHeal', 'eliteKillMaxLife', 'restHealAdd', 'meatBone', 'pantograph', 'winMaxLife', 'battleStartLifeLoss', 'strikeReduce', 'counterStrike'],
     curse: ['curseDmg'],
     item: ['itemSlots', 'itemPotency', 'itemDmg', 'itemDropBonus'],
-    elite: ['eliteDmgPct', 'eliteBattleDmg', 'bigBattleDmg', 'eliteHpPct', 'eliteKillMaxLife', 'eliteKillHeal', 'blackStar', 'eliteUpgrade', 'bossHpPct'],
+    elite: ['eliteDmgPct', 'eliteBattleDmg', 'bigBattleDmg', 'eliteHpPct', 'eliteKillMaxLife', 'eliteKillHeal', 'blackStar', 'eliteUpgrade', 'bossHpPct', 'strikeReduce', 'counterStrike'],
     merge: ['mergeDouble', 'mergeRefund', 'mergeMirror', 'mergeChoose'],
     summon: ['twinChance', 'cloverChance', 'waveFreeSummon', 'startSummons', 'happyFlower', 'echoForm', 'sealSummon', 'startRare', 'souls'],
     high: ['legendAura', 'eliteSquad', 'epicChance'],

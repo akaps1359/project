@@ -80,7 +80,7 @@
       const t = fn(G.battle, G.run);
       UI.tip(e.currentTarget, t[0], t[1], t[2] || null);
     });
-    hudTip('#h-life', () => ['생명', '적이 길을 한 바퀴 돌아 균열로 들어갈 때마다 줄어요. 0이 되면 모험이 끝나요.']);
+    hudTip('#h-life', () => ['생명', '한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 가요. 엘리트·보스는 다시 나와 계속 돌고, 머리 위에 붉은 숫자가 뜨면 강타로 생명을 쳐요(몰아치거나 기절시키면 끊겨요). 전투가 끝나도 생명은 이어지니 휴식처에서 관리하세요.']);
     hudTip('#h-gold', (b) => ['골드', `처치·웨이브마다 들어와요. 웨이브 시작 때 보유 10G당 1G 이자 (최대 ${RS.interestCap(b.M)}).`]);
     hudTip('#h-foe', (b) => ['적', `지금 필드에 있는 적 수. ${b.cap}마리가 되면 즉시 패배.`]);
     hudTip('#h-wave', (b) => ['웨이브', '준비: 첫 웨이브까지 남은 시간 · n/3: 현재 웨이브와 다음 웨이브까지 남은 시간', trialLimit(b) ? `허수아비 시험: ${trialLimit(b)}초 안에 쓰러뜨려야 해요` : null]);
@@ -220,7 +220,9 @@
     if (e.boss && b.enraged) leak *= 2;
     if (M.leakReduce) leak = Math.max(1, leak - M.leakReduce);
     const hp = M.blindfold ? '?' : Math.max(1, Math.ceil((100 * Math.max(0, e.hp)) / e.maxHp));
-    UI.tipAt(cx, cy, def.name + (e.boss ? ' · 보스' : e.elite ? ' · 엘리트' : ''), `체력 ${hp}${hp === '?' ? '' : '%'} · 한 바퀴당 생명 -${Math.round(leak * 10) / 10}`, def.trait || null);
+    const big = e.boss || e.elite;
+    const lapTxt = big ? `한 바퀴마다 생명 -${Math.round(leak * 10) / 10} (다시 나와 계속 돈다)` : `빠져나가면 생명 -${Math.round(leak * 10) / 10}`;
+    UI.tipAt(cx, cy, def.name + (e.boss ? ' · 보스' : e.elite ? ' · 엘리트' : ''), `체력 ${hp}${hp === '?' ? '' : '%'} · ${lapTxt}`, def.trait || null);
   }
 
   function bindField() {
@@ -354,6 +356,15 @@
     if (!meta.tut || typeof meta.tut !== 'object') meta.tut = {};
     return meta.tut;
   }
+  // 새 규칙 안내: 튜토리얼을 끈 사람에게도 한 번은 보여 준다
+  UI.onceTip = function (k, text) {
+    const meta = UI.G.meta;
+    const seen = meta.tips || (meta.tips = {});
+    if (seen[k]) return;
+    seen[k] = true;
+    UI.toast(text, 'warn');
+    UI.G.saveMeta();
+  };
   UI.tutDone = function (k) {
     const t = tut();
     if (t.off || t[k]) return;
@@ -911,6 +922,7 @@
     rift: '표시된 칸이 기절해요',
     submerge: '물속에 숨어 공격을 피해요',
     anchor: '표시된 열이 기절해요',
+    strike: '생명을 쳐요 · 체력을 깎거나 기절·빙결로 끊기',
   };
   const CAST_NAME = { rift: '균열', spawn: '소환', glue: '점액' };
   function updateCastBar(b, c) {
@@ -932,6 +944,7 @@
       k = cast.k;
       name = `${cast.name || CAST_NAME[k] || '기술'} ${Math.max(0, cast.t).toFixed(1)}`;
       txt = CAST_TXT[k] || '';
+      if (k === 'strike' && cast.pre) txt = `생명 -${cast.pre.dmg} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
       frac = 1 - cast.t / cast.T;
       col = RS.CAST_COL[k] || '#ffe46b';
     }
@@ -984,8 +997,9 @@
     rift: '표시된 칸이 곧 기절해요',
     submerge: '곧 물속에 숨어 잠시 공격받지 않아요',
     anchor: '표시된 열이 곧 기절해요',
+    strike: '강타! 붉은 숫자만큼 생명을 쳐요. 준비하는 동안 노란 경직 막대를 채우도록 몰아치거나, 기절·빙결시키면 끊겨요',
   };
-  const SKILL_SFX = { glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin', cross: 'charge', shuffle: 'blink', plunder: 'error' };
+  const SKILL_SFX = { strike: 'leak', glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin', cross: 'charge', shuffle: 'blink', plunder: 'error' };
   UI.onFx = function (ev) {
     switch (ev.k) {
       case 'bossSkill':
@@ -1015,6 +1029,40 @@
       case 'doze':
         RS.sfx('doze');
         break;
+      case 'strike': {
+        RS.sfx('big');
+        if (ev.v > 0) {
+          const el = $('#h-life');
+          el.classList.remove('hit');
+          void el.offsetWidth;
+          el.classList.add('hit');
+          clearTimeout(UI.hitTimer);
+          UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
+          UI.hudFloat(el, '-' + Math.round(ev.v * 10) / 10, 'bad');
+        }
+        break;
+      }
+      case 'pressure': {
+        RS.sfx('leak');
+        const el = $('#h-life');
+        el.classList.remove('hit');
+        void el.offsetWidth;
+        el.classList.add('hit');
+        clearTimeout(UI.hitTimer);
+        UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
+        UI.hudFloat(el, '-1', 'bad');
+        UI.onceTip('pressure', '균열 게이지가 찼어요! 적이 균열로 돌아오는 길(오른쪽·아래·왼쪽)에 오래 머물수록 문 둘레 고리가 차고, 가득 차면 생명 -1');
+        break;
+      }
+      case 'stagger': {
+        RS.sfx('shieldBreak');
+        const b = UI.G.battle;
+        if (b && !b.staggerSeen) {
+          b.staggerSeen = true;
+          UI.toast(ev.why === 'stun' ? '기절시켜 강타를 끊었다!' : '몰아쳐서 강타를 끊었다!', 'good');
+        }
+        break;
+      }
       case 'wake':
         RS.sfx('heartbeat');
         break;
@@ -1093,11 +1141,8 @@
           clearTimeout(UI.hitTimer);
           UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
           UI.hudFloat(el, '-' + Math.round(ev.v * 10) / 10, 'bad');
-          const t = tut();
-          if (!t.off && !t.leak) {
-            UI.toast('적이 한 바퀴 돌아 균열로 들어가면 생명이 줄어요', 'warn');
-            UI.tutDone('leak');
-          }
+          UI.onceTip('escape', '한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1 앗아 가요 (엘리트·보스는 다시 나와 계속 돌아요)');
+          UI.tutDone('leak');
         }
         break;
       case 'summon':

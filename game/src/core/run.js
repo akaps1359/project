@@ -720,7 +720,8 @@
       run.lane = -1;
       run.nodeType = null;
       run.map = RS.genMap(run);
-      RS.heal(run, Math.ceil(run.maxLife * BAL.actHealPct * (run.asc >= 4 ? 0.5 : 1)));
+      // 막을 넘어가면 잃은 생명을 회복한다 (슬더스처럼 막 하나가 생명 관리의 한 판. 심연 4부터 75%만)
+      RS.heal(run, Math.ceil(Math.max(0, run.maxLife - run.life) * BAL.actHealPct * (run.asc >= 4 ? 0.75 : 1)));
       run.phase = 'actStart';
       run.pending = run.act <= 3 ? { ancient: RS.rollAncient(run) } : null;
     } else {

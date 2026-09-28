@@ -82,7 +82,9 @@
     this.rollCost();
     const clsDmg = {};
     for (const c of RS.CLASSES) clsDmg[c] = 0;
-    this.stats = { kills: 0, dmg: 0, leaks: 0, clsDmg, goldEarned: 0, lifeStart: run.life };
+    this.stats = { kills: 0, dmg: 0, leaks: 0, struck: 0, escaped: 0, staggers: 0, pressure: 0, clsDmg, goldEarned: 0, lifeStart: run.life };
+    this.pressure = 0; // 균열 게이지 (0~1)
+    this.pressureW = 0;
     RS.migrateBoard(run, M); // 이전 버전 저장의 유닛에 들인 골드(v)를 매긴다
 
     if (M.battleStartGold) RS.addGold(run, M.battleStartGold * Math.min(3, run.act));
@@ -96,6 +98,7 @@
   }
 
   const P = Battle.prototype;
+  const PRESSURE_FROM = 0.25; // 한 바퀴의 이 지점(오른쪽 길)부터 균열 게이지를 채운다
 
   P.emit = function (ev) {
     if (this.fxOn) this.fx.push(ev);
@@ -128,6 +131,8 @@
     this.updateSpawns(dt);
     this.updateRift(dt);
     this.updateEnemies(dt);
+    if (this.status !== 'running') return;
+    this.updatePressure(dt);
     if (this.status !== 'running') return;
     this.updateUnits(dt);
     this.flushPending();
@@ -256,6 +261,8 @@
     if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.15 : 1);
     else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.15 : 1);
     else if (asc >= 3) hp *= 1.1;
+    // 일반 적: 놓쳐도 한 번만 아프므로(빠져나감) 아슬아슬한 세기로 맞춘다 (막마다)
+    if (!def.boss && !def.elite) hp *= RS.BAL.normalHpMul[Math.min(4, this.run.act)] || 1;
     const e = {
       id: this.nextId++, type, def, L,
       hp, maxHp: hp,
@@ -368,6 +375,8 @@
         if (e.dead) continue;
       }
       const def = e.def;
+      // 강타 준비 중에 기절·빙결되면 끊긴다
+      if (e.stunT > 0 && e.cast && e.cast.s.k === 'strike') this.staggerStrike(e, 'stun');
       // 기절·빙결 중에는 기술 타이머도 멈춘다
       if (e.stunT <= 0 && (def.heal || def.haste || def.summon || def.rift || def.hop || def.submerge || def.anchor || def.skills)) this.enemySkill(e, def, dt);
       if (def.phase2 && !e.p2 && e.hp < e.maxHp * def.phase2.at) this.bossPhase2(e, def);
@@ -403,6 +412,12 @@
         e.laps++;
         this.leak(e);
         if (this.status !== 'running') return;
+        // 일반 적은 균열로 빠져나간다 (한 번만 생명을 앗아 간다). 엘리트·보스는 균열에서 다시 나와 계속 돈다
+        if (!e.dead && !e.boss && !e.elite) {
+          e.dead = true;
+          e.escaped = true;
+          continue;
+        }
       }
       RS.pathPos(e.d, e);
     }
@@ -566,6 +581,12 @@
       case 'mend':
         if (!(e.hp < e.maxHp * (s.below || 1))) return false;
         break;
+      case 'strike':
+        // 강타: 준비하는 동안 체력의 brk 만큼 깎으면(또는 기절·빙결시키면) 끊긴다
+        pre.need = e.maxHp * s.brk;
+        pre.taken = 0;
+        pre.dmg = this.strikeDmg(e, s);
+        break;
     }
     return pre;
   };
@@ -665,6 +686,9 @@
         }
         this.emit({ k: 'haste', x: e.x, y: e.y, r: 60 });
         said('rally');
+        break;
+      case 'strike':
+        this.strikeHit(e, s, pre);
         break;
       case 'doze':
         // 깊은 잠: 제자리에 멈춰 회복하지만, 그동안 받는 피해 한도가 커진다
@@ -844,6 +868,70 @@
     }
   };
 
+  // ── 균열 게이지 ──
+  // 일반 적이 한 바퀴의 뒤쪽(오른쪽 길을 지나 균열로 돌아오는 길)에 머물수록 게이지가 찬다. 가득 차면 생명 -1.
+  // 누수(한 바퀴를 다 돎)는 '놓쳤는가'만 보지만, 게이지는 '얼마나 가까이 오게 두었는가'를 본다 → 전투마다 조금씩 닳는다
+  P.updatePressure = function (dt) {
+    const fill = RS.BAL.pressureFill;
+    if (!fill) return;
+    let w = 0;
+    for (const e of this.enemies) {
+      if (e.dead || e.boss || e.elite || e.subT > 0 || !(e.def.leak > 0)) continue;
+      const p = (e.d - (e.nextLap - F.PERIM)) / F.PERIM;
+      if (p > PRESSURE_FROM) w += (p - PRESSURE_FROM) / (1 - PRESSURE_FROM);
+    }
+    this.pressureW = w;
+    if (w <= 0) return;
+    // 유령 망토가 펼쳐진 동안은 게이지가 차지 않는다
+    if (this.ghostT > 0) return;
+    this.pressure += (w * dt) / fill;
+    while (this.pressure >= 1 && this.status === 'running') {
+      this.pressure -= 1;
+      this.stats.pressure++;
+      this.emit({ k: 'pressure' });
+      this.loseLife(1);
+    }
+  };
+
+  // ── 강타 (적의 의도) ──
+  // 엘리트는 막이 오를수록 세게 친다
+  P.strikeDmg = function (e, s) {
+    return s.dmg + (e.elite && !e.boss ? Math.floor((Math.max(1, Math.min(3, this.run.act)) - 1) * (RS.BAL.eliteStrikeStep || 0)) : 0);
+  };
+  P.strikeHit = function (e, s, pre) {
+    const M = this.M;
+    let dmg = pre ? pre.dmg : this.strikeDmg(e, s);
+    if (e.boss && this.enraged) dmg *= 2;
+    if (M.strikeReduce) dmg = Math.max(0, dmg - M.strikeReduce);
+    if (M.leakReduce) dmg = Math.max(dmg > 0 ? 1 : 0, dmg - M.leakReduce);
+    this.stats.struck += dmg;
+    this.emit({ k: 'strike', x: e.x, y: e.y, v: dmg, name: s.name, boss: e.def.name });
+    this.loseLife(dmg);
+  };
+  P.staggerStrike = function (e, why) {
+    if (!e.cast || e.cast.s.k !== 'strike') return;
+    e.cast = null;
+    e.stunT = Math.max(e.stunT, e.boss ? 0.8 : 1.2);
+    this.stats.staggers++;
+    const M = this.M;
+    // 반격: 끊을 때마다 생명 +1, 그 적에게 최대 체력의 5% 피해
+    if (M.counterStrike) {
+      RS.heal(this.run, M.counterStrike);
+      this.damage(e, e.maxHp * 0.05, null, false, true);
+    }
+    this.emit({ k: 'stagger', x: e.x, y: e.y, why, heal: M.counterStrike || 0 });
+  };
+  // 누수·강타 공통: 생명을 잃고, 0이 되면 진다
+  P.loseLife = function (dmg) {
+    if (!(dmg > 0)) return;
+    const run = this.run;
+    run.life -= dmg;
+    if (run.life <= 0 && this.status === 'running') {
+      run.life = 0;
+      this.finish('lost', 'life');
+    }
+  };
+
   // ── 유닛 ──
   P.updateDyn = function () {
     const M = this.M;
@@ -867,9 +955,11 @@
       if (M.legendAura) dmg += M.legendAura * legends;
     }
     if (M.rich && run.gold >= 100) dmg += M.rich;
-    if (M.berserk && run.life <= run.maxLife / 2) {
-      dmg += 0.6;
-      aspd += 0.25;
+    // 광전사: 잃은 생명 1당 피해 +5%, 공격 속도 +1.5% (최대 +100% / +30%)
+    if (M.berserk) {
+      const miss = Math.max(0, run.maxLife - run.life);
+      dmg += Math.min(1, 0.05 * miss * M.berserk);
+      aspd += Math.min(0.3, 0.015 * miss * M.berserk);
     }
     if (M.lowLifeDmg && run.life <= run.maxLife / 2) dmg += M.lowLifeDmg;
     if (M.curseDmg) dmg += M.curseDmg * run.curses.length;
@@ -1224,6 +1314,12 @@
       dm = Math.min(dm, e.capLeft);
       e.capLeft -= dm;
     }
+    // 강타 준비 중: 들어간 피해만큼 경직이 쌓인다
+    if (e.cast && e.cast.s.k === 'strike' && dm > 0) {
+      const pre = e.cast.pre;
+      pre.taken += dm;
+      if (pre.taken >= pre.need) this.staggerStrike(e, 'dmg');
+    }
     // 보호막이 먼저 피해를 받는다
     if (e.shield > 0 && dm > 0) {
       const ab = Math.min(e.shield, dm);
@@ -1269,8 +1365,12 @@
     let w = 0;
     for (let k = 0; k < list.length; k++) {
       const e = list[k];
-      if (e.dead) this.onKill(e);
-      else list[w++] = e;
+      if (e.dead) {
+        if (e.escaped) {
+          this.stats.escaped++;
+          this.emit({ k: 'escape', x: e.x, y: e.y });
+        } else this.onKill(e);
+      } else list[w++] = e;
     }
     list.length = w;
     this.flushPending();

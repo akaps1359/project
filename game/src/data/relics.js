@@ -14,7 +14,7 @@
     R('goldIdol', '금두꺼비', 1, 'idol', '처치 골드 +25%', { killGoldPct: 0.25 }),
     R('clover', '네잎클로버', 1, 'clover', '소환할 때 10% 확률로 비용 반환', { cloverChance: 0.1 }),
     R('iceHeart', '얼음 심장', 1, 'iceheart', '모든 공격이 4% 확률로 적을 0.8초 빙결', { freezeChance: 0.04 }),
-    R('thornArmor', '가시 갑옷', 1, 'armor', '한 바퀴를 돈 적은 최대 체력의 35% 피해', { thorns: 0.35 }),
+    R('thornArmor', '가시 갑옷', 1, 'armor', '한 바퀴를 돈 적은 최대 체력의 35% 피해 (다시 나오는 엘리트·보스에게 특히 아프다)', { thorns: 0.35 }),
     R('potionBelt', '보급 허리띠', 1, 'belt', '소모품 칸 +1, 무작위 소모품 2개', { itemSlots: 1 }, {
       onPick(run) { RS.addItem(run, RS.randomItemId(run.rng)); RS.addItem(run, RS.randomItemId(run.rng)); },
     }),
@@ -43,9 +43,12 @@
     R('juzu', '고요의 구슬', 1, 'beads', '? 칸에서 전투가 나오지 않고, ? 칸에 들어설 때마다 생명 +2', { juzu: 1 }),
     R('tinyChest', '꼬마 궤짝', 1, 'chest', '? 칸에 3번째로 들어갈 때마다 보물이 나온다', { tinyChest: 1 }),
     R('ceramicFish', '비단잉어', 1, 'fish', '증강을 얻을 때마다 골드 +15', { ceramicFish: 15 }),
-    R('redSkull', '붉은 해골', 1, 'skull', '생명이 절반 이하면 모든 유닛 피해 +25%', { lowLifeDmg: 0.25 }),
+    R('redSkull', '붉은 해골', 1, 'skull', '생명이 절반 이하면 모든 유닛 피해 +30%', { lowLifeDmg: 0.3 }),
+    R('bronzeShield', '청동 방패', 1, 'shield2', '적의 강타로 잃는 생명 -1, 최대 생명 +3', { strikeReduce: 1 }, {
+      onPick(run) { RS.changeMaxLife(run, 3); RS.heal(run, 3); },
+    }),
     R('apothecary', '약사의 반지', 1, 'ring', '소모품을 쓸 때마다 이번 전투 동안 모든 유닛 피해 +10% (누적)', { itemDmg: 0.1 }),
-    R('tungsten', '쇠말뚝', 1, 'rod', '한 바퀴를 돈 적에게 잃는 생명 -1 (최소 1)', { leakReduce: 1 }),
+    R('tungsten', '쇠말뚝', 1, 'rod', '누수·강타로 잃는 생명 -1 (최소 1)', { leakReduce: 1 }),
 
     // ── 희귀 ──
     R('scroll', '고대 두루마리', 2, 'scroll', '합성 결과를 두 클래스 중에서 고른다', { mergeChoose: 1 }),
