@@ -9,7 +9,7 @@
   // rarity: 1 일반 · 2 희귀 · 3 보스 · 4 방랑자(막 시작의 차원 방랑자) · 5 시작(지휘관)
   RS.RELICS = [
     // ── 일반 ──
-    R('hourglass', '모래시계', 1, 'hourglass', '보스 제한 시간 +25초', { bossTimeAdd: 25 }),
+    R('hourglass', '모래시계', 1, 'hourglass', '보스 제한 시간 +30초, 보스 체력 -10%', { bossTimeAdd: 30, bossHpPct: 0.1 }),
     R('bloodChalice', '승리의 축배', 1, 'chalice', '전투에서 이기면 생명 +2', { winHeal: 2 }),
     R('goldIdol', '금두꺼비', 1, 'idol', '처치 골드 +25%', { killGoldPct: 0.25 }),
     R('clover', '네잎클로버', 1, 'clover', '소환할 때 10% 확률로 비용 반환', { cloverChance: 0.1 }),
@@ -21,20 +21,20 @@
     R('whetstone', '신병의 숫돌', 1, 'whetstone', '일반·희귀 유닛 피해 +30%', { tierDmg: [0.3, 0.3, 0, 0] }),
     R('pocketWatch', '자명종', 1, 'watch', '웨이브 시작 후 4초간 공격 속도 +60%', { pocketWatch: 1 }),
     R('banner', '전쟁 깃발', 1, 'flag', '네 모서리 칸 유닛 피해 +40%', { cornerDmg: 0.4 }),
-    R('lens', '확대경', 1, 'lens', '안쪽 6칸 유닛 사거리 +8, 피해 +8%', { innerRange: 8, innerDmg: 0.08 }),
+    R('lens', '확대경', 1, 'lens', '안쪽 6칸 유닛 사거리 +3, 피해 +8%', { innerRange: 3, innerDmg: 0.08 }),
     R('anvil', '대장장이 모루', 1, 'anvil', '휴식처에서 수련하면 강화 +2 추가', { restTrainBonus: 2 }),
     R('coinPurse', '두둑한 전대', 1, 'bag', '전투 보상 골드 +50%', { combatGoldPct: 0.5 }),
     R('vampFang', '흡혈 송곳니', 1, 'fang', '엘리트·보스를 처치하면 최대 생명 +1', { eliteKillMaxLife: 1 }),
     R('rerollDice', '운명의 주사위', 1, 'dice', '증강을 고를 때 새로고침 1회', { augRerolls: 1 }),
     R('ancientCoin', '고대 주화', 1, 'coin', '이자 한도 +4', { interestCap: 4 }),
     R('anchor', '버팀 닻', 1, 'anchor', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { leakShield: 1 }),
-    R('bagPrep', '출정 배낭', 2, 'pack', '전투를 시작할 때 무료 소환 1회', { startSummons: 1 }),
-    R('lantern', '반딧불 초롱', 1, 'lantern', '전투를 시작할 때 골드 +15×막', { battleStartGold: 15 }),
+    R('bagPrep', '출정 배낭', 2, 'pack', '전투를 시작할 때 20% 확률로 희귀 유닛 1기 소환', { startRare: 0.2 }),
+    R('lantern', '반딧불 초롱', 1, 'lantern', '전투를 시작할 때 골드 +10×막', { battleStartGold: 10 }),
     R('strawberry', '산딸기', 1, 'berry', '최대 생명 +4', {}, {
       onPick(run) { RS.changeMaxLife(run, 4); RS.heal(run, 4); },
     }),
     R('penNib', '기록관의 깃펜', 1, 'pen', '유닛 공격 10번째마다 그 공격의 피해 2배', { penNib: 1 }),
-    R('happyFlower', '웃음꽃', 1, 'flower', '웨이브 4번마다 무료 소환 1회 (전투를 넘어 이어짐)', { happyFlower: 1 }),
+    R('happyFlower', '웃음꽃', 1, 'flower', '웨이브가 시작될 때마다 10% 확률로 무료 소환 1회', { waveFreeSummon: 0.1 }),
     R('meatBone', '비상 육포', 1, 'meat', '전투가 끝날 때 생명이 절반 이하면 생명 +5', { meatBone: 5 }),
     R('regalPillow', '구름 베개', 1, 'pillow', '휴식할 때 생명 +8 추가', { restHealAdd: 8 }),
     R('mawBank', '꿀꿀이 금고', 1, 'pig', '칸을 이동할 때마다 골드 +12. 상점에서 물건을 사면 깨진다', {}, { state: { active: true } }),
@@ -42,7 +42,7 @@
     R('smilingMask', '하회탈', 1, 'mask', '상점의 제거 서비스가 항상 25골드', { fixedRemoveCost: 25 }),
     R('juzu', '고요의 구슬', 1, 'beads', '? 칸에서 전투가 나오지 않고, ? 칸에 들어설 때마다 생명 +2', { juzu: 1 }),
     R('tinyChest', '꼬마 궤짝', 1, 'chest', '? 칸에 3번째로 들어갈 때마다 보물이 나온다', { tinyChest: 1 }),
-    R('ceramicFish', '비단잉어', 1, 'fish', '증강을 얻을 때마다 골드 +15', { ceramicFish: 15 }),
+    R('ceramicFish', '비단잉어', 1, 'fish', '증강을 얻을 때마다 골드 +10', { ceramicFish: 10 }),
     R('redSkull', '붉은 해골', 1, 'skull', '생명이 절반 이하면 모든 유닛 피해 +30%. 흡혈: 엘리트·보스 체력을 1/4 깎을 때마다 생명 +1', { lowLifeDmg: 0.3, leech: 4 }),
     R('bronzeShield', '청동 방패', 1, 'shield2', '적의 강타로 잃는 생명 -1, 최대 생명 +3', { strikeReduce: 1 }, {
       onPick(run) { RS.changeMaxLife(run, 3); RS.heal(run, 3); },
@@ -53,20 +53,20 @@
     // ── 희귀 ──
     R('powderKeg', '화약통', 2, 'keg', '적이 한 바퀴 돌 때마다 모든 적에게 폭발 피해', { powderKeg: 1 }),
     R('sageStone', '현인의 보석', 2, 'gem', '전설·신화 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5, 0.5] }),
-    R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 25%)', { burn: 0.25 }),
+    R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 40%)', { burn: 0.4 }),
     R('crystalBall', '수정 구슬', 2, 'orb', '증강 선택지 +1', { augChoices: 1 }),
     R('mirror', '거울', 2, 'mirror', '합성할 때 6% 확률로 결과 유닛 2기', { mergeMirror: 0.06 }),
     R('mango', '꿀참외', 2, 'mango', '최대 생명 +8', {}, {
       onPick(run) { RS.changeMaxLife(run, 8); RS.heal(run, 8); },
     }),
-    R('slingCourage', '거인잡이 새총', 2, 'sling', '엘리트전에서 모든 유닛 피해 +35%', { eliteBattleDmg: 0.35 }),
-    R('preservedInsect', '호박 속 벌레', 2, 'insect', '엘리트 체력 -30%', { eliteHpPct: -0.3 }),
+    R('slingCourage', '거인잡이 새총', 2, 'sling', '엘리트전에서 모든 유닛 피해 +50%', { eliteBattleDmg: 0.5 }),
+    R('preservedInsect', '호박 속 벌레', 2, 'insect', '엘리트 체력 -40%', { eliteHpPct: -0.4 }),
     R('prayerWheel', '소원 물레', 2, 'wheel', '일반 전투에서 5번 이길 때마다 증강을 한 번 더 고른다', { prayerWheel: 1 }, { state: { n: 0 } }),
     R('singingBowl', '울림 사발', 2, 'bowl', '증강을 건너뛰면 최대 생명 +2 (골드도 받는다)', { singingBowl: 1 }),
     R('dreamCatcher', '꿈 그물', 2, 'dream', '휴식처에서 휴식하면 증강 하나를 고른다', { dreamCatcher: 1 }),
     R('peacePipe', '곰방대', 2, 'pipe', '휴식처에서 [명상]: 증강이나 저주 하나를 없앤다', { peacePipe: 1 }),
     R('shovel', '모종삽', 2, 'shovel', '휴식처에서 [발굴]: 유물을 하나 얻는다', { shovel: 1 }),
-    R('girya', '무쇠 아령', 2, 'kettle', '휴식처에서 [단련]: 모든 유닛 피해 +6% (최대 3번)', { girya: 1 }, { state: { lifts: 0 } }),
+    R('girya', '무쇠 아령', 2, 'kettle', '모든 유닛 피해 +10%. 휴식처에서 [단련]: 모든 유닛 피해 +6% 더 (최대 3번)', { girya: 1, dmgPct: 0.1 }, { state: { lifts: 0 } }),
     R('matryoshka', '겹겹 인형', 2, 'doll', '다음 보물 상자 2번은 유물을 하나 더 준다', {}, { state: { count: 2 } }),
     R('membership', '단골 쿠폰', 2, 'card', '상점 가격 50% 할인', { shopDiscount: 0.5 }),
     R('courier', '보부상', 2, 'box', '상점 가격 20% 할인, 산 자리에 새 물건이 들어온다', { shopDiscount: 0.2, courier: 1 }),
@@ -74,7 +74,7 @@
     R('pantograph', '결전 나침반', 2, 'compass', '보스전을 시작할 때 생명 +6', { pantograph: 6 }),
     R('bloodGrail', '피의 성배', 2, 'chalice', '흡혈: 엘리트·보스 체력을 1/8 깎을 때마다 생명 +1 (한 마리를 쓰러뜨리면 +8)', { leech: 8 }),
     R('voodoo', '저주 인형', 2, 'voodoo', '저주 1개당 모든 유닛 피해 +10% (심연의 짐 포함)', { curseDmg: 0.1 }),
-    R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { helix: 1 }),
+    R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 두 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반, 한 번을 쓴다)', { helix: 1, leakShield: 1 }),
 
     // ── 보스 (강력하지만 대가가 따르는 것이 많다) ──
     R('cursedCrown', '저주받은 왕관', 3, 'crown', '전투를 시작할 때 골드 +30×막', { battleStartGold: 30 }, {
