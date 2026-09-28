@@ -335,7 +335,7 @@
     else if (UI.panelMode === 'unit') UI.setPanel('idle');
   };
 
-  // 강화·소모품·두루마리 패널을 닫으면 선택한 유닛이 있을 때 그 정보로 돌아간다
+  // 강화·소모품 패널을 닫으면 선택한 유닛이 있을 때 그 정보로 돌아간다
   UI.closePanel = function () {
     const G = UI.G;
     if (UI.sel >= 0 && G.run && G.run.board[UI.sel]) UI.setPanel('unit');
