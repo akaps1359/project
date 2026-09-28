@@ -225,7 +225,12 @@ img { max-width: 100%; }
 }
 .hud .stat { position: relative; flex: 1; min-width: 0; justify-content: center; background: var(--panel); box-shadow: var(--px); height: 30px; margin: 2px; padding: 0 4px; white-space: nowrap; font: inherit; color: var(--text); border: 0; cursor: pointer; touch-action: manipulation; }
 .hud .stat .ic { flex: 0 0 auto; }
-.hud .stat b { font-weight: normal; font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hud .stat b { font-weight: normal; font-size: 13px; min-width: 0; overflow: hidden; }
+/* 생명·적 수: 현재 값은 크게, 최대치는 작게 (좁은 화면에서도 잘리지 않게) */
+.hud .stat small.of { color: var(--dim); font-size: 9px; align-self: flex-end; margin-bottom: 8px; margin-left: -2px; }
+.hud #h-life { flex: 1.15; }
+.hud #h-wave { flex: 0.85; }
+.hud .stat .ic { width: 15px; height: 15px; }
 .hud .stat small { color: var(--green); font-size: 10px; }
 .hud .stat.danger b { color: var(--red); }
 .hud .stat.danger { animation: warn 0.6s steps(2) infinite; }

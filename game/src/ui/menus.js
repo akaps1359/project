@@ -248,7 +248,13 @@
         UI.G.saveMeta();
         UI.closeModal();
         UI.toast('모든 지휘관을 해금했어요', 'good');
-      }, 'sm', !!meta.unlockAll)),
+      }, 'sm', !!meta.unlockAll),
+      btn('심연 전체 해금 (테스트용)', () => {
+        meta.maxAsc = RS.MAX_ASC;
+        UI.G.saveMeta();
+        UI.closeModal();
+        UI.toast(`심연 ${RS.MAX_ASC}단계까지 모두 열었어요`, 'good');
+      }, 'sm', (meta.maxAsc || 0) >= RS.MAX_ASC)),
     ));
   };
 

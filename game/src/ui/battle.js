@@ -799,12 +799,14 @@
     if (force || !UI.hudCache) UI.hudCache = {};
     const c = UI.hudCache;
     const blind = !!b.M.blindfold;
-    setText($('#h-life-v'), 'life', `${Math.ceil(run.life)}/${run.maxLife}`);
+    setText($('#h-life-v'), 'life', String(Math.ceil(run.life)));
+    setText($('#h-life-m'), 'lifeM', '/' + run.maxLife);
     // 좁은 화면(360px 이하)에서는 네 자리부터 줄여 쓴다
     setText($('#h-gold-v'), 'gold', run.gold >= (window.innerWidth <= 360 ? 1000 : 10000) ? fmtK(run.gold) : fmt(run.gold));
     const cap = RS.interestCap(b.M);
     const inter = Math.min(cap, Math.floor(run.gold / RS.BAL.interestPer));
-    setText($('#h-foe-v'), 'foe', `${b.enemies.length}/${b.cap}`);
+    setText($('#h-foe-v'), 'foe', String(b.enemies.length));
+    setText($('#h-foe-m'), 'foeM', '/' + b.cap);
     setCls($('#h-foe'), 'danger', 'danger', b.enemies.length >= b.cap * 0.7);
     setCls($('#h-life'), 'low', 'danger', run.life <= run.maxLife * 0.3);
     const nW = b.stage.waves.length;
@@ -1087,7 +1089,7 @@
         el.classList.add('hit');
         clearTimeout(UI.hitTimer);
         UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
-        UI.hudFloat(el, '-1', 'bad');
+        UI.hudFloat(el, '-' + (ev.v || 1), 'bad');
         UI.onceTip('pressure', '균열 게이지가 찼어요! 적이 균열로 돌아오는 길(오른쪽·아래·왼쪽)에 오래 머물수록 문 둘레 고리가 차고, 가득 차면 생명 -1');
         break;
       }

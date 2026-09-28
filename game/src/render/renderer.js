@@ -633,7 +633,7 @@
           // 균열 게이지가 가득 찼다: 문이 붉게 터지고 생명 -1
           this.fxs.push({ k: 'leak', x: F.L, y: F.T, t: 0.45, max: 0.45 });
           this.fxs.push({ k: 'ring', x: F.L, y: F.T, r: 16, t: 0.4, max: 0.4, col: '#ff4d5a', glow: true });
-          this.nums.push({ x: F.L + 6, y: F.T + 4, vx: 6, vy: -16, s: '-1', c: 'r', t: 0.9, max: 0.9, big: 1.4 });
+          this.nums.push({ x: F.L + 6, y: F.T + 4, vx: 6, vy: -16, s: '-' + (ev.v || 1), c: 'r', t: 0.9, max: 0.9, big: 1.4 });
           this.shake = Math.max(this.shake, 0.12);
           break;
         case 'escape':

@@ -393,9 +393,13 @@ function makeSmartBot(RS, rng, opts) {
     const C = RS.CLASS[cls] || {};
     let f = 1;
     if (C.cleave) f = 1 + C.cleave * 0.8;
-    if (C.splash) f = (1 + (s.splash || 0) / 14) * (1 + (M.burn || 0) * 1.6);
+    const dot = 1 + (M.dotAmp || 0) * (M.contagion ? 1.25 : 1);
+    if (C.splash) f = (1 + (s.splash || 0) / 14) * (1 + (M.burn || 0) * 1.6 * dot);
     if (C.slow) f = 1.8 * (1 + (s.frostSplash || 0) / 20);
-    if (C.crit && M.poison) f *= 1 + M.poison * 0.8;
+    if (C.crit && M.poison) f *= 1 + M.poison * 0.8 * dot;
+    if (cls === 'archer' && M.burnArrow) f *= 1 + M.burnArrow * 1.6 * dot;
+    // 피의 흥분: 치명타가 자주 날수록 빨라진 시간이 길다
+    if (M.critHaste && s.crit > 0) f *= 1 + M.critHaste * Math.min(1, s.crit * 2.5);
     if (!C.splash && !C.slow && M.shrapnel) f *= 1 + M.shrapnel * 0.7;
     const baseR = (C.range || 60) + 3 * tier;
     if (s.range) f *= Math.sqrt(Math.max(0.5, s.range / baseR));
@@ -424,11 +428,16 @@ function makeSmartBot(RS, rng, opts) {
       if (M.legendAura) dmg += M.legendAura * (legends + (future ? 1 : 0));
     }
     if (M.rich) dmg += M.rich * 0.8;
+    // 광전사(연속형)·붉은 해골: 전투 중 평균 잃은 생명을 막 진행에 따라 어림
+    const missNow = Math.max(0, run.maxLife - run.life);
+    const miss = future ? Math.max(missNow, run.maxLife * 0.35) : missNow;
     if (M.berserk) {
-      const on = run.life <= run.maxLife / 2 ? 1 : 0.2;
-      dmg += 0.6 * on;
-      aspd += 0.25 * on;
+      dmg += Math.min(0.8, 0.04 * miss * M.berserk);
+      aspd += Math.min(0.24, 0.012 * miss * M.berserk);
     }
+    if (M.lowLifeDmg) dmg += M.lowLifeDmg * (run.life <= run.maxLife / 2 ? 1 : future ? 0.35 : 0);
+    if (M.curseDmg) dmg += M.curseDmg * run.curses.length;
+    if (M.itemDmg) dmg += M.itemDmg * Math.min(3, run.items.length) * 0.5;
     const rst = run.relicState || {};
     if (rst.pumpkinCandle && rst.pumpkinCandle.charges > 0) dmg += 0.4 * (future ? Math.min(1, rst.pumpkinCandle.charges / 10) : 1);
     if (rst.waxToys) aspd += Math.max(0, 0.3 - 0.1 * Math.floor(rst.waxToys.fights / 3)) * (future ? 0.4 : 1);
@@ -461,9 +470,23 @@ function makeSmartBot(RS, rng, opts) {
   }
   function boardPower(run, M, dyn) {
     let p = 0;
+    let frost = 0;
+    let stun = (M.freezeChance || 0) * 4;
+    let tot = 0;
     for (let i = 0; i < run.board.length; i++) {
       const s = run.board[i];
-      if (s) p += slotPower(run, M, dyn, s.cls, s.tier, i) * s.n;
+      if (!s) continue;
+      p += slotPower(run, M, dyn, s.cls, s.tier, i) * s.n;
+      tot += s.n;
+      if (s.cls === 'frost') frost += s.n;
+      if (s.cls === 'knight' && (s.tier >= 1 || M.cls.knight.stun)) stun += s.n * 0.05;
+      if (s.cls === 'frost' && s.tier >= 3) stun += s.n * 0.08;
+    }
+    // 얼음 깨기: 둔화된 적(서리술사 비율) +20%, 기절·빙결된 적 +50%
+    if (M.shatter && tot) {
+      const slowed = Math.min(0.8, (frost / tot) * 2.5);
+      const stunned = Math.min(0.5, stun / Math.max(1, tot) * 3);
+      p *= 1 + M.shatter * (0.4 * slowed + stunned);
     }
     return p * globalFactor(M);
   }
@@ -652,7 +675,7 @@ function makeSmartBot(RS, rng, opts) {
       if (M.leakShield) loss -= Math.min(M.leakShield, L * 1.5) * 0.7;
       if (loss > 0) loss *= 1.5; // 누수가 커지면 한 판에 무너질 위험도 커진다
       const start = M.battleStartLifeLoss || 0;
-      const heal = Math.min(M.winHeal || 0, 2.5) * 0.7 + (M.eliteKillHeal || 0) * 0.35 + (M.meatBone ? 1 : 0) + (M.pantograph || 0) / 7;
+      const heal = Math.min(M.winHeal || 0, 2.5) * 0.7 + (M.eliteKillHeal || 0) * 0.35 + (M.meatBone ? 1 : 0) + (M.pantograph || 0) / 7 + (M.leech || 0) * 0.12 + (M.counterStrike || 0) * 0.3 + (M.strikeReduce || 0) * 0.35;
       flow += rem[k] * (heal - loss - start);
       maxFlow += rem[k] * ((M.winMaxLife || 0) + (M.eliteKillMaxLife || 0) * 0.3);
     }

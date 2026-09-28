@@ -895,8 +895,8 @@
     while (this.pressure >= 1 && this.status === 'running') {
       this.pressure -= 1;
       this.stats.pressure++;
-      this.emit({ k: 'pressure' });
-      this.loseLife(1);
+      this.emit({ k: 'pressure', v: this.M.leakMult });
+      this.loseLife(this.M.leakMult);
     }
   };
 
@@ -907,7 +907,7 @@
   };
   P.strikeHit = function (e, s, pre) {
     const M = this.M;
-    let dmg = pre ? pre.dmg : this.strikeDmg(e, s);
+    let dmg = (pre ? pre.dmg : this.strikeDmg(e, s)) * M.leakMult;
     if (e.boss && this.enraged) dmg *= 2;
     if (M.strikeReduce) dmg = Math.max(0, dmg - M.strikeReduce);
     if (M.leakReduce) dmg = Math.max(dmg > 0 ? 1 : 0, dmg - M.leakReduce);
@@ -924,7 +924,7 @@
     // 반격: 끊을 때마다 생명 +1, 그 적에게 최대 체력의 5% 피해
     if (M.counterStrike) {
       RS.heal(this.run, M.counterStrike);
-      this.damage(e, e.maxHp * 0.05, null, false, true);
+      this.damage(e, e.maxHp * 0.08, null, false, true);
     }
     this.emit({ k: 'stagger', x: e.x, y: e.y, why, heal: M.counterStrike || 0 });
   };
@@ -967,11 +967,11 @@
       if (M.legendAura) dmg += M.legendAura * legends;
     }
     if (M.rich && run.gold >= 100) dmg += M.rich;
-    // 광전사: 잃은 생명 1당 피해 +5%, 공격 속도 +1.5% (최대 +100% / +30%)
+    // 광전사: 잃은 생명 1당 피해 +4%, 공격 속도 +1.2% (최대 +80% / +24%)
     if (M.berserk) {
       const miss = Math.max(0, run.maxLife - run.life);
-      dmg += Math.min(1, 0.05 * miss * M.berserk);
-      aspd += Math.min(0.3, 0.015 * miss * M.berserk);
+      dmg += Math.min(0.8, 0.04 * miss * M.berserk);
+      aspd += Math.min(0.24, 0.012 * miss * M.berserk);
     }
     if (M.lowLifeDmg && run.life <= run.maxLife / 2) dmg += M.lowLifeDmg;
     if (M.curseDmg) dmg += M.curseDmg * run.curses.length;

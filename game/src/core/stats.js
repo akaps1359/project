@@ -21,7 +21,7 @@
       diversity: 0, purity: 0, eliteSquad: 0, rich: 0, berserk: 0, legendAura: 0, missChance: 0,
       // 시너지 연결 고리 (키워드 보상)
       shatter: 0, critHaste: 0, burnArrow: 0, dotAmp: 0, contagion: 0, lowLifeDmg: 0, curseDmg: 0, itemDmg: 0,
-      strikeReduce: 0, counterStrike: 0, leech: 0,
+      strikeReduce: 0, counterStrike: 0, leech: 0, actHealCut: 0, restHealCut: 0,
     };
   };
 

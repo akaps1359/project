@@ -721,7 +721,8 @@
       run.nodeType = null;
       run.map = RS.genMap(run);
       // 막을 넘어가면 잃은 생명을 회복한다 (슬더스처럼 막 하나가 생명 관리의 한 판. 심연 4부터 75%만)
-      RS.heal(run, Math.ceil(Math.max(0, run.maxLife - run.life) * BAL.actHealPct * (run.asc >= 4 ? 0.75 : 1)));
+      const cut = Math.min(0.9, RS.collectMods(run).actHealCut || 0);
+      RS.heal(run, Math.ceil(Math.max(0, run.maxLife - run.life) * BAL.actHealPct * (run.asc >= 4 ? 0.75 : 1) * (1 - cut)));
       run.phase = 'actStart';
       run.pending = run.act <= 3 ? { ancient: RS.rollAncient(run) } : null;
     } else {
@@ -1028,7 +1029,10 @@
   };
 
   // ── 휴식처 ──
-  RS.restHealAmount = (run) => Math.ceil(run.maxLife * BAL.restHealPct) + (RS.collectMods(run).restHealAdd || 0);
+  RS.restHealAmount = (run) => {
+    const M = RS.collectMods(run);
+    return Math.ceil(run.maxLife * BAL.restHealPct * (1 - Math.min(0.9, M.restHealCut || 0))) + (M.restHealAdd || 0);
+  };
   RS.restTrainAmount = (run) => BAL.trainLevels + RS.collectMods(run).restTrainBonus;
 
   // 복제의 룬 위 유닛 중 실제로 복제할 수 있는 칸 (같은 유닛 칸이나 빈칸이 있어야 한다)
