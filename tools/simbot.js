@@ -11,7 +11,7 @@
 //   random : 모든 선택을 무작위로
 // 게임 코드는 공개 함수만 쓴다: RS.saveString/loadString/attachRng, eventOptions/eventChoose/optionEnabled,
 // shopBuy, restOptions/restDo, pickAugment/addRelic/applyBlessing/applyAncient, unitStats, 전투의
-// summon/merge/mergeOptions/upgrade/upgradeCost/summonCost/summonLimit/useItem/swap/starfall/canStarfall 등.
+// summon/merge/upgrade/upgradeCost/summonCost/summonLimit/useItem/swap/starfall/canStarfall 등.
 // 있으면 쓰는 것: RS.cancelChoice(건너뛴 대기열 항목 환불), RS.skipGoldAmount(건너뛰기 골드), b.starMax.
 'use strict';
 
@@ -239,8 +239,7 @@ function makeBasicBot(RS, kind, rng, opts) {
       const run = b.run;
       let i;
       while ((i = RS.firstMergeable(run.board)) >= 0) {
-        const pick = b.M.mergeChoose ? b.mergeOptions(i)[0] : undefined;
-        if (!b.merge(i, pick)) break;
+        if (!b.merge(i)) break;
       }
       const danger = b.enemies.length > b.cap * 0.6 || run.life <= 4 || (b.boss && b.bossTimer < 15);
       if (b.canStarfall() && (danger || b.boss || b.stars >= 5)) b.starfall();
@@ -465,7 +464,6 @@ function makeSmartBot(RS, rng, opts) {
     if (M.capAdd) f *= Math.max(0.5, 1 + M.capAdd * 0.006);
     if (M.dragon) f *= 1.08;
     if (M.stars) f *= 1.1;
-    if (M.mergeChoose) f *= 1.03;
     return f;
   }
   function boardPower(run, M, dyn) {
@@ -1023,9 +1021,7 @@ function makeSmartBot(RS, rng, opts) {
       const M = b.M;
       let i;
       while ((i = RS.firstMergeable(run.board)) >= 0) {
-        let pick;
-        if (M.mergeChoose && has(b.mergeOptions)) pick = chooseMergeClass(run, b.mergeOptions(i), run.board[i].tier + 1);
-        if (!b.merge(i, pick)) break;
+        if (!b.merge(i)) break;
       }
       const danger = b.enemies.length > b.cap * 0.6 || run.life <= 4 || (b.boss && b.bossTimer < 15);
       const starMax = typeof b.starMax === 'number' ? b.starMax : 5;
@@ -1361,17 +1357,6 @@ function makeSmartBot(RS, rng, opts) {
     if (idx('summonScroll') >= 0 && RS.hasEmptySlot(run.board)) b.useItem(idx('summonScroll'));
     if (idx('anvilScroll') >= 0 && RS.boardUnitCount(run.board) >= 5) b.useItem(idx('anvilScroll'));
   }
-  // 고대 두루마리: 이미 모으는 중인 클래스·강화된 클래스 쪽으로
-  function chooseMergeClass(run, opts, tier) {
-    if (!opts || !opts.length) return undefined;
-    const share = futureShare(run);
-    return best(opts, (c) => {
-      let s = (run.classLv[c] || 0) * 2 + share[c] * 10;
-      for (const x of run.board) if (x && x.cls === c && x.tier === tier && x.n < RS.stackMax(tier)) s += 6 + x.n * 2;
-      return s;
-    });
-  }
-
   // ── 대기열 처리 ──
   function doRemove(run) {
     const cands = [];

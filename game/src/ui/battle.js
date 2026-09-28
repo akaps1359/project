@@ -38,21 +38,6 @@
 
   UI.starMax = (b) => (typeof b.starMax === 'number' && b.starMax > 0 ? b.starMax : 3);
 
-  // 고대 두루마리: 합성 후보는 칸의 스택이 바뀔 때까지 고정
-  UI.mergeOptsFor = function (b, i) {
-    if (typeof b.mergeOptions !== 'function') return null;
-    if (b.mergeOptions.length >= 1) return b.mergeOptions(i); // 코어가 칸별로 기억한다
-    // 예전 코어: 부를 때마다 새로 굴리므로 여기서 기억한다
-    const s = b.run.board[i];
-    if (!s) return null;
-    const cache = b.uiMergeOpts || (b.uiMergeOpts = {});
-    const key = i + ':' + s.cls + ':' + s.tier;
-    return cache[key] || (cache[key] = b.mergeOptions(i));
-  };
-  function forgetMergeOpts(b, i) {
-    if (!b.uiMergeOpts) return;
-    for (const k of Object.keys(b.uiMergeOpts)) if (k.split(':')[0] === String(i)) delete b.uiMergeOpts[k];
-  }
 
   UI.initBattle = function () {
     for (const img of document.querySelectorAll('img[data-icon]')) img.src = RS.iconURL(img.dataset.icon, 3);
@@ -347,7 +332,7 @@
     UI.sel = i;
     if (G.renderer) G.renderer.sel = i;
     if (i >= 0 && G.run && G.run.board[i]) UI.setPanel('unit');
-    else if (UI.panelMode === 'unit' || UI.panelMode === 'mergeChoose') UI.setPanel('idle');
+    else if (UI.panelMode === 'unit') UI.setPanel('idle');
   };
 
   // 강화·소모품·두루마리 패널을 닫으면 선택한 유닛이 있을 때 그 정보로 돌아간다
@@ -463,36 +448,17 @@
     UI.updateHud(true);
   };
 
-  UI.doMerge = function (i, pick) {
+  UI.doMerge = function (i) {
     const G = UI.G;
     const b = G.battle;
     if (!b) return;
-    if (b.M.mergeChoose && !pick) {
-      const opts = UI.mergeOptsFor(b, i);
-      if (opts && opts.length) {
-        UI.sel = i;
-        if (G.renderer) G.renderer.sel = i;
-        UI.setPanel('mergeChoose', { slot: i, opts });
-        return;
-      }
-    }
     const tierFrom = G.run.board[i] ? G.run.board[i].tier : 0;
-    const res = b.merge(i, pick);
+    const res = b.merge(i);
     if (!res) {
-      // 고른 후보가 코어의 후보와 다르면(스택이 바뀐 사이 등) 후보를 다시 받아 패널을 연다
-      forgetMergeOpts(b, i);
-      if (pick && b.M.mergeChoose && RS.canMerge(G.run.board, i)) {
-        const opts = UI.mergeOptsFor(b, i);
-        if (opts && opts.length) {
-          UI.setPanel('mergeChoose', { slot: i, opts });
-          return;
-        }
-      }
       UI.select(G.run.board[i] ? i : -1);
       UI.updateHud(true);
       return;
     }
-    forgetMergeOpts(b, i);
     UI.tutDone('merge');
     if (res.fail) {
       RS.sfx('error');
@@ -515,12 +481,6 @@
     if (RS.firstMergeable(G.run.board) < 0) {
       RS.sfx('error');
       UI.toast('합성할 칸이 없어요 (같은 칸에 같은 유닛 3기)', 'warn');
-      return;
-    }
-    // 고대 두루마리: 칸마다 결과를 골라야 하므로 첫 칸의 선택 패널을 연다
-    if (b.M.mergeChoose) {
-      const i = RS.firstMergeable(G.run.board);
-      UI.doMerge(i);
       return;
     }
     let count = 0;
@@ -562,7 +522,7 @@
   UI.setPanel = function (mode, data) {
     const G = UI.G;
     // 사용·닫기 버튼 자리에 합성·판매 버튼이 바로 그려지므로 연타가 새 버튼을 누르지 않게 잠깐 막는다
-    if (UI.panelMode !== mode && (UI.panelMode === 'item' || UI.panelMode === 'mergeChoose' || UI.panelMode === 'upgrade') && UI.lockInput) UI.lockInput(250);
+    if (UI.panelMode !== mode && (UI.panelMode === 'item' || UI.panelMode === 'upgrade') && UI.lockInput) UI.lockInput(250);
     UI.panelMode = mode;
     UI.panelData = data || null;
     UI.panelSig = null;
@@ -663,21 +623,6 @@
             UI.updateHud(true);
           }, 'gold'),
           btn('닫기', () => UI.closePanel()),
-        ),
-      ));
-    } else if (mode === 'mergeChoose') {
-      const tier = Math.min(3, (run.board[data.slot] ? run.board[data.slot].tier : 0) + 1);
-      append(p, h('div', { class: 'pchoose' },
-        h('p', { class: 'phint' }, '고대 두루마리: 합성 결과를 고르세요'),
-        h('div', { class: 'row2' },
-          data.opts.map((c) => h('button', {
-            class: 'btn choose',
-            onclick() {
-              RS.sfx('click');
-              UI.doMerge(data.slot, c);
-            },
-          }, unitImg(c, tier), RS.CLASS[c].name)),
-          btn('닫기', () => UI.closePanel(), 'sm'),
         ),
       ));
     }
@@ -862,8 +807,6 @@
       if (!run.board[UI.sel]) UI.select(-1);
       else if (unitSig(run, UI.sel) !== UI.panelSig) UI.setPanel('unit');
       else UI.refreshUnitStats();
-    } else if (UI.panelMode === 'mergeChoose') {
-      if (!UI.panelData || !RS.canMerge(run.board, UI.panelData.slot)) UI.closePanel();
     } else if (UI.panelMode === 'upgrade' && refs.rows) {
       const step = b.M.upgradeDouble ? 2 : 1;
       for (const cl of RS.CLASSES) {

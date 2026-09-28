@@ -77,7 +77,6 @@
     // 벨벳 초커·메아리 형상: 준비 시간은 첫 웨이브와 같은 웨이브로 친다
     this.waveSummons = 0;
     this.echoLeft = M.echoForm || 0; // 메아리 형상: 전투마다 남은 메아리 수
-    this.mergeOpts = {}; // 고대 두루마리 합성 후보 ('클래스:등급' → [후보 둘])
     this.costMul = 1; // 뱀의 눈
     this.rollCost();
     const clsDmg = {};
@@ -1576,29 +1575,11 @@
     for (let u = 0; u < cds.length; u++) if (cds[u] < 0.05) cds[u] = 0.05 + this.rng.next() * 0.3;
   };
 
-  // 고대 두루마리: i 칸 유닛의 합성 후보 둘. '클래스:등급'마다 한 번만 굴려 두고 실제로 합성할 때까지 유지하므로
-  // 패널을 다시 열거나 자리를 바꾸거나 정렬해도 후보가 바뀌지 않는다. i 를 생략하면 첫 번째로 합성할 수 있는 칸
-  P.mergeOptions = function (i) {
-    const board = this.run.board;
-    if (i == null || i < 0) i = RS.firstMergeable(board);
-    const s = board[i];
-    if (!s) return [];
-    const key = s.cls + ':' + s.tier;
-    return this.mergeOpts[key] || (this.mergeOpts[key] = RS.mergeOptions(this.rng, this.run));
-  };
-
-  // pickCls: 고대 두루마리가 있을 때 mergeOptions(i) 중 하나 (생략하면 첫 번째 후보). 후보가 아니면 합성하지 않는다
-  P.merge = function (i, pickCls) {
+  // 합성: 결과 클래스는 늘 무작위 (지휘관 성향 가중치). 고르는 기능은 후반 가치가 너무 커서 없앴다
+  P.merge = function (i) {
     const board = this.run.board;
     if (!RS.canMerge(board, i)) return null;
-    let pick;
-    if (this.M.mergeChoose) {
-      const opts = this.mergeOptions(i);
-      if (pickCls != null && opts.indexOf(pickCls) < 0) return null;
-      pick = pickCls != null ? pickCls : opts[0];
-      delete this.mergeOpts[board[i].cls + ':' + board[i].tier];
-    }
-    const res = RS.mergeSlot(this.run, i, this.rng, this.M, pick);
+    const res = RS.mergeSlot(this.run, i, this.rng, this.M);
     if (!res) return null;
     for (const r of res.results) this.resetCd(r.slot);
     this.statsDirty = true;

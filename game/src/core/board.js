@@ -175,16 +175,8 @@
     return -1;
   };
 
-  // 두 개의 서로 다른 클래스 후보 (고대 두루마리). 전투에서는 Battle.mergeOptions(i) 가 칸마다 기억해 둔다
-  RS.mergeOptions = function (rng, run) {
-    const a = RS.pickClass(run, rng);
-    let b = a;
-    while (b === a) b = RS.pickClass(run, rng);
-    return [a, b];
-  };
-
   // 합성: 같은 유닛 3기 → 다음 등급 무작위 클래스 1기. 재료 3기에 들인 골드가 결과로 옮겨 간다
-  RS.mergeSlot = function (run, i, rng, M, pickCls) {
+  RS.mergeSlot = function (run, i, rng, M) {
     const board = run.board;
     const s = board[i];
     if (!RS.canMerge(board, i)) return null;
@@ -213,7 +205,7 @@
     const count = M.mergeMirror && rng.chance(M.mergeMirror) ? 2 : 1;
     const each = moved / count;
     for (let k = 0; k < count; k++) {
-      const cls = pickCls || RS.pickClass(run, rng);
+      const cls = RS.pickClass(run, rng);
       const slot = RS.addUnit(board, cls, tier, i, each);
       if (slot >= 0) res.results.push({ cls, tier, slot });
       else res.gold += RS.worthToGold(each, M); // 놓을 자리가 없으면 판매한 것처럼 골드로

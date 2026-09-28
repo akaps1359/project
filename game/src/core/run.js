@@ -251,6 +251,10 @@
     if (!run || run.v !== 2) return null;
     RS.attachRng(run);
     RS.registerCustomAugs(run);
+    // 게임에서 빠진 유물·증강·저주(예: 고대 두루마리)는 조용히 뺀다
+    if (Array.isArray(run.relics)) run.relics = run.relics.filter((id) => RS.REL[id]);
+    if (Array.isArray(run.augments)) run.augments = run.augments.filter((id) => RS.augDef(id));
+    if (Array.isArray(run.curses)) run.curses = run.curses.filter((id) => RS.CURSE[id]);
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
     // 예전 저장본: 마지막 보스를 이기고 보상 화면에 멈춰 있었다면 그대로 끝낸다
     if (run.phase === 'reward' && run.nodeType === 'boss' && typeof RS.isFinalBoss === 'function' && RS.isFinalBoss(run)) {
