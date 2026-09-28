@@ -258,8 +258,8 @@
     const M = this.M;
     const asc = this.run.asc || 0;
     let hp = RS.levelHp(L) * def.hp * (1 + M.enemyHpPct) * (hpMul || 1);
-    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.15 : 1);
-    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.15 : 1);
+    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.1 : 1);
+    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.25 : 1);
     else if (asc >= 3) hp *= 1.1;
     // 일반 적: 놓쳐도 한 번만 아프므로(빠져나감) 아슬아슬한 세기로 맞춘다 (막마다)
     if (!def.boss && !def.elite) hp *= RS.BAL.normalHpMul[Math.min(4, this.run.act)] || 1;
@@ -902,7 +902,8 @@
   // ── 강타 (적의 의도) ──
   // 엘리트는 막이 오를수록 세게 친다
   P.strikeDmg = function (e, s) {
-    return s.dmg + (e.elite && !e.boss ? Math.floor((Math.max(1, Math.min(3, this.run.act)) - 1) * (RS.BAL.eliteStrikeStep || 0)) : 0);
+    const elite = e.elite && !e.boss;
+    return s.dmg + (elite ? Math.floor((Math.max(1, Math.min(3, this.run.act)) - 1) * (RS.BAL.eliteStrikeStep || 0)) + (this.run.asc >= 1 ? 1 : 0) : 0);
   };
   P.strikeHit = function (e, s, pre) {
     const M = this.M;

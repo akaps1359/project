@@ -87,7 +87,7 @@
     A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +80%, 범위 +5 (서리술사는 영웅 등급부터)', {
       cls: { mage: { dmg: 0.8, splash: 5 }, frost: { dmg: 0.8, splash: 5 } },
     }, { unique: true }),
-    A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +60%', { dmgPct: 0.6, leakMult: 2 }, {
+    A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +55%', { dmgPct: 0.55, leakMult: 2 }, {
       unique: true, cost: '누수·강타·균열 게이지로 잃는 생명 2배',
     }),
     A('lastStand', '배수의 진', 3, 'skull', '모든 유닛 피해 +45%, 공격 속도 +15%', { dmgPct: 0.45, aspdPct: 0.15, restHealCut: 0.5 }, {
@@ -96,8 +96,8 @@
     }),
     // ── 슬레이 더 스파이어의 '파워' 카드에서 착안 ──
     A('demonForm', '분노의 뿔', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +15% (누적)', { demonForm: 0.15 }, { unique: true }),
-    A('echoForm', '산울림', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1, summonCostPct: 0.05 }, {
-      unique: true, cost: '소환 비용 +5%',
+    A('echoForm', '산울림', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1, summonCostPct: 0.1 }, {
+      unique: true, cost: '소환 비용 +10%',
     }),
     A('apotheosis', '빛의 세례', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 되고, 모든 클래스 강화 +1', {}, {
       onPick(run) { RS.promoteTier(run, 0); for (const c of RS.CLASSES) run.classLv[c] += 1; },

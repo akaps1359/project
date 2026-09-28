@@ -877,40 +877,40 @@ img { max-width: 100%; }
   // hp: 웨이브 레벨 체력 대비 배율, leak: 한 바퀴 돌 때 잃는 생명
   RS.ENEMY = {
     slime: { name: '슬라임', hp: 1, speed: 26, gold: 1, leak: 1 },
-    bat: { name: '박쥐', hp: 0.6, speed: 44, gold: 1, leak: 1, countMul: 1.3, gap: 0.4 },
+    bat: { name: '박쥐', hp: 0.7, speed: 44, gold: 1, leak: 1, countMul: 1.3, gap: 0.4 },
     golem: { name: '돌골렘', hp: 2.4, speed: 17, gold: 2, leak: 1, armorLight: 0.5, countMul: 0.6, gap: 0.8, trait: '궁수·도적 피해 50% 감소' },
     ghost: { name: '유령', hp: 1.2, speed: 30, gold: 1, leak: 1, physRes: 0.4, trait: '물리 피해 40% 감소' },
     skeleton: { name: '해골 병사', hp: 0.9, speed: 28, gold: 1, leak: 1, countMul: 1.1 },
-    imp: { name: '임프', hp: 0.8, speed: 36, gold: 1, leak: 1, countMul: 1.1 },
-    shaman: { name: '고블린 주술사', hp: 1.5, speed: 24, gold: 2, leak: 1, countMul: 0.5, gap: 0.9, heal: { every: 3, pct: 0.06, r: 32 }, trait: '주변 적 체력 회복' },
+    imp: { name: '임프', hp: 0.9, speed: 36, gold: 1, leak: 1, countMul: 1.1 },
+    shaman: { name: '고블린 주술사', hp: 1.3, speed: 24, gold: 2, leak: 1, countMul: 0.5, gap: 0.9, heal: { every: 3, pct: 0.045, r: 32 }, trait: '주변 적 체력 회복' },
     // 엘리트
     ogre: { name: '오우거', hp: 12, speed: 20, gold: 8, leak: 1, elite: true, skills: [{ k: 'strike', name: '몽둥이 찍기', every: 8, wind: 2.4, dmg: 1, brk: 0.08, first: 5 }], trait: '몽둥이 찍기: 경고 뒤 생명을 친다 (막마다 세진다). 준비 중에 체력 8%를 깎거나 기절시키면 끊긴다' },
     darkKnight: { name: '흑기사', hp: 9.5, speed: 22, gold: 8, leak: 1, elite: true, armorLight: 0.5, skills: [{ k: 'strike', name: '흑검 베기', every: 9, wind: 2.0, dmg: 1, brk: 0.07, first: 6 }], trait: '궁수·도적 피해 50% 감소. 흑검 베기: 경고 뒤 생명을 친다 (준비 중 체력 7% 또는 기절로 끊김)' },
-    witch: { name: '마녀', hp: 8, speed: 26, gold: 8, leak: 1, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, skills: [{ k: 'strike', name: '저주 화살', every: 10, wind: 2.2, dmg: 1, brk: 0.08, first: 6 }], trait: '주변 적 가속. 저주 화살: 경고 뒤 생명을 친다 (준비 중 체력 8% 또는 기절로 끊김)' },
-    bigSlime: { name: '왕슬라임', hp: 8, speed: 20, gold: 8, leak: 1, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, skills: [{ k: 'strike', name: '산성 뱉기', every: 8, wind: 2.4, dmg: 1, brk: 0.1, first: 5 }], trait: '죽으면 분열. 산성 뱉기: 경고 뒤 생명을 친다 (준비 중 체력 10% 또는 기절로 끊김)' },
+    witch: { name: '마녀', hp: 8, speed: 26, gold: 8, leak: 1, elite: true, haste: { every: 5, pct: 0.4, dur: 2, r: 44 }, skills: [{ k: 'strike', name: '저주 화살', every: 8, wind: 2.2, dmg: 1, brk: 0.08, first: 5 }], trait: '주변 적 가속. 저주 화살: 경고 뒤 생명을 친다 (준비 중 체력 8% 또는 기절로 끊김)' },
+    bigSlime: { name: '왕슬라임', hp: 8, speed: 20, gold: 8, leak: 1, elite: true, split: { type: 'slime', n: 3, hp: 0.5 }, skills: [{ k: 'strike', name: '산성 뱉기', every: 8, wind: 2.4, dmg: 1, brk: 0.08, first: 5 }], trait: '죽으면 분열. 산성 뱉기: 경고 뒤 생명을 친다 (준비 중 체력 8% 또는 기절로 끊김)' },
     // 보스
     slimeKing: {
-      name: '슬라임 킹', hp: 15.5, speed: 13, gold: 40, leak: 3, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 3, splitHp: 0.5,
-      skills: [{ k: 'glue', name: '끈적한 점액', every: 9, warn: 1.1, dur: 4, amt: 0.5, size: 2 }, { k: 'strike', name: '짓누르기', every: 15, wind: 2.5, dmg: 2, brk: 0.04, first: 8 }],
+      name: '슬라임 킹', hp: 19, speed: 14, gold: 40, leak: 3, boss: true, splitAt: [0.75, 0.5, 0.25], splitN: 4, splitHp: 0.5,
+      skills: [{ k: 'glue', name: '끈적한 점액', every: 8, warn: 1.1, dur: 4, amt: 0.5, size: 2 }, { k: 'strike', name: '짓누르기', every: 12, wind: 2.5, dmg: 2, brk: 0.04, first: 8 }],
       trait: '체력이 줄 때마다 슬라임을 뱉고, 점액을 뿌려 2×2 칸의 공격을 4초 동안 절반으로 늦춘다. 짓누르기: 경고 뒤 생명 -2 (준비 중 체력 4%를 깎으면 끊김)',
     },
     lich: {
-      name: '리치', hp: 15, speed: 14, gold: 40, leak: 3, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
-      skills: [{ k: 'shield', name: '뼈 방벽', every: 13, pct: 0.12 }, { k: 'strike', name: '영혼 착취', every: 14, wind: 2.5, dmg: 3, brk: 0.05, first: 9 }],
-      feed: { r: 44, pct: 0.012 },
+      name: '리치', hp: 13.5, speed: 14, gold: 40, leak: 3, boss: true, physRes: 0.25, summon: { every: 8, type: 'skeleton', n: 2, hp: 0.6 },
+      skills: [{ k: 'shield', name: '뼈 방벽', every: 13, pct: 0.1 }, { k: 'strike', name: '영혼 착취', every: 14, wind: 2.5, dmg: 3, brk: 0.05, first: 9 }],
+      feed: { r: 44, pct: 0.006 },
       phase2: { at: 0.4, speed: 1.2, cd: 0.7, msg: '리치가 죽음의 힘을 끌어올린다! (더 빨라지고 방벽을 자주 친다)' },
-      trait: '물리 피해 25% 감소. 해골을 부르고, 13초마다 체력 12%만큼의 뼈 방벽을 두른다. 주변에서 적이 쓰러질 때마다 영혼을 흡수해 체력 1.2% 회복. 영혼 착취: 경고 뒤 생명 -3 (준비 중 체력 5%를 깎으면 끊김). 체력 40%에서 각성',
+      trait: '물리 피해 25% 감소. 해골을 부르고, 13초마다 체력 10%만큼의 뼈 방벽을 두른다. 주변에서 적이 쓰러질 때마다 영혼을 흡수해 체력 0.6% 회복. 영혼 착취: 경고 뒤 생명 -3 (준비 중 체력 5%를 깎으면 끊김). 체력 40%에서 각성',
     },
     // 대체 막 (안개 늪 · 가라앉은 항구)
     frog: { name: '늪 개구리', hp: 0.9, speed: 24, gold: 1, leak: 1, hop: { every: 3.5, dist: 26 }, trait: '가끔 앞으로 크게 뛴다' },
     crab: { name: '철갑 게', hp: 2, speed: 19, gold: 2, leak: 1, armorLight: 0.5, countMul: 0.7, gap: 0.7, trait: '궁수·도적 피해 50% 감소' },
     bogQueen: {
-      name: '늪의 여왕', hp: 15.5, speed: 14, gold: 40, leak: 3, boss: true, summon: { every: 6, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.04 },
+      name: '늪의 여왕', hp: 15.5, speed: 14, gold: 40, leak: 3, boss: true, summon: { every: 7, type: 'frog', n: 2, hp: 0.6 }, submerge: { every: 8, dur: 2, heal: 0.02 },
       skills: [{ k: 'glue', name: '늪 진흙', every: 11, warn: 1.1, dur: 3.5, amt: 0.45, size: 2 }, { k: 'strike', name: '늪 물기', every: 15, wind: 2.5, dmg: 2, brk: 0.04, first: 8 }],
-      trait: '개구리를 부르고, 물속에 잠겨 공격받지 않으며 체력 4%를 회복한다. 진흙으로 칸의 공격을 늦춘다. 늪 물기: 경고 뒤 생명 -2 (준비 중 체력 4%를 깎으면 끊김)',
+      trait: '개구리를 부르고, 물속에 잠겨 공격받지 않으며 체력 2%를 회복한다. 진흙으로 칸의 공격을 늦춘다. 늪 물기: 경고 뒤 생명 -2 (준비 중 체력 4%를 깎으면 끊김)',
     },
     captain: {
-      name: '해골 선장', hp: 15, speed: 14, gold: 40, leak: 3, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
+      name: '해골 선장', hp: 18.5, speed: 14, gold: 40, leak: 3, boss: true, physRes: 0.15, summon: { every: 9, type: 'skeleton', n: 3, hp: 0.5 }, anchor: { every: 7, warn: 1.2, stun: 2 },
       skills: [{ k: 'rally', name: '럼 한 모금', every: 12, pct: 0.35, dur: 3 }, { k: 'plunder', name: '약탈', every: 14, pct: 0.15, max: 40 }, { k: 'strike', name: '대포 사격', every: 12, wind: 2.5, dmg: 3, brk: 0.05, first: 7 }],
       trait: '닻을 던져 한 줄의 유닛을 기절시키고 해골 선원을 부른다. 12초마다 모든 적이 3초 동안 35% 빨라지고, 14초마다 가진 골드의 15%(최대 40)를 약탈한다. 대포 사격: 경고 뒤 생명 -3 (준비 중 체력 5%를 깎으면 끊김)',
     },
@@ -927,7 +927,7 @@ img { max-width: 100%; }
       trait: '빠르고 주변 적을 가속. 6초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 1.8초 기절',
     },
     riftHeart: {
-      name: '고대신 옴네크', hp: 34, speed: 14, gold: 0, leak: 9, boss: true, dpsCap: 0.028, bossTimeAdd: 25,
+      name: '고대신 옴네크', hp: 42, speed: 14, gold: 0, leak: 9, boss: true, dpsCap: 0.028, bossTimeAdd: 25,
       skills: [
         { k: 'pulse', name: '광기의 시선', every: 9, warn: 0.9, dur: 2.5, amt: 0.35 },
         { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6, wind: 0 },
@@ -936,13 +936,13 @@ img { max-width: 100%; }
         { k: 'shuffle', name: '혼돈의 속삭임', every: 13, n: 4, first: 15 },
         { k: 'rift', every: 12, warn: 1.2, stun: 2.5 },
         { k: 'doze', name: '깊은 잠', every: 17, first: 13, dur: 4.5, heal: 0.01, cap: 1.5 },
-        { k: 'strike', name: '신의 손길', every: 15, wind: 2.8, dmg: 4, brk: 0.05, first: 20 },
+        { k: 'strike', name: '신의 손길', every: 15, wind: 2.8, dmg: 5, brk: 0.05, first: 20 },
       ],
       phase2: { at: 0.5, speed: 1.5, cd: 0.7, shield: 0.06, seal: 1, msg: '고대신이 완전히 눈을 떴다! (빨라지고 기술을 더 자주 쓴다)' },
-      trait: '고대의 몸: 1초에 최대 체력의 2.8%까지만 피해를 받는다. 17초마다 4.5초 동안 깊은 잠에 빠져 제자리에 멈추고 초당 1%씩 회복하지만, 그동안은 초당 4.2%까지 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 신의 손길: 경고 뒤 생명 -4 (준비 중 체력 5%를 깎으면 끊김, 잠든 틈을 노려라). 체력 절반에서 완전히 깨어난다',
+      trait: '고대의 몸: 1초에 최대 체력의 2.8%까지만 피해를 받는다. 17초마다 4.5초 동안 깊은 잠에 빠져 제자리에 멈추고 초당 1%씩 회복하지만, 그동안은 초당 4.2%까지 피해를 받는다. 광기의 시선으로 모든 유닛을 늦추고, 하수인·사도를 부르고, 봉인의 장막을 두를 때마다 높은 등급 유닛을 봉인한다(장막을 깨면 풀림, 신화는 봉인 불가). 유닛 자리를 뒤섞는다. 신의 손길: 경고 뒤 생명 -5 (준비 중 체력 5%를 깎으면 끊김, 잠든 틈을 노려라). 체력 절반에서 완전히 깨어난다',
     },
     riftLord: {
-      name: '균열의 군주', hp: 21.5, speed: 14, gold: 40, leak: 3, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
+      name: '균열의 군주', hp: 22, speed: 14, gold: 40, leak: 3, boss: true, rift: { every: 9, warn: 1.3, stun: 2.5 }, rage: 0.5,
       skills: [{ k: 'blink', at: [0.7, 0.4], dist: 0.2 }, { k: 'shield', name: '균열 장막', every: 16, pct: 0.1 }, { k: 'shuffle', name: '차원 뒤섞기', every: 15, n: 3, first: 9 }, { k: 'strike', name: '균열 폭발', every: 13, wind: 2.5, dmg: 3, brk: 0.05, first: 6 }],
       trait: '균열로 유닛을 기절시키고 16초마다 장막을 두르며, 15초마다 유닛 3기의 자리를 뒤섞는다. 체력 70%·40%에서 앞으로 순간이동, 절반부터 가속. 균열 폭발: 경고 뒤 생명 -3 (준비 중 체력 5%를 깎으면 끊김)',
     },
@@ -1011,12 +1011,12 @@ img { max-width: 100%; }
     // ── 은빛 ──
     A('sharp', '날카로운 무기', 1, 'sword', '모든 유닛 피해 +15%', { dmgPct: 0.15 }),
     A('quick', '빠른 손놀림', 1, 'wing', '모든 유닛 공격 속도 +10%', { aspdPct: 0.1 }),
-    A('eagle', '매의 눈', 1, 'eye', '모든 유닛 사거리 +6', { rangeAdd: 6 }),
-    A('drillKnight', '전사 훈련', 1, 'c_knight', '전사 피해 +25%, 기절 확률 +6%p (일반 등급부터)', { cls: { knight: { dmg: 0.25, stun: 0.06 } } }),
+    A('eagle', '매의 눈', 1, 'eye', '모든 유닛 사거리 +5', { rangeAdd: 5 }),
+    A('drillKnight', '전사 훈련', 1, 'c_knight', '전사 피해 +35%, 기절 확률 +8%p (일반 등급부터)', { cls: { knight: { dmg: 0.35, stun: 0.08 } } }),
     A('drillArcher', '궁수 훈련', 1, 'c_archer', '궁수 공격 속도 +30%, 사거리 +4', { cls: { archer: { aspd: 0.3, range: 4 } } }),
-    A('drillMage', '마법 연구', 1, 'c_mage', '마법사 피해 +25%, 폭발 범위 +3', { cls: { mage: { dmg: 0.25, splash: 3 } } }),
+    A('drillMage', '마법 연구', 1, 'c_mage', '마법사 피해 +35%, 폭발 범위 +3', { cls: { mage: { dmg: 0.35, splash: 3 } } }),
     A('drillRogue', '암살 교본', 1, 'c_rogue', '도적 치명타 확률 +12%', { cls: { rogue: { crit: 0.12 } } }),
-    A('drillFrost', '서리 결정', 1, 'c_frost', '서리술사 피해 +40%, 둔화 +8%', { cls: { frost: { dmg: 0.4, slow: 0.08 } } }),
+    A('drillFrost', '서리 결정', 1, 'c_frost', '서리술사 피해 +50%, 둔화 +10%', { cls: { frost: { dmg: 0.5, slow: 0.1 } } }),
     A('piggy', '저금통', 1, 'pig', '이자 한도 +4, 즉시 골드 +30', { interestCap: 4 }, {
       onPick(run) { RS.addGold(run, 30); },
     }),
@@ -1028,15 +1028,15 @@ img { max-width: 100%; }
     A('recruits', '신병 모집', 1, 'flag', '즉시 희귀 유닛 1기와 일반 유닛 2기 소환 (빈칸이 없으면 골드로 환급)', {}, {
       onPick(run) { RS.grantUnits(run, 1, 1); RS.grantUnits(run, 0, 2); },
     }),
-    A('goldRush', '골드 러시', 1, 'bag', '즉시 골드 +70×막', {}, {
-      onPick(run) { RS.addGold(run, 70 * run.act); },
+    A('goldRush', '골드 러시', 1, 'bag', '즉시 골드 +90×막', {}, {
+      onPick(run) { RS.addGold(run, 90 * run.act); },
     }),
-    A('smithDiscount', '대장간 할인', 1, 'anvil', '강화 비용 -25%', { upgradeCostPct: -0.25 }),
+    A('smithDiscount', '대장간 할인', 1, 'anvil', '강화 비용 -30%', { upgradeCostPct: -0.3 }),
     A('firstStrike', '선제공격', 1, 'bolt', '각 적에게 가하는 첫 공격 피해 +150%', { firstStrike: 1.5 }, { unique: true }),
     A('massProduction', '대량 생산', 1, 'gear', '소환 비용 -30%', { summonCostPct: -0.3, noRare: 1 }, {
       unique: true, cost: '소환 시 희귀 이상 등급이 나오지 않음',
     }),
-    A('fireArrow', '불화살', 1, 'firearrow', '궁수 공격이 3초 동안 화상 (초당 그 피해의 20%)', { burnArrow: 0.2 }),
+    A('fireArrow', '불화살', 1, 'firearrow', '궁수 공격이 3초 동안 화상 (초당 그 피해의 30%)', { burnArrow: 0.3 }),
     A('hastyWaves', '속전속결', 1, 'clock', '웨이브 시작 골드 2배', { waveGoldPct: 1, waveIntervalPct: 0.15 }, {
       unique: true, cost: '웨이브 간격 15% 단축',
     }),
@@ -1044,24 +1044,24 @@ img { max-width: 100%; }
     // ── 골드 ──
     A('luckySummon', '행운의 소환', 2, 'clover', '소환 시 희귀 등급 확률 +8%', { rareChance: 0.08 }),
     A('recycle', '재활용', 2, 'recycle', '합성할 때 18% 확률로 재료 1기 반환', { mergeRefund: 0.18 }, { unique: true }),
-    A('diversity', '다양성', 2, 'rainbow', '보드에 다섯 클래스가 모두 있으면 피해 +35%', { diversity: 0.35 }, { unique: true }),
-    A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +55%', { purity: 0.55 }, { unique: true }),
+    A('diversity', '다양성', 2, 'rainbow', '보드에 다섯 클래스가 모두 있으면 피해 +40%', { diversity: 0.4 }, { unique: true }),
+    A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +75%', { purity: 0.75 }, { unique: true }),
     A('eliteSquad', '정예주의', 2, 'medal', '보드 유닛이 12기 이하면 피해 +45%', { eliteSquad: 0.45 }, { unique: true }),
-    A('rich', '부자의 여유', 2, 'crown', '골드를 100 이상 보유하면 피해 +25%', { rich: 0.25 }, { unique: true }),
+    A('rich', '부자의 여유', 2, 'crown', '골드를 100 이상 보유하면 피해 +30%', { rich: 0.3 }, { unique: true }),
     A('critMaster', '치명적 일격', 2, 'dagger', '치명타 확률 +8%, 치명타 피해 +50%', { critChance: 0.08, critMult: 0.5 }, { unique: true }),
     A('shrapnel', '파편탄', 2, 'burst', '전사·궁수·도적의 공격이 주변 적에게 30% 피해', { shrapnel: 0.3 }, { unique: true }),
     A('mud', '끈적한 땅', 2, 'drop', '모든 적 이동 속도 -10%', { enemySpeedPct: 0.1 }),
-    A('compound', '복리', 2, 'coins', '이자 한도 +4, 이자가 붙으면 +1 추가', { interestCap: 4, interestBonus: 1 }),
-    A('giantSlayer', '거인 사냥꾼', 2, 'axe', '엘리트·보스에게 피해 +40%', { eliteDmgPct: 0.4 }),
+    A('compound', '복리', 2, 'coins', '이자 한도 +4, 이자가 붙으면 +2 추가', { interestCap: 4, interestBonus: 2 }),
+    A('giantSlayer', '거인 사냥꾼', 2, 'axe', '엘리트·보스에게 피해 +35%', { eliteDmgPct: 0.35 }),
     A('promotion', '승급', 2, 'up', '즉시 희귀 유닛 2기 소환', {}, {
       onPick(run) { RS.grantUnits(run, 1, 2); },
     }),
-    A('vampRite', '흡혈 의식', 2, 'fang', '엘리트·보스를 처치하면 생명 +3, 최대 생명 +1', { eliteKillHeal: 3, eliteKillMaxLife: 1 }),
-    A('bloodPact', '피의 계약', 2, 'blood', '모든 유닛 피해 +35%', { dmgPct: 0.35, actHealCut: 0.5 }, {
+    A('vampRite', '흡혈 의식', 2, 'fang', '엘리트·보스를 처치하면 생명 +5, 최대 생명 +1', { eliteKillHeal: 5, eliteKillMaxLife: 1 }),
+    A('bloodPact', '피의 계약', 2, 'blood', '모든 유닛 피해 +40%', { dmgPct: 0.4, actHealCut: 0.5 }, {
       unique: true, cost: '최대 생명 -4 · 막을 넘어갈 때 잃은 생명의 절반만 회복',
       onPick(run) { RS.changeMaxLife(run, -4); },
     }),
-    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 18% 확률로 2단계 상승', { mergeDouble: 0.18, mergeFail: 0.08 }, {
+    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 15% 확률로 2단계 상승', { mergeDouble: 0.15, mergeFail: 0.08 }, {
       unique: true, cost: '8% 확률로 합성 실패(결과 소멸)',
     }),
     A('greed', '탐욕', 2, 'bag', '처치 골드 +60%', { killGoldPct: 0.6, enemyHpPct: 0.08 }, {
@@ -1073,21 +1073,21 @@ img { max-width: 100%; }
 
     // 키워드 보상: 이미 가진 것과 이어질 때 강해진다
     A('shatter', '얼음 깨기', 2, 'icecrack', '기절·빙결된 적에게 피해 +50%, 둔화된 적에게 +20%', { shatter: 0.5 }, { unique: true }),
-    A('counterStrike', '반격', 2, 'shield2', '적의 강타를 끊을 때마다 생명 +3, 그 적에게 최대 체력의 8% 피해', { counterStrike: 3 }, { unique: true }),
+    A('counterStrike', '반격', 2, 'shield2', '적의 강타를 끊을 때마다 생명 +4, 그 적에게 최대 체력의 8% 피해', { counterStrike: 4 }, { unique: true }),
     A('bloodRush', '피의 흥분', 2, 'bloodrush', '치명타를 낸 유닛은 2초 동안 공격 속도 +30%', { critHaste: 0.3 }, { unique: true }),
     A('plague', '역병 확산', 2, 'plague', '화상·독·독안개 피해 +50%. 화상·독에 걸린 적이 쓰러지면 주변 적 3명에게 옮는다', { dotAmp: 0.5, contagion: 1 }, { unique: true }),
 
     // ── 프리즘 ──
     A('twinSummon', '쌍둥이 소환', 3, 'twin', '소환할 때 20% 확률로 같은 유닛 1기 추가', { twinChance: 0.2 }, { unique: true }),
-    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 12% 확률로 2단계 상승', { mergeDouble: 0.12 }, { unique: true }),
+    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 8% 확률로 2단계 상승', { mergeDouble: 0.08 }, { unique: true }),
     A('berserk', '광전사', 3, 'rage', '잃은 생명 1당 모든 유닛 피해 +4%, 공격 속도 +1.2% (최대 +80% / +24%). 흡혈: 엘리트·보스 체력을 1/6 깎을 때마다 생명 +1', { berserk: 1, leech: 6 }, { unique: true }),
-    A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -20%', { enemySpeedPct: 0.2 }, { unique: true }),
-    A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +10% (신화는 전설 4기로 친다)', { legendAura: 0.1 }, { unique: true }),
+    A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -25%', { enemySpeedPct: 0.25 }, { unique: true }),
+    A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12% (신화는 전설 4기로 친다)', { legendAura: 0.12 }, { unique: true }),
     A('midas', '미다스의 손', 3, 'coins', '처치 골드 +50%, 판매 가격 +50%', { killGoldPct: 0.5, sellPct: 0.5 }, { unique: true }),
     A('archmage', '대마법사', 3, 'c_mage', '마법사·서리술사 피해 +80%, 범위 +5 (서리술사는 영웅 등급부터)', {
       cls: { mage: { dmg: 0.8, splash: 5 }, frost: { dmg: 0.8, splash: 5 } },
     }, { unique: true }),
-    A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +60%', { dmgPct: 0.6, leakMult: 2 }, {
+    A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +55%', { dmgPct: 0.55, leakMult: 2 }, {
       unique: true, cost: '누수·강타·균열 게이지로 잃는 생명 2배',
     }),
     A('lastStand', '배수의 진', 3, 'skull', '모든 유닛 피해 +45%, 공격 속도 +15%', { dmgPct: 0.45, aspdPct: 0.15, restHealCut: 0.5 }, {
@@ -1096,14 +1096,16 @@ img { max-width: 100%; }
     }),
     // ── 슬레이 더 스파이어의 '파워' 카드에서 착안 ──
     A('demonForm', '분노의 뿔', 3, 'horns', '웨이브가 시작될 때마다 이번 전투 동안 모든 유닛 피해 +15% (누적)', { demonForm: 0.15 }, { unique: true }),
-    A('echoForm', '산울림', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1 }, { unique: true }),
+    A('echoForm', '산울림', 3, 'echo', '전투마다 처음 소환하는 유닛이 같은 유닛 하나를 더 데려온다', { echoForm: 1, summonCostPct: 0.1 }, {
+      unique: true, cost: '소환 비용 +10%',
+    }),
     A('apotheosis', '빛의 세례', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 되고, 모든 클래스 강화 +1', {}, {
       onPick(run) { RS.promoteTier(run, 0); for (const c of RS.CLASSES) run.classLv[c] += 1; },
     }),
     A('wraithForm', '혼령 빙의', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 일반 적에게 생명을 잃지 않고(엘리트·보스는 피해 절반), 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
       unique: true, cost: '필드 상한 60 → 50',
     }),
-    A('corruption', '검은 풀무', 3, 'corrupt', '강화 비용 -55%', { upgradeCostPct: -0.55, summonCostPct: 0.1 }, {
+    A('corruption', '검은 풀무', 3, 'corrupt', '강화 비용 -60%', { upgradeCostPct: -0.6, summonCostPct: 0.1 }, {
       unique: true, cost: '소환 비용 +10%',
     }),
     A('creativeAI', '태엽 소환기', 2, 'chip', '웨이브가 시작될 때 20% 확률로 무작위 일반 유닛 1기 무료 소환', { waveFreeSummon: 0.2 }, { unique: true }),
@@ -1172,7 +1174,7 @@ img { max-width: 100%; }
   // rarity: 1 일반 · 2 희귀 · 3 보스 · 4 방랑자(막 시작의 차원 방랑자) · 5 시작(지휘관)
   RS.RELICS = [
     // ── 일반 ──
-    R('hourglass', '모래시계', 1, 'hourglass', '보스 제한 시간 +25초', { bossTimeAdd: 25 }),
+    R('hourglass', '모래시계', 1, 'hourglass', '보스 제한 시간 +30초, 보스 체력 -10%', { bossTimeAdd: 30, bossHpPct: 0.1 }),
     R('bloodChalice', '승리의 축배', 1, 'chalice', '전투에서 이기면 생명 +2', { winHeal: 2 }),
     R('goldIdol', '금두꺼비', 1, 'idol', '처치 골드 +25%', { killGoldPct: 0.25 }),
     R('clover', '네잎클로버', 1, 'clover', '소환할 때 10% 확률로 비용 반환', { cloverChance: 0.1 }),
@@ -1184,20 +1186,20 @@ img { max-width: 100%; }
     R('whetstone', '신병의 숫돌', 1, 'whetstone', '일반·희귀 유닛 피해 +30%', { tierDmg: [0.3, 0.3, 0, 0] }),
     R('pocketWatch', '자명종', 1, 'watch', '웨이브 시작 후 4초간 공격 속도 +60%', { pocketWatch: 1 }),
     R('banner', '전쟁 깃발', 1, 'flag', '네 모서리 칸 유닛 피해 +40%', { cornerDmg: 0.4 }),
-    R('lens', '확대경', 1, 'lens', '안쪽 6칸 유닛 사거리 +8, 피해 +8%', { innerRange: 8, innerDmg: 0.08 }),
+    R('lens', '확대경', 1, 'lens', '안쪽 6칸 유닛 사거리 +3, 피해 +8%', { innerRange: 3, innerDmg: 0.08 }),
     R('anvil', '대장장이 모루', 1, 'anvil', '휴식처에서 수련하면 강화 +2 추가', { restTrainBonus: 2 }),
     R('coinPurse', '두둑한 전대', 1, 'bag', '전투 보상 골드 +50%', { combatGoldPct: 0.5 }),
     R('vampFang', '흡혈 송곳니', 1, 'fang', '엘리트·보스를 처치하면 최대 생명 +1', { eliteKillMaxLife: 1 }),
     R('rerollDice', '운명의 주사위', 1, 'dice', '증강을 고를 때 새로고침 1회', { augRerolls: 1 }),
     R('ancientCoin', '고대 주화', 1, 'coin', '이자 한도 +4', { interestCap: 4 }),
     R('anchor', '버팀 닻', 1, 'anchor', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { leakShield: 1 }),
-    R('bagPrep', '출정 배낭', 2, 'pack', '전투를 시작할 때 무료 소환 1회', { startSummons: 1 }),
-    R('lantern', '반딧불 초롱', 1, 'lantern', '전투를 시작할 때 골드 +15×막', { battleStartGold: 15 }),
+    R('bagPrep', '출정 배낭', 2, 'pack', '전투를 시작할 때 20% 확률로 희귀 유닛 1기 소환', { startRare: 0.2 }),
+    R('lantern', '반딧불 초롱', 1, 'lantern', '전투를 시작할 때 골드 +10×막', { battleStartGold: 10 }),
     R('strawberry', '산딸기', 1, 'berry', '최대 생명 +4', {}, {
       onPick(run) { RS.changeMaxLife(run, 4); RS.heal(run, 4); },
     }),
     R('penNib', '기록관의 깃펜', 1, 'pen', '유닛 공격 10번째마다 그 공격의 피해 2배', { penNib: 1 }),
-    R('happyFlower', '웃음꽃', 1, 'flower', '웨이브 4번마다 무료 소환 1회 (전투를 넘어 이어짐)', { happyFlower: 1 }),
+    R('happyFlower', '웃음꽃', 1, 'flower', '웨이브가 시작될 때마다 10% 확률로 무료 소환 1회', { waveFreeSummon: 0.1 }),
     R('meatBone', '비상 육포', 1, 'meat', '전투가 끝날 때 생명이 절반 이하면 생명 +5', { meatBone: 5 }),
     R('regalPillow', '구름 베개', 1, 'pillow', '휴식할 때 생명 +8 추가', { restHealAdd: 8 }),
     R('mawBank', '꿀꿀이 금고', 1, 'pig', '칸을 이동할 때마다 골드 +12. 상점에서 물건을 사면 깨진다', {}, { state: { active: true } }),
@@ -1205,7 +1207,7 @@ img { max-width: 100%; }
     R('smilingMask', '하회탈', 1, 'mask', '상점의 제거 서비스가 항상 25골드', { fixedRemoveCost: 25 }),
     R('juzu', '고요의 구슬', 1, 'beads', '? 칸에서 전투가 나오지 않고, ? 칸에 들어설 때마다 생명 +2', { juzu: 1 }),
     R('tinyChest', '꼬마 궤짝', 1, 'chest', '? 칸에 3번째로 들어갈 때마다 보물이 나온다', { tinyChest: 1 }),
-    R('ceramicFish', '비단잉어', 1, 'fish', '증강을 얻을 때마다 골드 +15', { ceramicFish: 15 }),
+    R('ceramicFish', '비단잉어', 1, 'fish', '증강을 얻을 때마다 골드 +10', { ceramicFish: 10 }),
     R('redSkull', '붉은 해골', 1, 'skull', '생명이 절반 이하면 모든 유닛 피해 +30%. 흡혈: 엘리트·보스 체력을 1/4 깎을 때마다 생명 +1', { lowLifeDmg: 0.3, leech: 4 }),
     R('bronzeShield', '청동 방패', 1, 'shield2', '적의 강타로 잃는 생명 -1, 최대 생명 +3', { strikeReduce: 1 }, {
       onPick(run) { RS.changeMaxLife(run, 3); RS.heal(run, 3); },
@@ -1216,20 +1218,20 @@ img { max-width: 100%; }
     // ── 희귀 ──
     R('powderKeg', '화약통', 2, 'keg', '적이 한 바퀴 돌 때마다 모든 적에게 폭발 피해', { powderKeg: 1 }),
     R('sageStone', '현인의 보석', 2, 'gem', '전설·신화 유닛 피해 +50%', { tierDmg: [0, 0, 0, 0.5, 0.5] }),
-    R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 25%)', { burn: 0.25 }),
+    R('ember', '불씨', 2, 'flame', '마법사 공격이 3초간 화상(초당 피해의 40%)', { burn: 0.4 }),
     R('crystalBall', '수정 구슬', 2, 'orb', '증강 선택지 +1', { augChoices: 1 }),
     R('mirror', '거울', 2, 'mirror', '합성할 때 6% 확률로 결과 유닛 2기', { mergeMirror: 0.06 }),
     R('mango', '꿀참외', 2, 'mango', '최대 생명 +8', {}, {
       onPick(run) { RS.changeMaxLife(run, 8); RS.heal(run, 8); },
     }),
-    R('slingCourage', '거인잡이 새총', 2, 'sling', '엘리트전에서 모든 유닛 피해 +35%', { eliteBattleDmg: 0.35 }),
-    R('preservedInsect', '호박 속 벌레', 2, 'insect', '엘리트 체력 -30%', { eliteHpPct: -0.3 }),
-    R('prayerWheel', '소원 물레', 2, 'wheel', '일반 전투에서 5번 이길 때마다 증강을 한 번 더 고른다', { prayerWheel: 1 }, { state: { n: 0 } }),
+    R('slingCourage', '거인잡이 새총', 2, 'sling', '엘리트전에서 모든 유닛 피해 +50%', { eliteBattleDmg: 0.5 }),
+    R('preservedInsect', '호박 속 벌레', 2, 'insect', '엘리트 체력 -40%', { eliteHpPct: -0.4 }),
+    R('prayerWheel', '소원 물레', 2, 'wheel', '일반 전투에서 6번 이길 때마다 증강을 한 번 더 고른다', { prayerWheel: 1 }, { state: { n: 0 } }),
     R('singingBowl', '울림 사발', 2, 'bowl', '증강을 건너뛰면 최대 생명 +2 (골드도 받는다)', { singingBowl: 1 }),
     R('dreamCatcher', '꿈 그물', 2, 'dream', '휴식처에서 휴식하면 증강 하나를 고른다', { dreamCatcher: 1 }),
     R('peacePipe', '곰방대', 2, 'pipe', '휴식처에서 [명상]: 증강이나 저주 하나를 없앤다', { peacePipe: 1 }),
     R('shovel', '모종삽', 2, 'shovel', '휴식처에서 [발굴]: 유물을 하나 얻는다', { shovel: 1 }),
-    R('girya', '무쇠 아령', 2, 'kettle', '휴식처에서 [단련]: 모든 유닛 피해 +6% (최대 3번)', { girya: 1 }, { state: { lifts: 0 } }),
+    R('girya', '무쇠 아령', 2, 'kettle', '모든 유닛 피해 +10%. 휴식처에서 [단련]: 모든 유닛 피해 +6% 더 (최대 3번)', { girya: 1, dmgPct: 0.1 }, { state: { lifts: 0 } }),
     R('matryoshka', '겹겹 인형', 2, 'doll', '다음 보물 상자 2번은 유물을 하나 더 준다', {}, { state: { count: 2 } }),
     R('membership', '단골 쿠폰', 2, 'card', '상점 가격 50% 할인', { shopDiscount: 0.5 }),
     R('courier', '보부상', 2, 'box', '상점 가격 20% 할인, 산 자리에 새 물건이 들어온다', { shopDiscount: 0.2, courier: 1 }),
@@ -1237,17 +1239,19 @@ img { max-width: 100%; }
     R('pantograph', '결전 나침반', 2, 'compass', '보스전을 시작할 때 생명 +6', { pantograph: 6 }),
     R('bloodGrail', '피의 성배', 2, 'chalice', '흡혈: 엘리트·보스 체력을 1/8 깎을 때마다 생명 +1 (한 마리를 쓰러뜨리면 +8)', { leech: 8 }),
     R('voodoo', '저주 인형', 2, 'voodoo', '저주 1개당 모든 유닛 피해 +10% (심연의 짐 포함)', { curseDmg: 0.1 }),
-    R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 한 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반)', { helix: 1 }),
+    R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 두 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반, 한 번을 쓴다)', { helix: 1, leakShield: 1 }),
 
     // ── 보스 (강력하지만 대가가 따르는 것이 많다) ──
-    R('cursedCrown', '저주받은 왕관', 3, 'crown', '전투를 시작할 때 골드 +30×막', { battleStartGold: 30 }, {
+    R('cursedCrown', '저주받은 왕관', 3, 'crown', '전투를 시작할 때 골드 +35×막', { battleStartGold: 35 }, {
       cost: '최대 생명 -4',
       onPick(run) { RS.changeMaxLife(run, -4); },
     }),
     R('riftShard', '균열 파편', 3, 'shard', '보스 체력 -25%, 엘리트 체력 -20%', { bossHpPct: 0.25, eliteHpPct: -0.2 }),
-    R('warHorn', '전쟁 나팔', 3, 'horn', '모든 유닛 공격 속도 +15%, 사거리 +4', { aspdPct: 0.15, rangeAdd: 4 }),
-    R('ectoHeart', '유령 젤리', 3, 'ecto', '웨이브가 시작될 때마다 60% 확률로 무료 소환 1회', { waveFreeSummon: 0.6, noKillGold: 1 }, {
-      cost: '적을 처치해도 골드를 얻지 못한다',
+    R('warHorn', '전쟁 나팔', 3, 'horn', '모든 유닛 공격 속도 +15%, 사거리 +4', { aspdPct: 0.15, rangeAdd: 4, strikeReduce: -1 }, {
+      cost: '엘리트·보스의 강타로 잃는 생명 +1',
+    }),
+    R('ectoHeart', '유령 젤리', 3, 'ecto', '웨이브가 시작될 때마다 60% 확률로 무료 소환 1회', { waveFreeSummon: 0.6, killGoldPct: -0.7 }, {
+      cost: '처치 골드 -70%',
     }),
     R('stimulant', '각성제', 3, 'cup', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, noRestHeal: 1 }, {
       cost: '휴식처에서 휴식할 수 없다',
@@ -1263,16 +1267,16 @@ img { max-width: 100%; }
       cost: '증강 선택지 -1',
     }),
     // 실시간 디펜스라 정보를 가리는 것만으로는 대가가 되지 않는다 → 실제로 빗나가게 한다 (심연 5 봇: 없음 54% · 예전 68% · 지금 60%)
-    R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +45%', { dmgPct: 0.45, blindfold: 1, missChance: 0.07 }, {
-      cost: '모든 공격이 7% 확률로 빗나간다 · 적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
+    R('blindfold', '눈가리개', 3, 'blind', '모든 유닛 피해 +60%', { dmgPct: 0.6, blindfold: 1, missChance: 0.05 }, {
+      cost: '모든 공격이 5% 확률로 빗나간다 · 적 체력바, 보스 체력·시간, 웨이브 시간이 보이지 않는다',
     }),
-    R('philStone', '붉은 연금석', 3, 'redgem', '소환 비용 -35%', { summonCostPct: -0.35, enemyHpPct: 0.15 }, {
-      cost: '모든 적 체력 +15%',
+    R('philStone', '붉은 연금석', 3, 'redgem', '소환 비용 -35%', { summonCostPct: -0.35, enemyHpPct: 0.1 }, {
+      cost: '모든 적 체력 +10%',
     }),
     R('velvetChoker', '비단 목띠', 3, 'choker', '소환 비용 -30%', { summonCostPct: -0.3, upgradeCostPct: 0.6 }, {
       cost: '강화 비용 +60%',
     }),
-    R('snakeEye', '홀린 뱀눈', 3, 'snake', '소환 시 희귀 확률 +15%, 영웅 확률 +2%', { rareChance: 0.15, epicChance: 0.02, snakeEye: 1 }, {
+    R('snakeEye', '홀린 뱀눈', 3, 'snake', '소환 시 희귀 확률 +18%, 영웅 확률 +2%', { rareChance: 0.18, epicChance: 0.02, snakeEye: 1 }, {
       cost: '소환 비용이 매번 50~200% 사이에서 무작위',
     }),
     R('cursedKey', '도굴꾼의 열쇠', 3, 'key', '웨이브 시작 골드 2배, 이자 한도 +3', { waveGoldPct: 1, interestCap: 3, cursedKey: 1 }, {
@@ -1283,10 +1287,10 @@ img { max-width: 100%; }
     }),
     R('slaverCollar', '검투사 목줄', 3, 'collar', '엘리트·보스전에서 모든 유닛 피해 +60%', { bigBattleDmg: 0.6 }),
     R('blackStar', '그믐 별', 3, 'blackstar', '엘리트가 주는 유물 2개를 모두 얻는다', { blackStar: 1 }),
-    R('callingBell', '요술 방울', 3, 'bell', '즉시 일반 유물 1개, 희귀 유물 2개', {}, {
+    R('callingBell', '요술 방울', 3, 'bell', '즉시 희귀 유물 3개', {}, {
       cost: '저주 [불면]',
       onPick(run) {
-        RS.grantRandomRelic(run, [1]);
+        RS.grantRandomRelic(run, [2]);
         RS.grantRandomRelic(run, [2]);
         RS.grantRandomRelic(run, [2]);
         RS.addCurse(run, 'regret');
@@ -1306,20 +1310,24 @@ img { max-width: 100%; }
         if (a.length) RS.pickAugment(run, a[0]);
       },
     }),
-    R('orrery', '행성 모빌', 3, 'planet', '증강을 3번 연달아 고른다', {}, {
-      onPick(run) { for (let k = 0; k < 3; k++) RS.enqueue(run, { k: 'aug', w: [0, 40, 45, 15], title: '행성 모빌' }); },
+    R('orrery', '행성 모빌', 3, 'planet', '증강을 2번 연달아 고른다 (황금·프리즘 위주)', {}, {
+      onPick(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'aug', w: [0, 25, 55, 20], title: '행성 모빌' }); },
     }),
-    R('sacredBark', '당산나무 껍질', 3, 'bark', '소모품 효과 2배', { itemPotency: 1 }),
-    R('emptyCage', '풀어 준 새장', 3, 'cage', '증강·저주를 2개까지 골라 없앤다', {}, {
-      onPick(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'remove', title: '풀어 준 새장' }); },
+    R('sacredBark', '당산나무 껍질', 3, 'bark', '소모품 효과 2배, 소모품 칸 +1', { itemPotency: 1, itemSlots: 1 }),
+    R('emptyCage', '풀어 준 새장', 3, 'cage', '증강·저주를 2개까지 골라 없애고, 최대 생명 +6', {}, {
+      onPick(run) {
+        RS.changeMaxLife(run, 6);
+        RS.heal(run, 6);
+        for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'remove', title: '풀어 준 새장' });
+      },
     }),
 
     // ── 시작 유물 (지휘관) ──
-    R('mercContract', '용병 계약서', 5, 'scroll', '전투에서 이기면 골드 +15×막', { winGold: 15 }),
-    R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +40%, 전사 기절 확률 +5%p, 도적 치명타 확률 +5%p', { cls: { knight: { dmg: 0.4, stun: 0.05 }, rogue: { dmg: 0.4, crit: 0.05 } } }),
-    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +50%, 범위 +2 (서리술사는 영웅 등급부터). 마법사 공격이 화상 (초당 피해의 15%)', { cls: { mage: { dmg: 0.5, splash: 2 }, frost: { dmg: 0.5, splash: 2 } }, burn: 0.15 }),
-    R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +8, 공격 속도 +15%', { cls: { archer: { range: 8, aspd: 0.15 } } }),
-    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +1, 전투 후 소모품이 나올 확률 +30%', { itemSlots: 1, itemDropBonus: 0.3 }),
+    R('mercContract', '용병 계약서', 5, 'scroll', '전투에서 이기면 골드 +22×막', { winGold: 22 }),
+    R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +60%, 전사 기절 확률 +6%p, 도적 치명타 확률 +6%p', { cls: { knight: { dmg: 0.6, stun: 0.06 }, rogue: { dmg: 0.6, crit: 0.06 } } }),
+    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +60%, 범위 +2 (서리술사는 영웅 등급부터). 마법사 공격이 화상 (초당 피해의 15%)', { cls: { mage: { dmg: 0.6, splash: 2 }, frost: { dmg: 0.6, splash: 2 } }, burn: 0.15 }),
+    R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +6, 공격 속도 +10%', { cls: { archer: { range: 6, aspd: 0.1 } } }),
+    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +2, 전투 후 소모품이 나올 확률 +50%. 소모품을 쓸 때마다 이번 전투 동안 모든 유닛 피해 +20% (누적)', { itemSlots: 2, itemDropBonus: 0.5, itemDmg: 0.2 }),
     R('soulJar', '영혼 항아리', 5, 'vial', '적을 50마리 처치할 때마다 유닛 1기가 무료로 일어난다 (소환 비용이 오르지 않는다)', { souls: 50 }),
     R('starScepter', '별의 왕홀', 5, 'star', '웨이브마다 별 +1 (전투가 끝나도 남고, 최대 5). 별 3개로 [별똥별]: 모든 적에게 큰 피해', { stars: 1 }, { state: { n: 0 } }),
 
@@ -1345,23 +1353,23 @@ img { max-width: 100%; }
     R('forgottenShelf', '망각의 서가', 'scroll', '증강 선택지 +1, 증강을 건너뛸 때 골드 2배', { augChoices: 1, skipGoldMul: 1 }),
     R('forbiddenIndex', '금단의 색인', 'lens', '앞으로 얻는 증강이 25% 확률로 연마된 채 들어온다', { augUpChance: 0.25 }),
     R('stoppedClock', '멈춘 시계', 'watch', '모든 적 이동 속도 -12%, 보스 제한 시간 +20초', { enemySpeedPct: 0.12, bossTimeAdd: 20 }),
-    R('rewindSand', '되감기 모래', 'hourglass', '전투마다 처음 세 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스는 피해 절반, 한 번을 쓴다)', { leakShield: 3 }),
+    R('rewindSand', '되감기 모래', 'hourglass', '전투마다 처음 세 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스는 피해 절반, 한 번을 쓴다). 적의 강타로 잃는 생명 -1', { leakShield: 3, strikeReduce: 1 }),
     R('dragonScale', '용비늘 금화', 'coins', '웨이브 시작 골드 +100%, 이자 한도 +5', { waveGoldPct: 1, interestCap: 5 }),
     R('goldenEgg', '황금 알', 'egg', '전투에서 이기면 골드 +25×막', { winGold: 25 }),
-    R('bloodPactCup', '혈맹의 잔', 'chalice', '최대 생명 +10, 전투에서 이기면 생명 +4', { winHeal: 4 }, {
-      onPick(run) { RS.changeMaxLife(run, 10); RS.heal(run, 10); },
+    R('bloodPactCup', '혈맹의 잔', 'chalice', '최대 생명 +8, 전투에서 이기면 생명 +2', { winHeal: 2 }, {
+      onPick(run) { RS.changeMaxLife(run, 8); RS.heal(run, 8); },
     }),
-    R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +45%', { dmgPct: 0.45 }, {
-      cost: '최대 생명 -3',
-      onPick(run) { RS.changeMaxLife(run, -3); },
+    R('bloodCrown', '피의 왕관', 'crown', '모든 유닛 피해 +65%', { dmgPct: 0.65 }, {
+      cost: '최대 생명 -4',
+      onPick(run) { RS.changeMaxLife(run, -4); },
     }),
     R('twinStar', '쌍둥이 별', 'twin', '합성할 때 10% 확률로 결과 유닛 2기', { mergeMirror: 0.1 }),
     R('luckyStar', '행운의 별', 'star', '소환 시 희귀 확률 +7%, 영웅 확률 +1%', { rareChance: 0.07, epicChance: 0.01 }),
-    R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 35를 내고 무료 소환 1회 (소환 비용이 오르지 않는다)', { sealSummon: 35 }, { cost: '웨이브마다 골드 -35' }),
+    R('sealOfGold', '황금 인장', 'coin', '웨이브가 시작될 때마다 골드 40을 내고 무료 소환 1회 (소환 비용이 오르지 않는다)', { sealSummon: 40 }, { cost: '웨이브마다 골드 -40' }),
     R('pumpkinCandle', '박 등잔', 'lantern', '다음 12번의 전투 동안 모든 유닛 피해 +50%. 휴식처에서 다시 켤 수 있다', {}, { state: { charges: 12 } }),
     R('waxToys', '밀랍 병정', 'box', '모든 유닛 공격 속도 +40%. 전투 6번마다 녹아 10%p씩 줄어든다', {}, { state: { fights: 0 } }),
-    R('lordParasol', '거상의 관', 'crown2', '상점마다 첫 번째로 사는 물건은 공짜', { freeFirstBuy: 1 }),
-    R('whisperEarring', '홀림 귀고리', 'charm', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
+    R('lordParasol', '거상의 관', 'crown2', '상점마다 첫 번째로 사는 물건은 공짜, 상점 가격 15% 할인', { freeFirstBuy: 1, shopDiscount: 0.15 }),
+    R('whisperEarring', '홀림 귀고리', 'charm', '모든 유닛 공격 속도 +25%', { aspdPct: 0.25, prepLocked: 1 }, { cost: '준비 시간 동안 소환·강화를 할 수 없다' }),
     R('spikedGauntlet', '고슴도치 장갑', 'fist', '모든 유닛 피해 +50%', { dmgPct: 0.5, upgradeCostPct: 0.3 }, { cost: '강화 비용 +30%' }),
     R('warHammerA', '담금질 망치', 'hammer', '엘리트를 처치하면 무작위 증강 2개 연마', { eliteUpgrade: 2 }),
     R('loomingFruit', '차원 복숭아', 'mango', '최대 생명 +12', {}, {
@@ -1374,13 +1382,13 @@ img { max-width: 100%; }
   // 즉시 효과형 축복
   const BOONS = {
     upgrade2: { name: '연마의 손길', desc: '증강 2개를 골라 연마', apply(run) { RS.enqueue(run, { k: 'upgrade', title: '방랑자의 손길' }); RS.enqueue(run, { k: 'upgrade', title: '방랑자의 손길' }); } },
-    cleanse: { name: '정화', desc: '저주를 모두 없애고 생명을 모두 회복', apply(run) { run.curses = run.curses.filter((id) => RS.CURSE[id].permanent); RS.heal(run, run.maxLife); } },
+    cleanse: { name: '정화', desc: '저주를 모두 없애고 최대 생명 +6, 생명을 모두 회복', apply(run) { run.curses = run.curses.filter((id) => RS.CURSE[id].permanent); RS.changeMaxLife(run, 6); RS.heal(run, run.maxLife); } },
     legend: { name: '전설의 부름', desc: '무작위 전설 유닛 1기', apply(run) { RS.grantUnits(run, 3, 1); } },
-    gold400: { name: '황금 비', desc: '골드 +400', apply(run) { RS.addGold(run, 400); } },
+    gold400: { name: '황금 비', desc: '골드 +500', apply(run) { RS.addGold(run, 500); } },
     epic2: { name: '영웅 둘', desc: '무작위 영웅 유닛 2기', apply(run) { RS.grantUnits(run, 2, 2); } },
-    maxLife15: { name: '생명의 샘', desc: '최대 생명 +15, 생명 모두 회복', apply(run) { RS.changeMaxLife(run, 15); RS.heal(run, run.maxLife); } },
-    prism2: { name: '프리즘 계시', desc: '프리즘 증강을 두 번 고른다', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 0, 0, 1], title: '프리즘 계시' }); RS.enqueue(run, { k: 'aug', w: [0, 0, 0, 1], title: '프리즘 계시' }); } },
-    runes2: { name: '룬 각인', desc: '룬 두 개를 골라 보드에 새긴다', apply(run) { for (let k = 0; k < 2; k++) RS.enqueue(run, { k: 'runeChoice', runes: pick2(run), title: '룬 각인' }); } },
+    maxLife15: { name: '생명의 샘', desc: '최대 생명 +12, 생명 모두 회복', apply(run) { RS.changeMaxLife(run, 12); RS.heal(run, run.maxLife); } },
+    prism2: { name: '프리즘 계시', desc: '프리즘 증강 하나와 황금 증강 하나를 고른다', apply(run) { RS.enqueue(run, { k: 'aug', w: [0, 0, 0, 1], title: '프리즘 계시' }); RS.enqueue(run, { k: 'aug', w: [0, 0, 1, 0], title: '프리즘 계시' }); } },
+    runes2: { name: '룬 각인', desc: '룬 세 개를 골라 보드에 새긴다', apply(run) { for (let k = 0; k < 3; k++) RS.enqueue(run, { k: 'runeChoice', runes: pick2(run), title: '룬 각인' }); } },
     trainAll2: { name: '차원 수련', desc: '모든 클래스 강화 +2', apply(run) { for (const c of RS.CLASSES) run.classLv[c] += 2; } },
     bossRelic: { name: '보물 더미', desc: '보스 유물 2개 중 하나를 고른다', apply(run) { const ids = RS.rollRelics(run, 2, [3], [1]); if (ids.length) RS.enqueue(run, { k: 'relicList', ids, title: '보물 더미' }); } },
     relicPair: { name: '도전자의 배낭', desc: '무작위 희귀 유물 2개', apply(run) { RS.grantRandomRelic(run, [2]); RS.grantRandomRelic(run, [2]); } },
@@ -1491,7 +1499,7 @@ img { max-width: 100%; }
       unlock: { bestAct: 2, text: '2막에 도달하면 해금' },
     },
     {
-      id: 'kai', name: '카이', title: '사냥꾼', relic: 'hawkFeather', weights: W(0.7, 2.5, 0.7, 1, 1.2), portrait: ['archer', 3],
+      id: 'kai', name: '카이', title: '사냥꾼', relic: 'hawkFeather', weights: W(0.7, 2.2, 0.8, 1, 1.3), portrait: ['archer', 3],
       desc: '궁수 특화. 넓은 사거리로 길 전체를 덮지만 골렘에 약하다.',
       unlock: { bestAct: 3, text: '3막에 도달하면 해금' },
     },
@@ -1521,13 +1529,13 @@ img { max-width: 100%; }
   // 심연: 클리어할 때마다 한 단계씩 열린다. 높은 단계는 낮은 단계 효과를 모두 포함
   RS.ASCENSION = [
     '기본 난이도',
-    '엘리트가 더 자주 나오고 체력 +15%',
+    '엘리트가 더 자주 나오고 체력 +25%, 엘리트 강타 피해 +1',
     '상점 가격·제거 비용 +15%',
     '일반 적 체력 +10%',
     '막을 넘어갈 때 잃은 생명의 75%만 회복',
     '엘리트·보스가 한 바퀴를 돌 때 잃는 생명 +1',
     '최대 생명 -4로 시작',
-    '보스 체력 +15%',
+    '보스 체력 +10%',
     '강화 비용 +20%',
     '저주 [심연의 짐]을 안고 시작 (모든 유닛 피해 -10%, 없앨 수 없다)',
     '3막 보스가 둘이 된다 (균열의 군주 + 리치, 둘 다 온전한 체력)',
@@ -2720,7 +2728,7 @@ img { max-width: 100%; }
     bloodPact: ['life'], lastStand: ['life'], glassCannon: ['life'], overdrive: ['life'], offering: ['life', 'summon'], wall: ['life'],
     strawberry: ['life'], mango: ['life'], loomingFruit: ['life'], bloodPactCup: ['life'], bloodCrown: ['life'], cursedCrown: ['life'],
     recruits: ['low', 'summon'], promotion: ['summon'], apotheosis: ['low'], pandoraBox: ['low'], luckySummon: ['high'], snakeEye: ['high'],
-    callingBell: ['curse'], cursedKey: ['curse'], omamori: ['curse'], peacePipe: ['curse'], emptyCage: ['curse'],
+    callingBell: ['curse'], cursedKey: ['curse'], omamori: ['curse'], peacePipe: ['curse'], emptyCage: ['curse', 'life'],
     potionBelt: ['item'], sacredBark: ['item'], alchemyPot: ['item'], sealedGourd: ['item'],
     iceHeart: ['control'], ember: ['mage'], powderKeg: ['leak'], fusionHammer: ['merge', 'high'], gamble: ['merge', 'high'], luckyMerge: ['high'],
     twinStar: ['merge'], mirror: ['merge'], scroll: ['merge'], massProduction: ['summon'], discount: ['summon'], philStone: ['summon'], velvetChoker: ['summon'],
@@ -3440,8 +3448,8 @@ img { max-width: 100%; }
     const M = this.M;
     const asc = this.run.asc || 0;
     let hp = RS.levelHp(L) * def.hp * (1 + M.enemyHpPct) * (hpMul || 1);
-    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.15 : 1);
-    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.15 : 1);
+    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.1 : 1);
+    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.25 : 1);
     else if (asc >= 3) hp *= 1.1;
     // 일반 적: 놓쳐도 한 번만 아프므로(빠져나감) 아슬아슬한 세기로 맞춘다 (막마다)
     if (!def.boss && !def.elite) hp *= RS.BAL.normalHpMul[Math.min(4, this.run.act)] || 1;
@@ -4084,7 +4092,8 @@ img { max-width: 100%; }
   // ── 강타 (적의 의도) ──
   // 엘리트는 막이 오를수록 세게 친다
   P.strikeDmg = function (e, s) {
-    return s.dmg + (e.elite && !e.boss ? Math.floor((Math.max(1, Math.min(3, this.run.act)) - 1) * (RS.BAL.eliteStrikeStep || 0)) : 0);
+    const elite = e.elite && !e.boss;
+    return s.dmg + (elite ? Math.floor((Math.max(1, Math.min(3, this.run.act)) - 1) * (RS.BAL.eliteStrikeStep || 0)) + (this.run.asc >= 1 ? 1 : 0) : 0);
   };
   P.strikeHit = function (e, s, pre) {
     const M = this.M;
@@ -5565,10 +5574,10 @@ img { max-width: 100%; }
     if (type === 'boss') reward.relics = RS.rollRelics(run, 3, [3], [1]);
     if (stage.type === 'eventFight' && stage.spec.relic) reward.relics = RS.rollRelics(run, stage.spec.relicChoices || 1, stage.spec.relic, stage.spec.relic.map(() => 1));
     if (type === 'combat' && M.prayerWheel) {
-      // 소원 물레: 일반 전투 5번마다 증강 한 번 더
+      // 소원 물레: 일반 전투 6번마다 증강 한 번 더
       const st = (run.relicState.prayerWheel = run.relicState.prayerWheel || { n: 0 });
       st.n = (st.n || 0) + 1;
-      if (st.n % 5 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
+      if (st.n % 6 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
     }
     run.phase = 'reward';
     run.pending = { reward };

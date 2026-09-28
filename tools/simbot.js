@@ -573,7 +573,7 @@ function makeSmartBot(RS, rng, opts) {
     const clear = CLEAR_B[a] * (1 + (M.combatGoldPct || 0)) + (M.winGold || 0) * Math.min(3, a);
     const start = (M.battleStartGold || 0) * Math.min(3, a) - (M.debt || 0) * 3 - (M.sealSummon || 0) * 3;
     const S = summonCostAt(run, M, a);
-    const free = ((M.waveFreeSummon || 0) * 3 + (M.startSummons || 0) + (M.startRare ? 3 : 0) + (M.happyFlower ? 0.75 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
+    const free = ((M.waveFreeSummon || 0) * 3 + (M.startSummons || 0) + (M.startRare ? M.startRare * 3 : 0) + (M.happyFlower ? 0.75 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
     const fish = (M.ceramicFish || 0) * 1.1;
     return wave + intr + kill + EARLY_B[a] + clear + start + free + fish;
   }

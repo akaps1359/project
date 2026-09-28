@@ -653,10 +653,10 @@
     if (type === 'boss') reward.relics = RS.rollRelics(run, 3, [3], [1]);
     if (stage.type === 'eventFight' && stage.spec.relic) reward.relics = RS.rollRelics(run, stage.spec.relicChoices || 1, stage.spec.relic, stage.spec.relic.map(() => 1));
     if (type === 'combat' && M.prayerWheel) {
-      // 소원 물레: 일반 전투 5번마다 증강 한 번 더
+      // 소원 물레: 일반 전투 6번마다 증강 한 번 더
       const st = (run.relicState.prayerWheel = run.relicState.prayerWheel || { n: 0 });
       st.n = (st.n || 0) + 1;
-      if (st.n % 5 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
+      if (st.n % 6 === 0) RS.enqueue(run, { k: 'aug', w, title: '소원 물레' });
     }
     run.phase = 'reward';
     run.pending = { reward };

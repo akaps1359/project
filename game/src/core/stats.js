@@ -155,7 +155,7 @@
     bloodPact: ['life'], lastStand: ['life'], glassCannon: ['life'], overdrive: ['life'], offering: ['life', 'summon'], wall: ['life'],
     strawberry: ['life'], mango: ['life'], loomingFruit: ['life'], bloodPactCup: ['life'], bloodCrown: ['life'], cursedCrown: ['life'],
     recruits: ['low', 'summon'], promotion: ['summon'], apotheosis: ['low'], pandoraBox: ['low'], luckySummon: ['high'], snakeEye: ['high'],
-    callingBell: ['curse'], cursedKey: ['curse'], omamori: ['curse'], peacePipe: ['curse'], emptyCage: ['curse'],
+    callingBell: ['curse'], cursedKey: ['curse'], omamori: ['curse'], peacePipe: ['curse'], emptyCage: ['curse', 'life'],
     potionBelt: ['item'], sacredBark: ['item'], alchemyPot: ['item'], sealedGourd: ['item'],
     iceHeart: ['control'], ember: ['mage'], powderKeg: ['leak'], fusionHammer: ['merge', 'high'], gamble: ['merge', 'high'], luckyMerge: ['high'],
     twinStar: ['merge'], mirror: ['merge'], scroll: ['merge'], massProduction: ['summon'], discount: ['summon'], philStone: ['summon'], velvetChoker: ['summon'],
