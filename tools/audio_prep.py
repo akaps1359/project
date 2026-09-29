@@ -80,6 +80,17 @@ SFX = {
 }
 
 
+def safe_extract(zpath, dst):
+    # 받은 zip 안의 경로가 폴더 밖(../ 나 절대 경로)을 가리키면 풀지 않는다 (zip-slip 방지)
+    root = os.path.realpath(dst)
+    with zipfile.ZipFile(zpath) as zf:
+        for m in zf.namelist():
+            target = os.path.realpath(os.path.join(root, m))
+            if target != root and not target.startswith(root + os.sep):
+                raise ValueError(f'zip 안에 폴더 밖 경로가 있다: {m}')
+        zf.extractall(root)
+
+
 def fetch(src):
     os.makedirs(src, exist_ok=True)
     for key, name in ZIPS.items():
@@ -89,7 +100,7 @@ def fetch(src):
         z = os.path.join(src, name)
         if not os.path.exists(z):
             urllib.request.urlretrieve(OGA + urllib.parse.quote(name), z)
-        zipfile.ZipFile(z).extractall(d)
+        safe_extract(z, d)
     for name in SINGLES:
         p = os.path.join(src, name)
         if not os.path.exists(p):
