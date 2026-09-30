@@ -47,8 +47,8 @@
   };
 
   UI.confirmNew = function () {
+    // 저장본은 [출발]을 누를 때 버린다 (지휘관 화면에서 뒤로 가면 그대로 남는다)
     UI.confirm('새 모험', '진행 중인 모험이 사라집니다. 새로 시작할까요? (지금까지 오른 기록은 남아요)', '새로 시작', () => {
-      if (UI.G.abandonSaved) UI.G.abandonSaved();
       UI.showCommanders();
     });
   };
@@ -107,6 +107,7 @@
       h('div', { class: 'page scroll' }, h('p', { class: 'page-sub' }, '지휘관에 따라 잘 나오는 클래스와 시작 유물이 다릅니다'), list, ascBox),
       h('div', { class: 'page-foot' }, ascCtl, btn('출발', (e) => {
         e.currentTarget.disabled = true;
+        if (G.abandonSaved) G.abandonSaved(); // 저장본이 없으면 아무 일도 없다
         G.newRun(null, { commander: UI.pickCmd, asc: UI.pickAsc });
       }, 'gold grow')),
     ]);
@@ -119,6 +120,8 @@
   // ── 메뉴: 전투 중이면 일시정지, 밖이면 일반 메뉴 ──
   UI.openMenu = function () {
     const G = UI.G;
+    // 승패가 난 뒤 끝맺는 연출(1.4초) 동안은 멈추지 않는다 (결과를 되돌리지 못하게)
+    if (G.battle && G.battle.result) return;
     const inBattle = !!G.battle;
     const back = () => UI.openMenu();
     UI.modal(inBattle ? '일시정지' : '메뉴', h('div', { class: 'menu' },
@@ -261,6 +264,13 @@
   // ── 도움말 ──
   UI.openHelp = function (onClose) {
     const li = (t, d) => h('li', null, h('b', null, t), ' ', d);
+    // 엘리트·보스가 한 바퀴마다 앗아 가는 생명 (데이터에서 읽는다)
+    const E = Object.values(RS.ENEMY);
+    const god = RS.ENEMY.riftHeart;
+    const lapSeq = (x) => [x, x * 2, x * 4, x * 8].join('→');
+    const eliteLk = Math.min(...E.filter((d) => d.elite).map((d) => d.leak));
+    const bossLk = Math.max(...E.filter((d) => d.boss && d !== god).map((d) => d.leak));
+    const lapText = `엘리트 ${lapSeq(eliteLk)}, 보스 ${lapSeq(bossLk)}` + (god ? `, 고대신 ${lapSeq(god.leak)}` : '');
     UI.modal('게임 방법', h('div', { class: 'help' },
       h('ol', null,
         li('소환', '골드로 무작위 유닛을 부릅니다. 같은 유닛은 한 칸에 3기까지 쌓입니다. 소환할수록 비용이 1씩 오릅니다.'),
@@ -269,7 +279,7 @@
         li('배치', '유닛을 끌어서 옮깁니다. 전사·도적은 바깥 칸, 궁수·마법사·서리술사는 점선 안쪽 칸에. 사거리가 길에 닿지 않는 칸에는 빨간 x가 뜹니다. 새로 소환한 유닛은 알맞은 빈칸에 놓이지만, 보스가 뒤섞은 자리는 직접 옮겨야 해요.'),
         li('강화', '전투 중 [강화]: 골드로 한 클래스의 레벨을 올려 피해 +15%/Lv. 모험 내내 유지됩니다.'),
         li('판매', '유닛을 누르고 [판매]로 골드를 돌려받습니다. 영웅 이상은 두 번 눌러야 팔립니다.'),
-        li('적', '적은 길을 따라 돕니다. 한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 갑니다(놓친 만큼만 아파요). 엘리트·보스는 균열에서 다시 나와 계속 돌며, 처음엔 조금(엘리트 1, 보스 2)이지만 다시 돌 때마다 두 배로 앗아 갑니다(1→2→4→8). 필드에 적이 60마리가 되면 패배합니다. 전장의 적을 누르면 정보가 나옵니다.'),
+        li('적', `적은 길을 따라 돕니다. 한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 갑니다(놓친 만큼만 아파요). 엘리트·보스는 균열에서 다시 나와 계속 돌며, 처음엔 조금이지만 다시 돌 때마다 두 배로 앗아 갑니다(${lapText}). 필드에 적이 ${RS.BAL.fieldCap}마리(일부 유물·증강은 더 적게)가 되면 패배합니다. 전장의 적을 누르면 정보가 나옵니다.`),
         li('강타', '엘리트·보스 머리 위에 ! 와 붉은 숫자가 뜨면 곧 그만큼 생명을 칩니다. 준비하는 동안 몰아쳐서 노란 경직 막대를 채우거나, 기절·빙결(전사 기절·서리술사 빙결·서리 주문서)시키면 끊깁니다. 엘리트의 강타는 막이 오를수록 세집니다.'),
         li('생명 관리', '생명은 전투가 끝나도 이어집니다. 휴식처에서 회복할지 강해질지 고르세요. 생명이 줄수록 강해지는 광전사·붉은 해골 같은 선택도 있습니다.'),
         li('골드', '처치·웨이브 시작 때 들어옵니다. 보유 골드 10당 이자 1(최대 5).'),

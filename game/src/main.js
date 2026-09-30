@@ -223,7 +223,11 @@
     G.run.pending = null;
   });
   G.enterNode = step((f, lane, wing) => RS.enterNode(G.run, f, lane, wing));
-  G.leaveNode = step(() => RS.advance(G.run));
+  G.leaveNode = step(() => {
+    // 이벤트 칸을 떠나면 그 선택은 되돌릴 수 없다 (선택이 남긴 제거·연마 등이 남아 있으면 그때까지는 뒤로 가능)
+    if (G.run.phase === 'event' && !G.run.queue.length) G.backSnap = null;
+    RS.advance(G.run);
+  });
   G.afterReward = step(() => {
     if (RS.rewardComplete(G.run)) RS.advance(G.run);
   });
@@ -261,7 +265,16 @@
   };
 
   // 전투 중 나가면 전투 전 저장본으로 되돌린다
+  // 단, 이미 승패가 난 전투(끝맺는 연출 중)는 결과를 확정한다
   G.quitToTitle = function () {
+    const b = G.battle;
+    if (b && b.result) {
+      G.battle = null;
+      RS.finishBattle(G.run, b);
+      G.save();
+      // 모험이 끝났으면 결과 화면으로 (기록도 남긴다)
+      if (G.run.phase === 'over' || G.run.phase === 'victory') return G.route();
+    }
     G.battle = null;
     G.run = null;
     releaseWake();
@@ -301,6 +314,15 @@
       G.wake.release().catch(() => {});
       G.wake = null;
     }
+  }
+
+  // 끝맺는 연출 중인 전투를 바로 끝낸다 (열린 창은 콜백 없이 닫는다)
+  function commitDecided() {
+    if (G.modalOpen) {
+      UI.onModalClose = null;
+      UI.closeModal();
+    }
+    G.endBattle();
   }
 
   function frame(ts) {
@@ -380,7 +402,9 @@
       G.hidden = document.hidden;
       // 앱을 내리면 음악도 멈춘다 (돌아오면 다음 터치에서 다시)
       if (RS.audioHidden) RS.audioHidden(document.hidden);
-      if (document.hidden && G.battle && !G.modalOpen) UI.openPause();
+      // 승패가 이미 났으면 앱이 백그라운드에서 꺼지기 전에 결과를 확정한다
+      if (document.hidden && G.battle && G.battle.result) commitDecided();
+      else if (document.hidden && G.battle && !G.modalOpen) UI.openPause();
       if (!document.hidden && G.battle) requestWake();
     });
     // 가로로 돌리면 전투를 멈추고 메뉴를 띄운다
@@ -388,7 +412,8 @@
       const rot = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
       const onRot = () => {
         G.rotated = rot.matches;
-        if (rot.matches && G.battle && !G.modalOpen) UI.openPause();
+        if (rot.matches && G.battle && G.battle.result) commitDecided();
+        else if (rot.matches && G.battle && !G.modalOpen) UI.openPause();
       };
       if (rot.addEventListener) rot.addEventListener('change', onRot);
       else if (rot.addListener) rot.addListener(onRot);

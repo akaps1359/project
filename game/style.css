@@ -146,6 +146,10 @@ img { max-width: 100%; }
 .tb-stats { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
 .tb-stats .btn { flex: 0 0 auto; white-space: nowrap; margin: 0; }
 .tb-stats .stat { white-space: nowrap; }
+/* 좁은 폰: 긴 제목(막 이름·이벤트 이름)은 두 줄까지 (버튼 높이 안에 들어간다) */
+@media (max-width: 420px) {
+  .tb-title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.15; }
+}
 @media (max-width: 360px) {
   .topbar { padding: 8px 10px 6px; }
   .tb-stats { gap: 6px; }

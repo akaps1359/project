@@ -154,6 +154,7 @@
   UI.tip = function (anchor, title, desc, extra, action) {
     const tip = $('#tip');
     tip.innerHTML = '';
+    tip.dataset.owner = ''; // 누가 연 툴팁인지 (맵 칸 두 번 누르기 확인용, 연 쪽이 다시 적는다)
     append(tip, [
       h('b', null, title),
       desc ? h('p', null, desc) : null,

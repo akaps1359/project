@@ -129,13 +129,23 @@
           onclick(e) {
             if (can || wing) {
               // 첫 탭은 설명, 같은 칸을 한 번 더 누르면 이동
-              if (UI.mapArmed === key && !$('#tip').hidden) return enter();
+              // (지금 떠 있는 툴팁이 이 칸의 설명일 때만, 너무 빠른 연타는 무시)
+              const tipEl = $('#tip');
+              const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+              if (UI.mapArmed === key && !tipEl.hidden && tipEl.dataset.owner === key) {
+                if (now - (UI.mapArmedAt || 0) < 350) return;
+                return enter();
+              }
               UI.mapArmed = key;
+              UI.mapArmedAt = now;
               for (const el of inner.querySelectorAll('.node.armed')) el.classList.remove('armed');
               e.currentTarget.classList.add('armed');
               RS.sfx('click');
               UI.tip(e.currentTarget, title, nodeDesc(n, run), wing ? '축지 장화를 한 번 씁니다' : null, { label: '여기로 이동', onClick: enter });
+              tipEl.dataset.owner = key;
             } else {
+              UI.mapArmed = null;
+              for (const el of inner.querySelectorAll('.node.armed')) el.classList.remove('armed');
               UI.tip(e.currentTarget, title, nodeDesc(n, run));
             }
           },
@@ -150,7 +160,7 @@
   };
 
   function nodeDesc(n, run) {
-    if (n.burning) return '성난 엘리트. 무작위 강화를 받은 엘리트가 나온다. 이기면 유물과 함께 초록 봉인석.';
+    if (n.burning) return '성난 엘리트. 무작위 강화를 받은 엘리트가 나온다. ' + (run.keys && run.keys.emerald ? '이기면 유물과 추가 골드 (초록 봉인석은 이미 있다).' : '이기면 유물과 함께 초록 봉인석.');
     if (n.type === 'boss') {
       const act = RS.actDef(run);
       const def = RS.ENEMY[act.boss];
@@ -226,7 +236,7 @@
       card = h('div', { class: 'act-card compact' },
         h('div', { class: 'boss-line' }, h('img', { src: RS.iconURL(act.boss, 3), alt: '' }),
           h('div', null, h('b', null, `${act.name} · 이 막의 보스: ${boss.name}`), h('p', { class: 'dim' }, boss.trait || ''),
-            h('p', { class: 'good' }, `막을 넘어오며 생명을 회복했습니다 (${Math.ceil(run.life)}/${run.maxLife})`))),
+            actHealLine(run))),
       );
       const A = RS.ANCIENT[anc.id];
       const selIdx = typeof UI.optSel === 'number' && UI.optSel < anc.boons.length ? UI.optSel : null;
@@ -270,7 +280,7 @@
         h('div', { class: 'boss-preview' }, h('img', { src: RS.iconURL(act.boss, 4), alt: '' })),
         h('p', null, `이 막의 보스: ${boss.name}`),
         h('p', { class: 'dim' }, boss.trait),
-        h('p', { class: 'good' }, `막을 넘어오며 생명을 회복했습니다 (${Math.ceil(run.life)}/${run.maxLife})`),
+        actHealLine(run),
         btn('출발', (e) => {
           e.currentTarget.disabled = true;
           G.startAct();
@@ -839,6 +849,14 @@
     UI.page('휴식처', null, body, footer);
   };
 
+  // 막 시작 화면의 회복 한 줄 (시든 꽃의 낙인이 있으면 회복하지 못한다)
+  function actHealLine(run) {
+    const now = `(${Math.ceil(run.life)}/${run.maxLife})`;
+    return RS.canHeal(run)
+      ? h('p', { class: 'good' }, `막을 넘어오며 생명을 회복했습니다 ${now}`)
+      : h('p', { class: 'bad' }, `시든 꽃의 낙인: 생명을 회복하지 못했습니다 ${now}`);
+  }
+
   // ── 보물: 열기 전에 안에 든 유물을 보여 준다 ──
   UI.showTreasure = function () {
     const G = UI.G;
@@ -855,6 +873,11 @@
         body.appendChild(h('div', { class: 'cards relics' }, p.relics.map((id) => UI.relicCard(id, false, () => {}))));
       }
       if (canKey) body.appendChild(h('p', { class: 'dim small keynote' }, '푸른 봉인석을 가져가면 이 유물은 두고 갑니다. 붉은·초록·푸른 봉인석을 모두 모으면 3막 보스 뒤 숨겨진 4막이 열립니다.'));
+      // 도굴꾼의 열쇠: 막의 보물 층이 아닌 상자는 열면 저주 (RS.openChest 와 같은 조건)
+      if (RS.collectMods(run).cursedKey && run.floor !== (run.map.treasureFloor || 5)) {
+        body.appendChild(h('p', { class: 'cost' }, '도굴꾼의 열쇠: 상자를 열면 무작위 저주' + (canKey ? ' (푸른 봉인석은 저주 없음)' : '')));
+        body.appendChild(UI.curseNote('무작위 저주'));
+      }
       const open = (takeKey) => (e) => {
         UI.lockAll(e.currentTarget.closest('.page-foot'));
         RS.sfx('coin');
@@ -883,7 +906,7 @@
   function lossTip(run) {
     const reason = run.pending && run.pending.reason;
     const st = run.stats;
-    if (reason === 'cap') return '적이 60마리 쌓이면 패배해요. 소환을 늘리고 [강화]로 화력을 올리세요.';
+    if (reason === 'cap') return `적이 ${RS.BAL.fieldCap + (RS.collectMods(run).capAdd || 0)}마리 쌓이면 패배해요. 소환을 늘리고 [강화]로 화력을 올리세요.`;
     if (!st.merges) return '같은 유닛 3기를 합성하면 훨씬 강한 다음 등급이 나와요.';
     let lv = 0;
     for (const c of RS.CLASSES) lv += run.classLv[c] || 0;
