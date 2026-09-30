@@ -2,43 +2,53 @@
 (function (RS) {
   'use strict';
 
-  const W = (k, a, m, r, f) => ({ knight: k, archer: a, mage: m, rogue: r, frost: f });
+  // ── 고유 능력: 지휘관마다 하나 (슬레이 더 스파이어의 캐릭터 고유 메커니즘) ──
+  // 유물이 아니라 지휘관 자체의 힘이라, 별점술사에게 시작 유물을 바꿔도 사라지지 않는다.
+  // res: 자원 이름. max·cost·start 는 기본값(전용 증강·시작 유물이 늘린다). persist: 전투가 끝나도 자원이 남는다
+  RS.ABILITY = {
+    charge: {
+      name: '방패 돌진', res: '결의', icon: 'shield2', max: 5, cost: 2, start: 1,
+      hit: 3, bigPct: 0.05, bigFlat: 1, // 피해: 일반 적 웨이브 레벨 체력 ×3, 엘리트·보스 최대 체력 5% + 레벨 체력 ×1
+      gain: '웨이브마다 결의 +1, 적의 강타를 끊을 때마다 +1',
+      tip: '결의 2개로 강타를 준비하는 적을 들이받아 끊어요. 결의는 웨이브마다 +1',
+      desc: '강타를 준비하는 적(없으면 엘리트·보스, 그다음 가장 앞선 적)을 들이받는다: 강타를 끊고 큰 피해, 주변 적 1초 기절',
+    },
+    stance: {
+      name: '원소 전환', res: '태세', icon: 'orb', cd: 12,
+      boom: 0.05, bigBoom: 0.01, burn: 0.15, slow: 0.15, // 원소 폭발 = 모든 적 최대 체력의 boom (엘리트·보스는 bigBoom), 화상·둔화 비율
+      gain: '태세를 바꾸고 12초가 지나면 다시 바꿀 수 있다',
+      tip: '12초마다 화염·냉기 태세를 바꾸며 모든 적에게 원소 폭발',
+      desc: '화염 태세: 모든 공격이 화상(초당 그 피해의 15%). 냉기 태세: 모든 공격이 15% 둔화. 태세를 바꾸면 원소 폭발로 모든 적에게 최대 체력의 5% 피해 (엘리트·보스는 1%)',
+    },
+    star: {
+      name: '별똥별', res: '별', icon: 'star', max: 5, cost: 3, start: 0, persist: true,
+      dmg: 1.5, bossMul: 0.35, // 피해 = 레벨 체력 ×dmg (보스 ×bossMul)
+      gain: '웨이브마다 별 +1 (전투가 끝나도 남는다)',
+      tip: '별 3개로 모든 적에게 별똥별. 별은 웨이브마다 +1, 다음 전투로 이어져요',
+      desc: '별 3개로 모든 적에게 큰 피해 (보스는 35%)',
+    },
+  };
 
-  // weights: 소환·합성 때 나오는 클래스 가중치. unlock: 메타 기록으로 해금
+  // ability: 고유 능력. 모든 지휘관은 다섯 클래스가 고르게 나온다 (클래스 확률로 정체성을 만들지 않는다).
+  // 지휘관마다 전용 증강(content.js 의 cmd)이 있어 고유 능력을 키운다. unlock: 메타 기록으로 해금
   RS.COMMANDERS = [
     {
-      id: 'leon', name: '레온', title: '용병대장', relic: 'mercContract', weights: W(1, 1, 1, 1, 1), portrait: ['knight', 3],
-      desc: '모든 클래스가 고르게 나온다. 전투에서 이길 때마다 골드를 더 받는다.',
+      id: 'bron', name: '브론', title: '기사단장', relic: 'ironCrest', ability: 'charge', portrait: ['knight', 3],
+      desc: '강타를 받아치는 기사. [방패 돌진]으로 엘리트·보스의 강타를 끊고, 결의를 쌓아 버틴다.',
     },
     {
-      id: 'bron', name: '브론', title: '기사단장', relic: 'ironCrest', weights: W(2, 1, 0.7, 2, 0.7), portrait: ['rogue', 3],
-      desc: '전사·도적이 자주 나온다. 바깥 칸 싸움에 강하지만 유령에 약하다.',
-    },
-    {
-      id: 'bel', name: '벨', title: '강령술사', relic: 'soulJar', weights: W(1, 1, 1.2, 1, 1), portrait: ['mage', 2],
-      desc: '쓰러진 적의 영혼을 모은다. 적 50마리마다 유닛이 무료로 일어난다.',
-    },
-    {
-      id: 'ella', name: '엘라', title: '대현자', relic: 'manaSpring', weights: W(0.7, 1, 2, 0.7, 1.5), portrait: ['mage', 3],
-      desc: '마법사·서리술사가 자주 나온다. 유령·리치에 강하다.',
+      id: 'ella', name: '엘라', title: '대현자', relic: 'manaSpring', ability: 'stance', portrait: ['mage', 3],
+      desc: '화염과 냉기를 오가는 마법사. 화상으로 태우거나 둔화로 붙잡고, 태세를 바꿀 때마다 [원소 폭발].',
       unlock: { bestAct: 2, text: '2막에 도달하면 해금' },
     },
     {
-      id: 'kai', name: '카이', title: '사냥꾼', relic: 'hawkFeather', weights: W(0.7, 2.2, 0.8, 1, 1.3), portrait: ['archer', 3],
-      desc: '궁수 특화. 넓은 사거리로 길 전체를 덮지만 골렘에 약하다.',
-      unlock: { bestAct: 3, text: '3막에 도달하면 해금' },
-    },
-    {
-      id: 'mira', name: '미라', title: '연금술사', relic: 'alchemyPot', weights: W(1, 1, 1, 1, 1), portrait: ['frost', 3], startItems: 3,
-      desc: '소모품의 달인. 소모품 3개를 들고 시작하고 전투 후 소모품이 더 잘 나온다.',
+      id: 'astra', name: '아스트라', title: '별의 섭정', relic: 'starScepter', ability: 'star', portrait: ['archer', 2],
+      desc: '웨이브마다 별을 모아 [별똥별]로 모든 적을 내리친다. 모아 둘지, 바로 쏟을지가 승부.',
       unlock: { wins: 1, text: '한 번 클리어하면 해금' },
     },
-    {
-      id: 'astra', name: '아스트라', title: '별의 섭정', relic: 'starScepter', weights: W(1, 1.2, 1, 1, 1.2), portrait: ['archer', 2],
-      desc: '웨이브마다 별을 모아 [별똥별]로 모든 적을 내리친다. 위기를 한 번에 뒤집는 지휘관.',
-      unlock: { wins: 2, text: '두 번 클리어하면 해금' },
-    },
   ];
+  // 빠진 지휘관(레온·벨·카이·미라)으로 저장된 모험은 가장 가까운 지휘관으로 이어 간다
+  RS.COMMANDER_ALIAS = { leon: 'bron', bel: 'ella', kai: 'astra', mira: 'ella' };
   RS.COMMANDER = {};
   for (const c of RS.COMMANDERS) RS.COMMANDER[c.id] = c;
 

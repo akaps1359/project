@@ -1,5 +1,6 @@
 // 증강·유물 가치 측정: 같은 시드 묶음을 '아무것도 없이' 한 번, '그것을 들고 시작'해서 한 번씩 돌려 차이를 본다.
-// 사용법: node tools/itemval.js [판수=120] [--asc=N] [--seed=N] [--only=aug|relic] [--ids=a,b] [--jobs=4] [--out=파일.json]
+// 사용법: node tools/itemval.js [판수=120] [--asc=N] [--seed=N] [--only=aug|relic] [--ids=a,b] [--jobs=4] [--cmd=지휘관] [--out=파일.json]
+//         지휘관 전용 증강은 --cmd 로 그 지휘관을 정해서 잰다 (기준선도 그 지휘관)
 // 출력: 승률 차이(%p)와 평균 도달 깊이 차이(층). 시작부터 쥐여 주므로 '판 전체에 걸친 가치'의 상한에 가깝다.
 'use strict';
 const { fork } = require('child_process');
@@ -11,6 +12,7 @@ function playOne(RS, playRun, item, seed, asc, cmds, k) {
     else R.addRelic(run, item.id);
   } : null;
   const { run, won } = playRun(RS, seed, 'smart', { commander: cmds[k % cmds.length], asc, onStart });
+  if (item && item.kind === 'aug' && RS.AUG[item.id] && RS.AUG[item.id].cmd && run.commander !== RS.AUG[item.id].cmd) throw new Error('전용 증강은 --cmd 로 그 지휘관을 정해 재야 한다: ' + item.id);
   const nF = RS.MAP_FLOORS + 1;
   const depth = won ? 3 * nF + 5 : (run.act - 1) * nF + Math.max(0, run.floor);
   return { won: won ? 1 : 0, depth };
@@ -19,7 +21,9 @@ function playOne(RS, playRun, item, seed, asc, cmds, k) {
 if (process.argv[2] === '--worker') {
   const { loadRS, playRun } = require('./sim.js');
   const RS = loadRS();
-  const cmds = RS.COMMANDERS.map((c) => c.id);
+  // --cmd=id: 그 지휘관으로만 잰다 (기준선도 같은 지휘관). 지휘관 전용 증강을 잴 때 쓴다
+  const cmdArg = (process.argv.find((a) => a.startsWith('--cmd=')) || '').slice(6);
+  const cmds = cmdArg ? [cmdArg] : RS.COMMANDERS.map((c) => c.id);
   process.on('message', (job) => {
     if (job.quit) process.exit(0);
     const out = { key: job.key, won: 0, depth: 0, n: job.n };
@@ -45,8 +49,14 @@ if (process.argv[2] === '--worker') {
   const ids = arg('ids') ? arg('ids').split(',') : null;
   const { loadRS } = require('./sim.js');
   const RS = loadRS();
+  const cmdSel = arg('cmd');
+  if (cmdSel && !RS.COMMANDER[cmdSel]) {
+    console.error(`알 수 없는 지휘관: ${cmdSel} (있는 것: ${RS.COMMANDERS.map((c) => c.id).join(', ')})`);
+    process.exit(1);
+  }
   const items = [{ key: 'BASE', item: null, name: '(없음)', rarity: 0, kind: '' }];
-  if (only !== 'relic') for (const a of RS.AUGMENTS) items.push({ key: 'aug:' + a.id, item: { kind: 'aug', id: a.id }, name: a.name, rarity: a.rarity, kind: 'aug' });
+  // 지휘관 전용 증강은 --cmd 로 고른 그 지휘관 것만 잰다 (--cmd 가 없으면 전용 증강은 뺀다)
+  if (only !== 'relic') for (const a of RS.AUGMENTS) if (!a.cmd || a.cmd === cmdSel) items.push({ key: 'aug:' + a.id, item: { kind: 'aug', id: a.id }, name: a.name, rarity: a.rarity, kind: 'aug' });
   // 시작 유물(지휘관)·이벤트 유물은 뺀다
   if (only !== 'aug') for (const r of RS.RELICS) if (r.rarity <= 4) items.push({ key: 'rel:' + r.id, item: { kind: 'relic', id: r.id }, name: r.name, rarity: r.rarity, kind: 'relic' });
   const list = ids ? items.filter((x) => x.key === 'BASE' || ids.includes(x.item.id)) : items;
@@ -77,8 +87,15 @@ if (process.argv[2] === '--worker') {
     w.send({ key: x.key, item: x.item, n, asc, seed });
   };
   for (let j = 0; j < jobsN; j++) {
-    const w = fork(__filename, ['--worker']);
+    const w = fork(__filename, ['--worker'].concat(cmdSel ? ['--cmd=' + cmdSel] : []));
     workers.push(w);
+    w.on('exit', (code) => {
+      if (code) {
+        console.error(`\n작업 프로세스가 오류로 끝났다 (code ${code})`);
+        for (const x of workers) x.kill();
+        process.exit(1);
+      }
+    });
     w.on('message', (m) => {
       res[m.key] = m;
       busy--;

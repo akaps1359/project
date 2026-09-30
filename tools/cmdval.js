@@ -1,6 +1,6 @@
 // 지휘관 승률 측정 (여러 코어로 나눠 돌림) + 유물 값 임시 바꿔 보기.
-// 사용법: node tools/cmdval.js [판수=150] --cmd=mira[,kai|all] [--asc=N] [--seed=N] [--jobs=4]
-//         [--patch='{"alchemyPot":{"mods":{"itemSlots":2}}}']   (유물 정의를 덮어쓴다. mods 는 통째로 바뀐다)
+// 사용법: node tools/cmdval.js [판수=150] --cmd=bron[,ella|all] [--asc=N] [--seed=N] [--jobs=4]
+//         [--patch='{"ironCrest":{"mods":{"abStart":2}}}']   (유물 정의를 덮어쓴다. mods 는 통째로 바뀐다)
 // 판수는 지휘관마다. 같은 시드로 돌리므로 --patch 없이 한 번, 있이 한 번 돌려 비교하면 된다.
 'use strict';
 const { fork } = require('child_process');
@@ -38,6 +38,11 @@ if (process.argv[2] === '--worker') {
   const { loadRS } = require('./sim.js');
   const RS = loadRS();
   const cmds = !arg('cmd') || arg('cmd') === 'all' ? RS.COMMANDERS.map((c) => c.id) : arg('cmd').split(',');
+  const bad = cmds.filter((c) => !RS.COMMANDER[c]);
+  if (bad.length) {
+    console.error(`알 수 없는 지휘관: ${bad.join(', ')} (있는 것: ${RS.COMMANDERS.map((c) => c.id).join(', ')})`);
+    process.exit(1);
+  }
   const chunk = Math.max(5, Math.ceil(n / 6));
   const jobs = [];
   for (const cmd of cmds) for (let s = 0; s < n; s += chunk) jobs.push({ cmd, from: s, to: Math.min(n, s + chunk), seed, asc, patch });

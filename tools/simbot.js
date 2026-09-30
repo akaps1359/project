@@ -11,7 +11,7 @@
 //   random : 모든 선택을 무작위로
 // 게임 코드는 공개 함수만 쓴다: RS.saveString/loadString/attachRng, eventOptions/eventChoose/optionEnabled,
 // shopBuy, restOptions/restDo, pickAugment/addRelic/applyBlessing/applyAncient, unitStats, 전투의
-// summon/merge/upgrade/upgradeCost/summonCost/summonLimit/useItem/swap/starfall/canStarfall 등.
+// summon/merge/upgrade/upgradeCost/summonCost/summonLimit/useItem/swap/useAbility/canUseAbility 등.
 // 있으면 쓰는 것: RS.cancelChoice(건너뛴 대기열 항목 환불), RS.skipGoldAmount(건너뛰기 골드), b.starMax.
 'use strict';
 
@@ -61,6 +61,10 @@ const AUG_SCORE = {
   demonForm: 8, echoForm: 6, apotheosis: 6, wraithForm: 6, corruption: 5, creativeAI: 5,
   noxious: 6, poisonBlade: 4, offering: 5, limitBreak: 5,
   fireArrow: 4, shatter: 5, bloodRush: 5, plague: 5, counterStrike: 4, karma: 3,
+  // 지휘관 전용
+  steadfast: 4, riposte: 4, chainCharge: 4, taunt: 5, knightMarch: 6, ironFormation: 5, crusade: 7, valorOath: 7,
+  kindle: 4, deepFrost: 4, manaSurge: 4, elemCycle: 6, thermalShock: 6, inferno: 6, elemUnity: 7, eternalFlame: 7,
+  stardust: 4, starfrost: 4, starLoot: 4, constellation: 6, meteorShower: 6, astronomy: 6, supernova: 7, galaxy: 7,
 };
 const ANC_SCORE = {
   bloodCrown: 8, spikedGauntlet: 8, whisperEarring: 7, twinStar: 7, luckyStar: 7, legend: 7, epic2: 7,
@@ -68,6 +72,34 @@ const ANC_SCORE = {
   rewindSand: 5, forgottenShelf: 5, forbiddenIndex: 5, upgrade2: 5, runes2: 5, gold400: 5, goldenEgg: 5,
   sealOfGold: 5, warHammerA: 5, bloodPactCup: 5, lordParasol: 4, loomingFruit: 4, maxLife15: 4, cleanse: 3, relicPair: 5,
 };
+
+// 지휘관 고유 능력: 사람처럼 '필요할 때' 쓴다 (두 봇 공통)
+function useAbilityBot(RS, b, danger) {
+  const ab = b.ab;
+  if (!ab || !b.canUseAbility()) return;
+  let live = 0;
+  let casting = false;
+  for (const e of b.enemies) {
+    if (e.dead || e.subT > 0) continue;
+    live++;
+    if (e.cast && e.cast.s.k === 'strike') casting = true;
+  }
+  const crowd = live > b.cap * 0.4;
+  let go = false;
+  switch (ab.id) {
+    // 별: 위험·보스·가득 참·몰려옴 (별자리가 있으면 5개는 남겨 둔다)
+    case 'star': {
+      const keep = b.M.starHoard ? 5 : 0; // 별자리: 5개 이상이면 피해가 오르니 위험하지 않으면 남긴다
+      go = (danger || !!b.boss || crowd || ab.n >= ab.max) && (danger || ab.n - ab.cost >= keep);
+      break;
+    }
+    // 결의: 강타를 끊는 데 쓰고, 넘치면 앞선 적에게
+    case 'charge': go = casting || danger || ab.n >= ab.max; break;
+    // 태세: 적이 있으면 대기가 끝날 때마다 바꿔 폭발을 낸다
+    case 'stance': go = live >= 3 || danger; break;
+  }
+  if (go) b.useAbility();
+}
 
 // 사람이 손으로 하듯 한 번에 한 칸만 옮긴다 (자동 정리는 게임에 없다).
 // 1) 서로 자리를 바꾸면 둘 다 나아지는 근접·원거리 짝  2) 더 좋은 빈칸이 있는 가장 높은 등급 유닛
@@ -242,7 +274,7 @@ function makeBasicBot(RS, kind, rng, opts) {
         if (!b.merge(i)) break;
       }
       const danger = b.enemies.length > b.cap * 0.6 || run.life <= 4 || (b.boss && b.bossTimer < 15);
-      if (b.canStarfall() && (danger || b.boss || b.stars >= 5)) b.starfall();
+      useAbilityBot(RS, b, danger);
       if (run.items.length) {
         if (danger) {
           const idx = run.items.findIndex((id) => id === 'bomb' || id === 'freeze' || id === 'rage' || id === 'ghostly');
@@ -433,6 +465,9 @@ function makeSmartBot(RS, rng, opts) {
       if (M.legendAura) dmg += M.legendAura * (legends + (future ? 1 : 0));
     }
     if (M.rich) dmg += M.rich * 0.8;
+    // 용맹의 서약(결의 평균 2개), 천체 관측(전투마다 별똥별 평균 1.5번)
+    if (M.resolveDmg) dmg += M.resolveDmg * 2;
+    if (M.starStack) dmg += M.starStack * 1.5;
     // 광전사(연속형)·붉은 해골: 전투 중 평균 잃은 생명을 막 진행에 따라 어림
     const missNow = Math.max(0, run.maxLife - run.life);
     const miss = future ? Math.max(missNow, run.maxLife * 0.35) : missNow;
@@ -472,7 +507,19 @@ function makeSmartBot(RS, rng, opts) {
     f *= 1 - (M.doubt || 0) * 0.015;
     if (M.capAdd) f *= Math.max(0.5, 1 + M.capAdd * 0.006);
     if (M.dragon) f *= 1.08;
-    if (M.stars) f *= 1.1;
+    f *= abilityFactor(M);
+    return f;
+  }
+  // 지휘관 고유 능력과 전용 증강이 전투에 더하는 힘 (어림. 용맹의 서약·천체 관측은 dynFor 에서)
+  function abilityFactor(M) {
+    const id = M.ability;
+    if (!id) return 1;
+    let f = 1.08;
+    switch (id) {
+      case 'star': f += 0.03 * M.abStart + 0.01 * M.abMax + M.starHoard * 0.4 + M.starTwice * 0.12 + (M.supernova ? 0.1 : 0) + M.starSlow * 0.12 + M.starKill * 1.5 + M.abCostDown * 0.12; break;
+      case 'charge': f += 0.02 * M.abStart + 0.01 * M.abMax + M.chargeTaunt * 0.25 + (M.chargeAoe ? 0.1 : 0) + M.chargeRefund * 0.06; break;
+      case 'stance': f += M.stanceBurn * 0.5 + M.stanceSlow * 0.4 + M.stanceFreeze * 1.2 + M.stanceCd * 0.012 + M.stanceBoom * 0.06 + M.stanceHaste * 0.12 + M.burnVuln * 0.5 + (M.burnLong ? 0.08 : 0) + (M.thermal ? 0.07 : 0) + (M.unity ? 0.12 : 0); break;
+    }
     return f;
   }
   function boardPower(run, M, dyn) {
@@ -582,7 +629,7 @@ function makeSmartBot(RS, rng, opts) {
     const clear = CLEAR_B[a] * (1 + (M.combatGoldPct || 0)) + (M.winGold || 0) * Math.min(3, a);
     const start = (M.battleStartGold || 0) * Math.min(3, a) - (M.debt || 0) * 3 - (M.sealSummon || 0) * 3;
     const S = summonCostAt(run, M, a);
-    const free = ((M.waveFreeSummon || 0) * 3 + (M.startRare ? M.startRare * 3 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
+    const free = ((M.waveFreeSummon || 0) * 3 + (M.startRare ? M.startRare * 3 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0)) * S;
     const fish = (M.ceramicFish || 0) * 1.1;
     return wave + intr + kill + EARLY_B[a] + clear + start + free + fish;
   }
@@ -682,7 +729,7 @@ function makeSmartBot(RS, rng, opts) {
       if (M.leakShield) loss -= Math.min(M.leakShield, L * 1.5) * 0.7;
       if (loss > 0) loss *= 1.5; // 누수가 커지면 한 판에 무너질 위험도 커진다
       const start = M.battleStartLifeLoss || 0;
-      const heal = Math.min(M.winHeal || 0, 2.5) * 0.7 + (M.eliteKillHeal || 0) * 0.35 + (M.meatBone ? 1 : 0) + (M.pantograph || 0) / 7 + (M.leech || 0) * 0.12 + (M.counterStrike || 0) * 0.3 + (M.strikeReduce || 0) * 0.35;
+      const heal = Math.min(M.winHeal || 0, 2.5) * 0.7 + (M.eliteKillHeal || 0) * 0.35 + (M.meatBone ? 1 : 0) + (M.pantograph || 0) / 7 + (M.leech || 0) * 0.12 + (M.counterStrike || 0) * 0.3 + (M.strikeReduce || 0) * 0.35 + (M.resolveGuard || 0) * 0.2 + (M.chargeHeal || 0) * 0.15;
       flow += rem[k] * (heal - loss - start);
       maxFlow += rem[k] * ((M.winMaxLife || 0) + (M.eliteKillMaxLife || 0) * 0.3);
     }
@@ -1035,8 +1082,7 @@ function makeSmartBot(RS, rng, opts) {
         if (!b.merge(i)) break;
       }
       const danger = b.enemies.length > b.cap * 0.6 || run.life <= 4 || (b.boss && b.bossTimer < 15);
-      const starMax = typeof b.starMax === 'number' ? b.starMax : 5;
-      if (b.canStarfall() && (danger || b.boss || b.stars >= starMax || b.enemies.length > b.cap * 0.4)) b.starfall();
+      useAbilityBot(RS, b, danger);
       if (run.items.length) useItems(b, danger);
       spend(b, danger);
       if (b.t % 5 < 0.25) tidyOne(RS, b);

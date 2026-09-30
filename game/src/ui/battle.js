@@ -36,7 +36,17 @@
     return RS.sellValue(run, s.tier, b.M);
   };
 
-  UI.starMax = (b) => (typeof b.starMax === 'number' && b.starMax > 0 ? b.starMax : 3);
+  // 지휘관 고유 능력 버튼 글자: 별똥별 ★ 2/3 · 방패 돌진 돌진 1/2 · 원소 전환 화염→냉기 / 화염 7초
+  UI.abLabel = function (b) {
+    const ab = b && b.ab;
+    if (!ab) return '';
+    if (ab.id === 'stance') {
+      const cur = ab.stance === 'fire' ? '화염' : '냉기';
+      return ab.cd > 0 ? `${cur} ${Math.ceil(ab.cd)}초` : `${cur}→${ab.stance === 'fire' ? '냉기' : '화염'}`;
+    }
+    const n = Math.floor(ab.n);
+    return ab.id === 'star' ? `★ ${n}/${ab.cost}` : `돌진 ${n}/${ab.cost}`;
+  };
 
 
   // 이번 전투에 실제로 걸린 상처 피해 감소(%) — 전투를 시작할 때 고정된다
@@ -715,7 +725,7 @@
     const b = G.battle;
     const slots = RS.itemSlots(run);
     // 칸이 많으면(보급 허리띠·연금 솥·별) 칸과 버튼을 조금 줄인다
-    UI.itemTight = slots + (b && b.M.stars ? 2 : 0) >= 6;
+    UI.itemTight = slots + (b && b.ab ? 2 : 0) >= 6;
     bar.classList.toggle('tight', UI.itemTight);
     for (let k = 0; k < slots; k++) {
       const id = run.items[k];
@@ -740,28 +750,28 @@
       }
     }
     bar.appendChild(h('div', { class: 'spacer' }));
-    UI.starBtn = null;
-    if (b && b.M.stars) {
-      // 별의 섭정: 별을 모아 별똥별
-      UI.starBtn = btn('★ 0/3', () => {
+    UI.abBtn = null;
+    if (b && b.ab) {
+      // 지휘관 고유 능력 (별똥별 · 방패 돌진 · 원소 전환)
+      const def = b.ab.def;
+      UI.abBtn = btn(UI.abLabel(b), () => {
         const bb = G.battle;
-        if (!bb || !bb.starfall()) {
+        if (!bb || !bb.useAbility()) {
           RS.sfx('error');
-          UI.toast(bb && bb.stars >= (bb.starCost || 3) ? '적이 있을 때 쓸 수 있어요' : `별이 ${(bb && bb.starCost) || 3}개 모여야 해요 (웨이브마다 1개, 최대 ${bb ? UI.starMax(bb) : 5}개)`, 'warn');
+          UI.toast((bb && bb.abilityBlock()) || '지금은 쓸 수 없어요', 'warn');
           return;
         }
-        RS.sfx('bomb');
-        UI.toast('별똥별!', 'good');
+        RS.sfx(bb.ab.id === 'star' ? 'bomb' : bb.ab.id === 'charge' ? 'big' : bb.ab.stance === 'ice' ? 'freeze' : 'bomb');
         UI.updateHud(true);
-      }, 'sm star');
-      UI.starBtn.setAttribute('aria-label', '별똥별');
-      bar.appendChild(UI.starBtn);
+      }, `sm star ab-${b.ab.id}`);
+      UI.abBtn.setAttribute('aria-label', def.name);
+      bar.appendChild(UI.abBtn);
     }
     UI.mergeAllBtn = btn(UI.itemTight ? '합성' : '모두 합성', () => UI.doMergeAll(), 'sm mall off');
     UI.mergeAllBtn.setAttribute('aria-label', '모두 합성');
     bar.appendChild(UI.mergeAllBtn);
     // 칸이 많으면 '빌드'는 뺀다 (일시정지 메뉴에 있다)
-    if (slots <= 3 && !(b && b.M.stars)) bar.appendChild(btn('빌드', () => UI.openBuild(), 'sm'));
+    if (slots <= 3 && !(b && b.ab)) bar.appendChild(btn('빌드', () => UI.openBuild(), 'sm'));
   };
 
   const setText = (el, key, v) => {
@@ -820,9 +830,10 @@
     setText($('#summon-cost'), 'cost', b.summonLimit() <= 0 ? '제한' : `${cost}G`);
     setCls($('#b-summon'), 'canS', 'off', !(run.gold >= cost && b.summonLimit() > 0));
     setText($('#b-speed'), 'spd', `x${G.speed}`);
-    if (UI.starBtn) {
-      setText(UI.starBtn, 'star', `★ ${b.stars}/${b.starCost || 3}`);
-      setCls(UI.starBtn, 'starOn', 'off', !b.canStarfall());
+    if (UI.abBtn && b.ab) {
+      setText(UI.abBtn, 'ab', UI.abLabel(b));
+      setCls(UI.abBtn, 'abOn', 'off', !b.canUseAbility());
+      if (b.ab.id === 'stance') setCls(UI.abBtn, 'abIce', 'ice', b.ab.stance === 'ice');
     }
     // 합성 가능한 칸 수 + 길에 닿지 않는 칸 (0.1초마다 20칸)
     let mergeable = 0;
@@ -1141,8 +1152,18 @@
         RS.sfx('wave');
         const g = (ev.gold || 0) + (ev.interest || 0);
         if (g > 0) UI.hudFloat($('#h-gold'), `+${g}G`, 'good');
+        // 처음 싸울 때 지휘관 고유 능력을 한 번 알려 준다
+        const bb = UI.G.battle;
+        if (ev.n === 1 && bb && bb.ab) UI.onceTip('ab_' + bb.ab.id, `고유 능력 [${bb.ab.def.name}] (아래 버튼) · ${bb.ab.def.tip}`);
         break;
       }
+      case 'abil':
+        if (ev.id === 'stance') UI.toast(ev.stance === 'fire' ? '화염 태세 · 공격이 화상을 남긴다' : '냉기 태세 · 공격이 둔화시킨다', 'good');
+        else if (ev.id === 'charge') {
+          UI.toast(ev.broke ? '방패 돌진! 강타를 끊었다' : '방패 돌진!', 'good');
+          if (ev.heal > 0) UI.hudFloat($('#h-life'), `+${ev.heal}`, 'good');
+        } else if (ev.id === 'star') UI.toast('별똥별!', 'good');
+        break;
       case 'boss':
         RS.sfx('boss');
         RS.bgm('boss', UI.G.run ? UI.G.run.act : 1);

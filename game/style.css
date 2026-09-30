@@ -421,6 +421,8 @@ img { max-width: 100%; }
 .card .ctop b { font-size: 14px; font-weight: normal; }
 .card .rar { font-size: 10px; padding: 1px 5px; background: var(--line); color: var(--t0); }
 .card .stack { color: var(--dim); font-size: 10px; }
+.cmdtag { color: #ffd98a; font-size: 10px; border: 1px solid #6b5a2e; border-radius: 3px; padding: 0 3px; margin-left: 4px; white-space: nowrap; }
+.lrow .cmdtag { margin-left: 0; display: inline-block; margin-bottom: 2px; }
 .card p { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: #e2d8c4; }
 .card p.cost, .cost { color: var(--red); }
 /* 시너지 태그 */
@@ -572,6 +574,10 @@ img { max-width: 100%; }
 .unlocks p { margin: 2px 0; }
 .btn.star { background: #2d2a55; color: var(--gold); white-space: nowrap; }
 .btn.star.off { opacity: 0.55; }
+/* 지휘관 고유 능력 버튼: 원소 전환은 지금 태세의 색 */
+.btn.star.ab-charge { background: #3a2f22; color: #ffd98a; }
+.btn.star.ab-stance { background: #4a2418; color: #ffb870; }
+.btn.star.ab-stance.ice { background: #173a4a; color: #a8ecff; }
 /* 보드 칸 고르기 (룬·복제·제물) */
 .bpick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 280px; margin: 12px auto; }
 .bcell { position: relative; aspect-ratio: 1; border: 0; padding: 0; background: var(--panel2); box-shadow: var(--px), inset 0 0 0 2px var(--rune, transparent); display: grid; place-items: center; touch-action: manipulation; font: inherit; color: var(--text); }

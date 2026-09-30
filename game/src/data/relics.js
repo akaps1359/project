@@ -158,13 +158,9 @@
     }),
 
     // ── 시작 유물 (지휘관) ──
-    R('mercContract', '용병 계약서', 5, 'scroll', '전투에서 이기면 골드 +22×막', { winGold: 22 }),
-    R('ironCrest', '강철 문장', 5, 'crest', '전사·도적 피해 +60%, 전사 기절 확률 +6%p, 도적 치명타 확률 +6%p', { cls: { knight: { dmg: 0.6, stun: 0.06 }, rogue: { dmg: 0.6, crit: 0.06 } } }),
-    R('manaSpring', '마나의 샘', 5, 'orb', '마법사·서리술사 피해 +60%, 범위 +2 (서리술사는 영웅 등급부터). 마법사 공격이 화상 (초당 피해의 15%)', { cls: { mage: { dmg: 0.6, splash: 2 }, frost: { dmg: 0.6, splash: 2 } }, burn: 0.15 }),
-    R('hawkFeather', '매의 깃털', 5, 'wing', '궁수 사거리 +6, 공격 속도 +10%', { cls: { archer: { range: 6, aspd: 0.1 } } }),
-    R('alchemyPot', '연금 솥', 5, 'potion', '소모품 칸 +2, 전투 후 소모품이 나올 확률 +50%. 소모품을 쓸 때마다 이번 전투 동안 모든 유닛 피해 +20% (누적)', { itemSlots: 2, itemDropBonus: 0.5, itemDmg: 0.2 }),
-    R('soulJar', '영혼 항아리', 5, 'vial', '적을 50마리 처치할 때마다 유닛 1기가 무료로 일어난다 (소환 비용이 오르지 않는다)', { souls: 50 }),
-    R('starScepter', '별의 왕홀', 5, 'star', '웨이브마다 별 +1 (전투가 끝나도 남고, 최대 5). 별 3개로 [별똥별]: 모든 적에게 큰 피해', { stars: 1 }, { state: { n: 0 } }),
+    R('ironCrest', '강철 문장', 5, 'crest', '전투를 시작할 때 결의 +1, 전사 기절 확률 +5%p', { abStart: 1, cls: { knight: { stun: 0.05 } } }),
+    R('manaSpring', '마나의 샘', 5, 'orb', '원소 폭발 피해 +30%', { stanceBoom: 0.3 }),
+    R('starScepter', '별의 왕홀', 5, 'star', '전투를 시작할 때 별 +1', { abStart: 1 }),
 
     // ── 이벤트 전용 ──
     R('cheese', '쥐구멍 치즈', 6, 'berry', '전투에서 이기면 최대 생명 +1', { winMaxLife: 1 }),

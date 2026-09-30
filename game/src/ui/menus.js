@@ -85,7 +85,8 @@
       h('div', { class: 'cbody' },
         h('div', { class: 'ctop' }, h('span', { class: 'rar' }, c.title), h('b', null, c.name)),
         h('p', null, ok ? c.desc : c.unlock.text),
-        ok ? h('p', { class: 'dim small' }, `시작 유물 · ${rel.name}: ${rel.desc}`) : null,
+        ok ? h('p', { class: 'good small' }, `고유 능력 [${RS.ABILITY[c.ability].name}] ${RS.ABILITY[c.ability].desc}. ${RS.ABILITY[c.ability].gain}`) : null,
+        ok ? h('p', { class: 'dim small' }, `시작 유물 · ${rel.name}: ${rel.desc} · 전용 증강 ${RS.AUGMENTS.filter((a) => a.cmd === c.id).length}개`) : null,
       ));
     }));
     const setAsc = (v) => {
@@ -104,7 +105,7 @@
     );
     append(scr, [
       h('div', { class: 'topbar' }, h('div', { class: 'tb-title' }, '지휘관 선택'), btn('뒤로', () => UI.showTitle(), 'sm')),
-      h('div', { class: 'page scroll' }, h('p', { class: 'page-sub' }, '지휘관에 따라 잘 나오는 클래스와 시작 유물이 다릅니다'), list, ascBox),
+      h('div', { class: 'page scroll' }, h('p', { class: 'page-sub' }, '지휘관마다 고유 능력(전투 중 버튼)과 전용 증강이 다릅니다. 클래스는 모두 고르게 나와요'), list, ascBox),
       h('div', { class: 'page-foot' }, ascCtl, btn('출발', (e) => {
         e.currentTarget.disabled = true;
         if (G.abandonSaved) G.abandonSaved(); // 저장본이 없으면 아무 일도 없다
@@ -216,7 +217,10 @@
     };
     UI.modal('도감', UI.tabs([
       { name: '유닛', sub: '같은 유닛 3기 → 다음 등급 무작위 유닛', render: () => RS.CLASSES.map((c) => h('div', { class: 'lrow' }, unitImg(c, 3), h('div', null, h('b', null, `${RS.CLASS[c].name} · ${RS.CLASS[c].role}`), h('p', null, RS.CLASS[c].desc)))) },
-      { name: '증강', sub: '전투 보상으로 고르는 영구 효과', render: () => [1, 2, 3].map((r) => RS.AUGMENTS.filter((a) => a.rarity === r).map((a) => UI.augRow(a.id, 1))) },
+      { name: '증강', sub: '전투 보상으로 고르는 영구 효과 · 지휘관 전용 증강은 그 지휘관으로 할 때만 나온다', render: () => [
+        [1, 2, 3].map((r) => RS.AUGMENTS.filter((a) => a.rarity === r && !a.cmd).map((a) => UI.augRow(a.id, 1))),
+        RS.COMMANDERS.map((c) => [h('h3', null, `${c.name} 전용 · ${RS.ABILITY[c.ability].name}`), RS.AUGMENTS.filter((a) => a.cmd === c.id).map((a) => UI.augRow(a.id, 1))]),
+      ] },
       { name: '유물', sub: '모험 내내 유지 · 빨간 글씨는 대가', render: () => [1, 2, 3, 4, 5, 6].map((r) => RS.RELICS.filter((x) => x.rarity === r).map((x) => UI.relicRow(x.id))) },
       { name: '시너지', sub: '#태그가 같은 증강·유물은 서로 이어진다 (덱 설계의 뼈대)', render: () => UI.synList(null) },
       { name: '룬', sub: '보드 칸에 새겨 그 칸 유닛에게 적용', render: () => RS.RUNES.map((r) => h('div', { class: 'lrow', style: `--rune:${r.color}` }, h('span', { class: 'runeic' }, '◆'), h('div', null, h('b', null, r.name), h('p', null, r.desc)))) },
@@ -231,15 +235,19 @@
 
   // ── 연대기 (슬레이 더 스파이어 2의 타임라인처럼 이정표와 해금) ──
   UI.chronicleMiles = function (meta) {
-    return [
+    // 지휘관 해금 보상은 RS.COMMANDERS 의 unlock 조건에서 뽑는다 (지휘관을 바꿔도 연대기가 따라온다)
+    const who = (pred) => RS.COMMANDERS.filter((c) => c.unlock && pred(c.unlock)).map((c) => `지휘관 ${c.name}(${c.title})`);
+    const rows = [
       { done: meta.runs >= 1, text: '첫 모험을 떠난다', reward: '—' },
-      { done: meta.bestAct >= 2, text: '1막 보스를 쓰러뜨린다', reward: '지휘관 엘라(대현자)' },
-      { done: meta.bestAct >= 3, text: '2막 보스를 쓰러뜨린다', reward: '지휘관 카이(사냥꾼)' },
-      { done: meta.wins >= 1, text: '3막 보스를 쓰러뜨린다', reward: '지휘관 미라(연금술사) · 심연 1' },
-      { done: meta.wins >= 2, text: '두 번 클리어한다', reward: '지휘관 아스트라(별의 섭정)' },
+      { done: meta.bestAct >= 2, text: '1막 보스를 쓰러뜨린다', reward: who((u) => u.bestAct === 2).join(' · ') },
+      { done: meta.bestAct >= 3, text: '2막 보스를 쓰러뜨린다', reward: who((u) => u.bestAct === 3).join(' · ') },
+      { done: meta.wins >= 1, text: '3막 보스를 쓰러뜨린다', reward: who((u) => u.wins === 1).concat('심연 1').join(' · ') },
+      { done: meta.wins >= 2, text: '두 번 클리어한다', reward: who((u) => u.wins === 2).join(' · ') },
       { done: !!meta.heart, text: '세 봉인석으로 4막 고대신을 잠재운다', reward: '진 엔딩' },
       { done: (meta.maxAsc || 0) >= 10, text: '심연 10에 도전한다', reward: '최고 난이도' },
     ];
+    // 보상이 없는 이정표는 뺀다 (첫 모험은 늘 보인다)
+    return rows.filter((r, i) => i === 0 || r.reward);
   };
   UI.openChronicle = function () {
     const meta = UI.G.meta;

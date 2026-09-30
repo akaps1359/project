@@ -37,7 +37,7 @@ p('\n### 증강 (' + RS.AUGMENTS.length + '종)\n');
 const tagStr = (d) => RS.synTags(d).map((t) => '#' + RS.SYN[t].name).join(' ') || '#범용';
 p('| 등급 | 이름 | 효과 | 대가 | 중첩 | 시너지 |');
 p('|---|---|---|---|---|---|');
-for (const a of RS.AUGMENTS) p(`| ${RS.RARITY_NAME.aug[a.rarity]} | ${a.name} | ${a.desc} | ${a.cost || '-'} | ${a.unique ? '1회' : '가능'} | ${tagStr(a)} |`);
+for (const a of RS.AUGMENTS) p(`| ${RS.RARITY_NAME.aug[a.rarity]} | ${a.name}${a.cmd ? ` (${RS.COMMANDER[a.cmd].name} 전용)` : ''} | ${a.desc} | ${a.cost || '-'} | ${a.unique ? '1회' : '가능'} | ${tagStr(a)} |`);
 
 p('\n### 유물 (' + RS.RELICS.length + '종)\n');
 p('| 등급 | 이름 | 효과 | 대가 | 시너지 |');
@@ -71,9 +71,12 @@ for (const e of RS.EVENTS) {
 }
 
 p('\n### 지휘관\n');
-p('| 지휘관 | 시작 유물 | 특징 | 해금 |');
-p('|---|---|---|---|');
-for (const c of RS.COMMANDERS) p(`| ${c.title} ${c.name} | ${RS.REL[c.relic].name}: ${RS.REL[c.relic].desc} | ${c.desc} | ${c.unlock ? c.unlock.text : '처음부터'} |`);
+p('| 지휘관 | 고유 능력 | 시작 유물 | 특징 | 해금 |');
+p('|---|---|---|---|---|');
+for (const c of RS.COMMANDERS) {
+  const ab = RS.ABILITY[c.ability];
+  p(`| ${c.title} ${c.name} | **${ab.name}** — ${ab.desc}. ${ab.gain} | ${RS.REL[c.relic].name}: ${RS.REL[c.relic].desc} | ${c.desc} | ${c.unlock ? c.unlock.text : '처음부터'} |`);
+}
 
 p('\n### 차원 방랑자 (2·3막 시작)\n');
 p('| 방랑자 | 막 | 선택지 풀 1 | 풀 2 | 풀 3 |');

@@ -245,10 +245,18 @@
     shrapnel: '파편 피해', freezeChance: '빙결 확률', diversity: '클래스당 피해', purity: '조건 충족 시 피해', eliteSquad: '조건 충족 시 피해',
     rich: '골드 100 이상일 때 피해', legendAura: '전설 1기당 피해', demonForm: '웨이브마다 쌓이는 피해', noxious: '초당 독안개 피해',
     poison: '독 피해', eliteKillHeal: ['엘리트 처치 시 회복', 'n'], karmaGold: ['저주당 골드(×막)', 'n'], sellPct: '판매 가격', summonCostPct: '소환 비용', upgradeCostPct: '강화 비용',
+    // 지휘관 고유 능력 (abMax·abStart 는 지휘관마다 자원 이름이 달라 아래에서 붙인다)
+    chargeHeal: ['강타를 끊으면 생명', 'n'], chargeTaunt: '도발한 적이 받는 피해', resolveDmg: '결의 1개당 피해',
+    stanceBurn: '화염 태세 화상', stanceSlow: '냉기 태세 둔화', stanceFreeze: '빙결 확률', stanceCd: ['원소 전환 대기', 's'],
+    stanceBoom: '원소 폭발 피해', stanceHaste: '전환 뒤 공격 속도', burnVuln: '화상 입은 적이 받는 피해',
+    starKill: ['별 +1 에 필요한 처치', 'per'], starSlow: '별똥별 둔화', starHoard: '별 5개 이상일 때 피해', starTwice: '두 번째 별똥별 피해',
+    starStack: '별똥별마다 쌓이는 피해',
   };
   const CLS_LABEL = { dmg: '피해', aspd: '공격 속도', range: ['사거리', 'n'], crit: '치명타 확률', splash: ['폭발 범위', 'n'], slow: '둔화' };
   function fmtMod(v, kind) {
     if (kind === 'n') return (v >= 0 ? '+' : '') + Math.round(v * 10) / 10;
+    if (kind === 's') return '-' + Math.round(v * 10) / 10 + '초';
+    if (kind === 'per') return Math.round(1 / v) + '마리';
     if (kind === 'x') return '+' + Math.round(v * 100) / 100 + '배';
     if (kind === 'neg') return '-' + Math.round(v * 1000 + 1e-6) / 10 + '%';
     const p = Math.round(v * 1000 + (v >= 0 ? 1e-6 : -1e-6)) / 10;
@@ -265,13 +273,17 @@
       const [name, kind] = Array.isArray(lab) ? lab : [lab, '%'];
       out.push({ label: name, from: fmtMod(a, kind), to: fmtMod(b, kind) });
     };
+    // 결의·별처럼 지휘관마다 이름이 다른 자원
+    const cmd = def.cmd && RS.COMMANDER[def.cmd];
+    const res = (cmd && RS.ABILITY[cmd.ability] && RS.ABILITY[cmd.ability].res) || '자원';
+    const labels = Object.assign({}, MOD_LABEL, { abMax: [res + ' 최대', 'n'], abStart: ['전투 시작 ' + res, 'n'] });
     for (const k in def.mods) {
       if (k === 'cls') {
         for (const c in def.mods.cls) for (const s in def.mods.cls[c]) if (CLS_LABEL[s]) {
           const lab = CLS_LABEL[s];
           add(Array.isArray(lab) ? [`${RS.CLASS[c].name} ${lab[0]}`, lab[1]] : `${RS.CLASS[c].name} ${lab}`, def.mods.cls[c][s], up.cls[c][s]);
         }
-      } else if (MOD_LABEL[k] && typeof def.mods[k] === 'number') add(MOD_LABEL[k], def.mods[k], up[k]);
+      } else if (labels[k] && typeof def.mods[k] === 'number') add(labels[k], def.mods[k], up[k]);
     }
     return out;
   };
@@ -322,7 +334,7 @@
     return h('button', { class: `card r${a.rarity}${selected ? ' sel' : ''}`, onclick },
       UI.icon(a.icon, 'cic', 4),
       h('div', { class: 'cbody' },
-        h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.aug[a.rarity]), h('b', null, a.name + (up ? '+' : '')), a.unique ? null : h('small', { class: 'stack' }, '중첩 가능')),
+        h('div', { class: 'ctop' }, h('span', { class: 'rar' }, RS.RARITY_NAME.aug[a.rarity]), h('b', null, a.name + (up ? '+' : '')), a.cmd ? h('small', { class: 'cmdtag' }, `${RS.COMMANDER[a.cmd].name} 전용`) : a.unique ? null : h('small', { class: 'stack' }, '중첩 가능')),
         h('p', null, a.desc),
         UI.synRow(a, ownedAug(a)),
         up ? UI.upgradeView(id, true) : null,
@@ -491,7 +503,7 @@
     const a = RS.augDef(id);
     const up = RS.isUpgraded(id);
     return h('div', { class: `lrow r${a.rarity}` }, UI.icon(a.icon, '', 3),
-      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), h('p', null, a.desc), UI.synRow(a, true), up ? UI.upgradeView(id, true) : null, a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
+      h('div', null, h('b', null, a.name + (up ? '+' : '') + (count > 1 ? ` ×${count}` : '')), a.cmd ? h('small', { class: 'cmdtag' }, `${RS.COMMANDER[a.cmd].name} 전용`) : null, h('p', null, a.desc), UI.synRow(a, true), up ? UI.upgradeView(id, true) : null, a.cost ? h('p', { class: 'cost' }, '대가 · ' + UI.curseText(a.cost)) : null));
   };
   UI.relicRow = function (id) {
     const r = RS.REL[id];

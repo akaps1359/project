@@ -119,6 +119,35 @@
     A('limitBreak', '곱절 단련', 2, 'fist', '강화할 때 레벨이 2씩 오른다', { upgradeDouble: 1, upgradeCostPct: 0.5 }, {
       unique: true, cost: '강화 비용 +50%',
     }),
+
+    // ── 지휘관 전용 (cmd): 그 지휘관으로 할 때만 나온다. 고유 능력을 키우는 '직업 카드' ──
+    // 브론 · 방패 돌진: 강타 끊기(되받아치기·철벽 방진) / 근접 전열(기사단 행진·도발) / 결의 쌓기(용맹의 서약)
+    A('steadfast', '굳건한 의지', 1, 'armor', '결의 최대 +2, 전투를 시작할 때 결의 +1', { abMax: 2, abStart: 1 }, { cmd: 'bron', unique: true }),
+    A('riposte', '되받아치기', 1, 'shield2', '방패 돌진으로 강타를 끊으면 생명 +2', { chargeHeal: 2 }, { cmd: 'bron', unique: true }),
+    A('chainCharge', '연속 돌격', 1, 'boots', '방패 돌진으로 강타를 끊으면 결의 1개를 돌려받는다', { chargeRefund: 1 }, { cmd: 'bron', unique: true }),
+    A('taunt', '도발', 2, 'mask', '방패 돌진에 맞거나 기절한 적은 8초 동안 받는 피해 +40%, 50% 둔화', { chargeTaunt: 0.4 }, { cmd: 'bron', unique: true }),
+    A('knightMarch', '기사단 행진', 2, 'c_knight', '전사·도적 피해 +40%, 전사 기절 확률 +5%p', { cls: { knight: { dmg: 0.4, stun: 0.05 }, rogue: { dmg: 0.4 } } }, { cmd: 'bron', unique: true }),
+    A('ironFormation', '철벽 방진', 2, 'crest', '결의가 3개 이상이면 적의 강타로 잃는 생명 -1', { resolveGuard: 1 }, { cmd: 'bron', unique: true }),
+    A('crusade', '성전', 3, 'sword', '방패 돌진 피해 ×2, 부딪힌 적 주변의 적에게도 같은 피해', { chargeAoe: 1 }, { cmd: 'bron', unique: true }),
+    A('valorOath', '용맹의 서약', 3, 'medal', '가진 결의 1개당 모든 유닛 피해 +6%', { resolveDmg: 0.06 }, { cmd: 'bron', unique: true }),
+    // 엘라 · 원소 전환: 화염(불꽃 심화·업화·꺼지지 않는 불) / 냉기(서리 심화·열충격) / 전환(마력 역류·원소 순환·원소 합일)
+    A('kindle', '불꽃 심화', 1, 'flame', '화염 태세의 화상 +10%p (초당 그 공격 피해의 25%)', { stanceBurn: 0.1 }, { cmd: 'ella', unique: true }),
+    A('deepFrost', '서리 심화', 1, 'snow', '냉기 태세의 둔화 +10%p, 4% 확률로 빙결 (보스 제외)', { stanceSlow: 0.1, stanceFreeze: 0.04 }, { cmd: 'ella', unique: true }),
+    A('manaSurge', '마력 역류', 1, 'bolt', '태세를 바꾸면 5초 동안 모든 유닛 공격 속도 +25%', { stanceHaste: 0.25 }, { cmd: 'ella', unique: true }),
+    A('elemCycle', '원소 순환', 2, 'rainbow', '원소 전환 대기 -4초, 원소 폭발 피해 +50%', { stanceCd: 4, stanceBoom: 0.5 }, { cmd: 'ella', unique: true }),
+    A('thermalShock', '열충격', 2, 'icecrack', '화염 → 냉기로 바꾸면 화상 입은 적이 1.5초 기절 (보스 제외). 냉기 → 화염으로 바꾸면 둔화된 적이 원소 폭발 피해 2배', { thermal: 1 }, { cmd: 'ella', unique: true }),
+    A('inferno', '업화', 2, 'flameE', '화상 입은 적이 받는 피해 +15%', { burnVuln: 0.15 }, { cmd: 'ella', unique: true }),
+    A('elemUnity', '원소 합일', 3, 'orb', '화염과 냉기 태세의 효과를 늘 함께 받는다', { unity: 1 }, { cmd: 'ella', unique: true }),
+    A('eternalFlame', '꺼지지 않는 불', 3, 'lantern', '화상이 8초 동안 이어지고, 화상 입은 적이 쓰러지면 가까운 적 2마리에게 옮겨 붙는다', { burnLong: 1 }, { cmd: 'ella', unique: true }),
+    // 아스트라 · 별똥별: 모으기(별자리) / 자주 쏘기(별 부스러기·은하의 축복·천체 관측) / 제압(별빛 서리·초신성)
+    A('stardust', '별 부스러기', 1, 'sparkle', '적 30마리를 처치할 때마다 별 +1', { starKill: 1 / 30 }, { cmd: 'astra', unique: true }),
+    A('starfrost', '별빛 서리', 1, 'snow', '별똥별이 맞힌 적을 4초 동안 40% 둔화 (보스는 절반)', { starSlow: 0.4 }, { cmd: 'astra', unique: true }),
+    A('starLoot', '별의 선물', 1, 'coins', '별똥별로 쓰러뜨린 적의 처치 골드 ×2', { starLoot: 1 }, { cmd: 'astra', unique: true }),
+    A('constellation', '별자리', 2, 'star', '별 최대 +3. 별이 5개 이상 모여 있는 동안 모든 유닛 피해 +25%', { abMax: 3, starHoard: 0.25 }, { cmd: 'astra', unique: true }),
+    A('meteorShower', '유성우', 2, 'bomb', '별똥별이 한 번 더 떨어진다 (두 번째는 피해 50%)', { starTwice: 0.5 }, { cmd: 'astra', unique: true }),
+    A('astronomy', '천체 관측', 2, 'lens', '별똥별을 쓸 때마다 이번 전투 동안 모든 유닛 피해 +10% (누적)', { starStack: 0.1 }, { cmd: 'astra', unique: true }),
+    A('supernova', '초신성', 3, 'burst', '별똥별이 보스에게도 온전한 피해를 주고, 맞은 적을 1초 기절시킨다 (보스는 0.5초 — 강타도 끊긴다)', { supernova: 1 }, { cmd: 'astra', unique: true }),
+    A('galaxy', '은하의 축복', 3, 'planet', '별똥별 비용 3 → 2', { abCostDown: 1 }, { cmd: 'astra', unique: true }),
   ];
 
   RS.ITEMS = [

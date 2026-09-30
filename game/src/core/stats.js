@@ -22,6 +22,11 @@
       // 시너지 연결 고리 (키워드 보상)
       shatter: 0, critHaste: 0, burnArrow: 0, dotAmp: 0, contagion: 0, lowLifeDmg: 0, curseDmg: 0, curseAspd: 0, karmaGold: 0, itemDmg: 0,
       strikeReduce: 0, counterStrike: 0, leech: 0, actHealCut: 0, restHealCut: 0,
+      // 지휘관 고유 능력 (전용 증강·시작 유물)
+      abMax: 0, abStart: 0, abCostDown: 0,
+      chargeHeal: 0, chargeTaunt: 0, chargeAoe: 0, chargeRefund: 0, resolveGuard: 0, resolveDmg: 0,
+      stanceBurn: 0, stanceSlow: 0, stanceFreeze: 0, stanceCd: 0, stanceBoom: 0, stanceHaste: 0, thermal: 0, unity: 0, burnVuln: 0, burnLong: 0,
+      starKill: 0, starSlow: 0, starHoard: 0, starTwice: 0, starLoot: 0, starStack: 0, supernova: 0,
     };
   };
 
@@ -50,9 +55,13 @@
     'firstStrike', 'shrapnel', 'freezeChance', 'diversity', 'purity', 'eliteSquad', 'rich', 'legendAura', 'demonForm',
     'noxious', 'poison', 'eliteKillHeal',
     'shatter', 'critHaste', 'burnArrow', 'dotAmp', 'lowLifeDmg', 'curseDmg', 'curseAspd', 'karmaGold', 'itemDmg', 'burn',
+    // 고유 능력 (켜고 끄는 값·비용 감소는 제외. 연속 돌격의 결의 환급은 2가 되면 강타를 끊는 돌진이 공짜라 제외)
+    'abMax', 'abStart', 'chargeHeal', 'chargeTaunt', 'resolveDmg',
+    'stanceBurn', 'stanceSlow', 'stanceFreeze', 'stanceCd', 'stanceBoom', 'stanceHaste', 'burnVuln',
+    'starKill', 'starSlow', 'starHoard', 'starTwice', 'starStack',
   ];
   // 정수여야 하는 수치 (생명·골드·사거리)
-  const INT_KEYS = { interestCap: true, interestBonus: true, rangeAdd: true, eliteKillHeal: true, karmaGold: true };
+  const INT_KEYS = { interestCap: true, interestBonus: true, rangeAdd: true, eliteKillHeal: true, karmaGold: true, abMax: true, abStart: true, chargeHeal: true };
   const GOOD_DOWN = ['summonCostPct', 'upgradeCostPct'];
   RS.upgradeScale = function (mods, f) {
     const out = {};
@@ -89,6 +98,9 @@
     }
     for (const id of run.relics) addInto(M, RS.REL[id].mods);
     for (const id of run.curses) addInto(M, RS.CURSE[id].mods);
+    // 지휘관 고유 능력 id (효과 수치는 아니지만, 능력 전용 수치를 읽는 쪽이 알 수 있게)
+    const cmd = RS.COMMANDER && RS.COMMANDER[run.commander];
+    M.ability = (cmd && cmd.ability) || null;
     return M;
   };
 
@@ -129,28 +141,32 @@
     aug: { name: '증강 수집', col: '#e0e0ff', desc: '증강 선택지·연마를 늘린다' },
     route: { name: '탐험', col: '#c9b28a', desc: '? 칸·보물·휴식처·상점에서 이득' },
     comp: { name: '클래스 조합', col: '#ffffff', desc: '보드의 클래스 구성에 따라 강해진다' },
+    ability: { name: '고유 능력', col: '#ffd98a', desc: '지휘관의 고유 능력을 키운다 (지휘관 전용 증강·시작 유물)' },
   };
   const AUTO = {
     crit: ['critChance', 'critMult', 'critHaste'],
-    control: ['freezeChance', 'shatter', 'counterStrike'],
-    slow: ['enemySpeedPct', 'shatter'],
-    dot: ['burn', 'burnArrow', 'poison', 'noxious', 'dotAmp', 'contagion'],
-    gold: ['killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus', 'combatGoldPct', 'rich', 'battleStartGold', 'winGold', 'ceramicFish', 'sellPct', 'skipGoldMul', 'freeFirstBuy', 'shopDiscount'],
-    life: ['berserk', 'lowLifeDmg', 'winHeal', 'eliteKillHeal', 'eliteKillMaxLife', 'restHealAdd', 'meatBone', 'pantograph', 'winMaxLife', 'battleStartLifeLoss', 'strikeReduce', 'counterStrike', 'leech'],
+    control: ['freezeChance', 'shatter', 'counterStrike', 'thermal', 'stanceFreeze', 'supernova'],
+    slow: ['enemySpeedPct', 'shatter', 'starSlow', 'chargeTaunt', 'stanceSlow'],
+    dot: ['burn', 'burnArrow', 'poison', 'noxious', 'dotAmp', 'contagion', 'stanceBurn', 'burnVuln', 'burnLong'],
+    gold: ['killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus', 'combatGoldPct', 'rich', 'battleStartGold', 'winGold', 'ceramicFish', 'sellPct', 'skipGoldMul', 'freeFirstBuy', 'shopDiscount', 'starLoot'],
+    life: ['berserk', 'lowLifeDmg', 'winHeal', 'eliteKillHeal', 'eliteKillMaxLife', 'restHealAdd', 'meatBone', 'pantograph', 'winMaxLife', 'battleStartLifeLoss', 'strikeReduce', 'counterStrike', 'leech', 'chargeHeal', 'resolveGuard'],
     curse: ['curseDmg', 'curseAspd', 'karmaGold'],
     item: ['itemSlots', 'itemPotency', 'itemDmg', 'itemDropBonus'],
-    elite: ['eliteDmgPct', 'eliteBattleDmg', 'bigBattleDmg', 'eliteHpPct', 'eliteKillMaxLife', 'eliteKillHeal', 'blackStar', 'eliteUpgrade', 'bossHpPct', 'strikeReduce', 'counterStrike', 'leech'],
+    elite: ['eliteDmgPct', 'eliteBattleDmg', 'bigBattleDmg', 'eliteHpPct', 'eliteKillMaxLife', 'eliteKillHeal', 'blackStar', 'eliteUpgrade', 'bossHpPct', 'strikeReduce', 'counterStrike', 'leech', 'resolveGuard'],
     merge: ['mergeDouble', 'mergeRefund', 'mergeMirror'],
-    summon: ['twinChance', 'cloverChance', 'waveFreeSummon', 'echoForm', 'sealSummon', 'startRare', 'souls'],
+    summon: ['twinChance', 'cloverChance', 'waveFreeSummon', 'echoForm', 'sealSummon', 'startRare'],
     high: ['legendAura', 'eliteSquad', 'epicChance'],
     low: ['noRare'],
-    wave: ['demonForm', 'pocketWatch', 'stars'],
+    wave: ['demonForm', 'pocketWatch', 'starHoard', 'starStack'],
     leak: ['leakShield', 'helix', 'thorns', 'powderKeg', 'leakReduce', 'firstWaveNoLeak'],
     pos: ['cornerDmg', 'innerDmg', 'innerRange'],
     upg: ['restTrainBonus', 'girya', 'upgradeDouble'],
     aug: ['augChoices', 'augRerolls', 'augUpChance', 'prayerWheel', 'singingBowl', 'dreamCatcher', 'ceramicFish', 'eliteUpgrade'],
     route: ['juzu', 'tinyChest', 'shovel', 'peacePipe', 'fixedRemoveCost', 'courier'],
     comp: ['diversity', 'purity'],
+    ability: ['abMax', 'abStart', 'abCostDown', 'chargeHeal', 'chargeTaunt', 'chargeAoe', 'chargeRefund', 'resolveGuard', 'resolveDmg',
+      'stanceBurn', 'stanceSlow', 'stanceFreeze', 'stanceCd', 'stanceBoom', 'stanceHaste', 'thermal', 'unity', 'burnVuln', 'burnLong',
+      'starKill', 'starSlow', 'starHoard', 'starTwice', 'starLoot', 'starStack', 'supernova'],
   };
   // 수치로 드러나지 않는 것 (즉시 효과·대가)
   const EXTRA = {
@@ -158,13 +174,14 @@
     strawberry: ['life'], mango: ['life'], loomingFruit: ['life'], bloodPactCup: ['life'], bloodCrown: ['life'], cursedCrown: ['life'],
     recruits: ['low', 'summon'], promotion: ['summon'], apotheosis: ['low'], pandoraBox: ['low'], luckySummon: ['high'], snakeEye: ['high'],
     callingBell: ['curse'], cursedKey: ['curse'], omamori: ['curse'], peacePipe: ['curse'], emptyCage: ['curse', 'life'],
-    potionBelt: ['item'], sacredBark: ['item'], alchemyPot: ['item'], sealedGourd: ['item', 'upg'],
+    potionBelt: ['item'], sacredBark: ['item'], sealedGourd: ['item', 'upg'],
     iceHeart: ['control'], ember: ['mage'], powderKeg: ['leak'], fusionHammer: ['merge', 'high'], gamble: ['merge', 'high'], luckyMerge: ['high'],
     twinStar: ['merge'], mirror: ['merge'], massProduction: ['summon'], discount: ['summon'], philStone: ['summon'], velvetChoker: ['summon'],
     goldRush: ['gold'], shrapnel: ['knight', 'archer', 'rogue'], mawBank: ['gold', 'route'], wingBoots: ['route'], matryoshka: ['route'],
     orrery: ['aug'], tinyHouse: ['aug', 'life'], forbiddenIndex: ['aug'], crystalBall: ['aug'], limitBreak: ['upg'],
     anvil: ['upg'], girya: ['upg'], corruption: ['upg'], smithDiscount: ['upg'], eliteSquad: ['high', 'comp'],
     shatter: ['frost', 'knight'], burnArrow: ['archer'], fireArrow: ['archer', 'dot'], bloodRush: ['rogue'],
+    knightMarch: ['ability'], ironCrest: ['knight'],
   };
   const tagCache = new WeakMap();
   RS.synTags = function (def) {
@@ -197,7 +214,9 @@
     return out;
   };
   // 지금 가진 증강·유물의 태그별 개수
-  RS.synCounts = function (run) {
+  // forPull(증강 선택지를 빌드 쪽으로 당길 때): 시작 유물은 세지 않고 지휘관의 고유 능력을 #고유 능력 1로 친다
+  // (시작 유물마다 붙은 태그 수가 달라 지휘관마다 전용 증강이 보이는 빈도가 달라지지 않게. 시작 유물을 바꿔도 같다)
+  RS.synCounts = function (run, forPull) {
     const c = {};
     const seen = {};
     const count = (def) => {
@@ -205,8 +224,12 @@
       seen[def.id] = 1;
       for (const t of RS.synTags(def)) c[t] = (c[t] || 0) + 1;
     };
+    if (forPull) {
+      const cmd = RS.COMMANDER && RS.COMMANDER[run.commander];
+      if (cmd && cmd.ability) c.ability = 1;
+    }
     for (const id of run.augments) count(RS.augDef(id));
-    for (const id of run.relics) count(RS.REL[id]);
+    for (const id of run.relics) if (!forPull || RS.REL[id].rarity !== 5) count(RS.REL[id]);
     return c;
   };
 

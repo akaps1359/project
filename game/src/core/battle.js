@@ -4,8 +4,6 @@
 
   const F = RS.FIELD;
   const MAX_NUMS = 40;
-  const STAR_MAX = 5; // 별의 왕홀: 전투가 끝나도 남는 별의 최대 개수
-  const STAR_COST = 3;
 
   function Battle(run, stage, opts) {
     opts = opts || {};
@@ -56,7 +54,7 @@
     this.boss = null;
     this.bossTimer = 0;
     this.enraged = false;
-    this.buffs = { rage: 0, watch: 0 };
+    this.buffs = { rage: 0, watch: 0, surge: 0 };
     this.demon = 0; // 악마의 형상 누적
     this.itemUses = 0; // 이번 전투에서 쓴 소모품 수 (약사의 반지)
     this.critHasteT = new Array(F.SIZE).fill(0); // 피의 흥분: 치명타를 낸 칸이 잠깐 빨라진다
@@ -67,14 +65,6 @@
     this.attackCount = 0; // 펜촉
     this.helixUsed = false;
     this.leakShield = M.leakShield || 0; // 되감기 모래
-    // 별의 왕홀: 별은 run.relicState.starScepter 에 쌓여 다음 전투로 이어진다 (최대 STAR_MAX)
-    this.starMax = M.stars ? STAR_MAX : 0;
-    this.starCost = STAR_COST;
-    this.stars = 0;
-    if (M.stars) {
-      const st = run.relicState.starScepter || (run.relicState.starScepter = { n: 0 });
-      this.stars = Math.max(0, Math.min(this.starMax, Math.floor(st.n) || 0));
-    }
     // 벨벳 초커·메아리 형상: 준비 시간은 첫 웨이브와 같은 웨이브로 친다
     this.waveSummons = 0;
     this.echoLeft = M.echoForm || 0; // 메아리 형상: 전투마다 남은 메아리 수
@@ -82,7 +72,9 @@
     this.rollCost();
     const clsDmg = {};
     for (const c of RS.CLASSES) clsDmg[c] = 0;
-    this.stats = { kills: 0, dmg: 0, leaks: 0, struck: 0, escaped: 0, staggers: 0, pressure: 0, clsDmg, goldEarned: 0, lifeStart: run.life };
+    this.stats = { kills: 0, dmg: 0, leaks: 0, struck: 0, escaped: 0, staggers: 0, pressure: 0, clsDmg, goldEarned: 0, lifeStart: run.life, abil: 0 };
+    // 지휘관 고유 능력 (자원·대기 시간)
+    this.initAbility();
     this.pressure = 0; // 균열 게이지 (0~1)
     this.pressureW = 0;
     RS.migrateBoard(run, M); // 이전 버전 저장의 유닛에 들인 골드(v)를 매긴다
@@ -122,6 +114,8 @@
     }
     if (this.buffs.rage > 0) this.buffs.rage -= dt;
     if (this.buffs.watch > 0) this.buffs.watch -= dt;
+    if (this.buffs.surge > 0) this.buffs.surge -= dt;
+    if (this.ab && this.ab.cd > 0) this.ab.cd -= dt;
     if (this.ghostT > 0) this.ghostT -= dt;
     if (this.dynT <= 0) {
       this.dynT = 0.25;
@@ -227,7 +221,7 @@
     // 황금 인장: 소환이 된 때만 골드를 낸다
     if (M.sealSummon && run.gold >= M.sealSummon && this.freeSummon(0, M.sealSummon, true) >= 0) RS.addGold(run, -M.sealSummon);
     if (M.debt) RS.addGold(run, -M.debt);
-    if (M.stars) this.setStars(this.stars + 1);
+    this.abilityOnWave();
     this.emit({ k: 'wave', n: k + 1, total: this.stage.waves.length, gold: Math.round(wg), interest });
   };
 
@@ -341,6 +335,11 @@
       if (e.hasteT > 0) {
         e.hasteT -= dt;
         if (e.hasteT <= 0) e.hasteP = 0;
+      }
+      // 도발: 받는 피해 증가
+      if (e.vulnT > 0) {
+        e.vulnT -= dt;
+        if (e.vulnT <= 0) e.vuln = 0;
       }
       if (e.capT !== undefined && e.def.dpsCap) {
         e.capT += dt;
@@ -929,6 +928,8 @@
     let dmg = (pre && pre.dmg != null ? pre.dmg : b.strikeDmg(e, s)) * M.leakMult;
     if (e.boss && b.enraged) dmg *= 2;
     if (M.strikeReduce) dmg = Math.max(0, dmg - M.strikeReduce);
+    // 철벽 방진: 결의가 3개 이상이면 강타 피해 감소
+    if (M.resolveGuard && b.ab && b.ab.id === 'charge' && b.ab.n >= 3) dmg = Math.max(0, dmg - M.resolveGuard);
     if (M.leakReduce) dmg = Math.max(dmg > 0 ? 1 : 0, dmg - M.leakReduce);
     return Math.max(0, dmg);
   };
@@ -953,6 +954,7 @@
     e.cast = null;
     e.stunT = Math.max(e.stunT, e.boss ? 0.8 : 1.2);
     this.stats.staggers++;
+    if (why !== 'charge') this.abilityOnStagger();
     const M = this.M;
     // 반격: 끊을 때마다 생명 +1, 그 적에게 최대 체력의 5% 피해
     if (M.counterStrike) {
@@ -1020,6 +1022,14 @@
     if (this.kind === 'boss') dmg += M.bigBattleDmg || 0;
     if (this.buffs.rage > 0) aspd += 0.6;
     if (this.buffs.watch > 0) aspd += 0.6;
+    // 고유 능력: 마력 역류 · 용맹의 서약(결의) · 별자리(별 5개 이상) · 천체 관측(이번 전투 별똥별 수)
+    if (this.buffs.surge > 0) aspd += M.stanceHaste;
+    const ab = this.ab;
+    if (ab && ab.id === 'charge' && M.resolveDmg) dmg += M.resolveDmg * ab.n;
+    if (ab && ab.id === 'star') {
+      if (M.starHoard && ab.n >= 5) dmg += M.starHoard;
+      if (M.starStack) dmg += M.starStack * ab.uses;
+    }
     if (dmg !== this.dyn.dmgPct || aspd !== this.dyn.aspdPct) {
       this.dyn.dmgPct = dmg;
       this.dyn.aspdPct = aspd;
@@ -1203,6 +1213,15 @@
         this.damage(e, dmg, cls, crit);
         if (cls === 'archer' && M.burnArrow && !e.dead) this.applyBurn(e, dmg * M.burnArrow);
     }
+    // 원소 전환: 화염 태세는 화상, 냉기 태세는 둔화 (원소 합일은 둘 다)
+    const ab = this.ab;
+    if (ab && ab.id === 'stance' && !e.dead) {
+      if (ab.stance === 'fire' || M.unity) this.applyBurn(e, dmg * (ab.def.burn + M.stanceBurn));
+      if (ab.stance === 'ice' || M.unity) {
+        this.applySlow(e, ab.def.slow + M.stanceSlow, 1.2);
+        if (M.stanceFreeze && !e.boss && rng.next() < M.stanceFreeze) e.stunT = Math.max(e.stunT, 0.6);
+      }
+    }
     if (st.runeSlow && !e.dead) this.applySlow(e, st.runeSlow, 1);
     if (M.shrapnel && cls !== 'mage' && cls !== 'frost') this.splash(ex, ey, 8, dmg * M.shrapnel, cls, e, false);
     if (M.freezeChance && !e.boss && rng.next() < M.freezeChance) e.stunT = Math.max(e.stunT, 0.8);
@@ -1315,7 +1334,7 @@
   // 화상: 초당 b 피해를 3초 동안 (더 센 화상이 덮어쓴다)
   P.applyBurn = function (e, b) {
     if (b > e.burn || e.burnT <= 0) e.burn = b;
-    e.burnT = 3;
+    e.burnT = this.M.burnLong ? 8 : 3; // 꺼지지 않는 불
   };
   P.splash = function (x, y, r, dmg, cls, exclude, crit) {
     const r2 = r * r;
@@ -1347,6 +1366,8 @@
       }
     }
     if ((e.elite || e.boss) && M.eliteDmgPct) dm *= 1 + M.eliteDmgPct;
+    if (e.vulnT > 0 && e.vuln) dm *= 1 + e.vuln;
+    if (M.burnVuln && e.burnT > 0) dm *= 1 + M.burnVuln; // 업화
     // 얼음 깨기: 기절·빙결된 적은 크게, 둔화된 적은 조금 더 아프다
     if (M.shatter) {
       if (e.stunT > 0) dm *= 1 + M.shatter;
@@ -1408,6 +1429,7 @@
     }
     this.stats.dmg += dealt;
     if (cls) this.stats.clsDmg[cls] += dealt;
+
     if (!isDot) e.flash = 0.08;
     if (this.fxOn && !isDot && this.numCount < MAX_NUMS && dm > 0) {
       this.numCount++;
@@ -1467,21 +1489,12 @@
       }
     }
     let g = def.gold * RS.BAL.killGoldMul[Math.min(3, run.act)] * (1 + M.killGoldPct);
+    if (M.starLoot && this.starFalling) g *= 2; // 별의 선물
     if (e.runeGold) g += e.runeGold; // 황금 룬 골드는 처치 골드 배율(유령 젤리 등)을 받지 않는다
     RS.addGold(run, g);
     this.stats.goldEarned += g;
     this.stats.kills++;
-    if (M.souls) {
-      run.souls = Math.min(M.souls, (run.souls || 0) + 1);
-      if (run.souls >= M.souls) {
-        const tier = 0;
-        // 자리가 없으면 영혼을 모아 둔 채로 다음 처치 때 다시 일으킨다
-        if (this.freeSummon(tier, undefined, true) >= 0) {
-          run.souls = 0;
-          this.emit({ k: 'msg', text: `영혼이 모여 ${RS.TIER[tier].name} 유닛이 일어났다!` });
-        }
-      }
-    }
+    this.abilityOnKill(e);
     if (e.elite || e.boss) {
       if (M.eliteKillHeal) RS.heal(run, M.eliteKillHeal);
       if (M.eliteKillMaxLife) {
@@ -1505,6 +1518,18 @@
         if (++spread >= 3) break;
       }
       if (spread) this.emit({ k: 'plague', x: e.x, y: e.y });
+    }
+    // 꺼지지 않는 불: 화상 입은 채 쓰러지면 가까운 적 2마리에게 옮겨 붙는다
+    if (M.burnLong && e.burnT > 0 && e.burn > 0) {
+      const near = [];
+      for (const o of this.enemies) {
+        if (o.dead || o === e || o.subT > 0) continue;
+        const d2 = (o.x - e.x) * (o.x - e.x) + (o.y - e.y) * (o.y - e.y);
+        if (d2 <= 28 * 28) near.push({ o, d2 });
+      }
+      near.sort((a, b) => a.d2 - b.d2);
+      for (let k = 0; k < Math.min(2, near.length); k++) this.applyBurn(near[k].o, e.burn);
+      if (near.length) this.emit({ k: 'plague', x: e.x, y: e.y });
     }
     if (def.split) {
       for (let j = 0; j < def.split.n; j++) this.queueSpawn(def.split.type, e.L, e.d - 4 * j, e.nextLap, def.split.hp, e.wave);
@@ -1740,23 +1765,215 @@
     return { id };
   };
 
-  // 별의 섭정: 웨이브마다 별 +1 (전투가 끝나도 남고 최대 starMax). 별 3개로 별똥별 (모든 적에게 큰 피해)
-  P.setStars = function (n) {
-    this.stars = Math.max(0, Math.min(this.starMax, n));
-    const st = this.run.relicState.starScepter;
-    if (st) st.n = this.stars;
+  // ── 지휘관 고유 능력 ──
+  // 브론 결의·아스트라 별은 모아서 버튼으로 쓰고, 엘라 원소 전환은 대기 시간이 있다.
+  // persist 인 자원(별)은 run.abil.n 에 남아 다음 전투로 이어진다
+  const lapProg = (e) => 1 - (e.nextLap - e.d) / F.PERIM;
+  // 엘리트·보스 (허수아비 시험의 허수아비도: 최대 체력 비율 피해로 시험을 공짜로 깎지 않게)
+  const isBig = (e) => e.elite || e.boss || e.def === RS.ENEMY.dummy;
+  P.initAbility = function () {
+    const run = this.run;
+    const M = this.M;
+    const cmd = RS.COMMANDER[run.commander];
+    const def = cmd && RS.ABILITY[cmd.ability];
+    this.ab = null;
+    if (!def) return;
+    const ab = { id: cmd.ability, def, n: 0, max: 0, cost: 0, cd: 0, uses: 0, stance: 'fire' };
+    if (def.max) {
+      ab.max = def.max + M.abMax;
+      ab.cost = Math.max(1, def.cost - M.abCostDown);
+      if (def.persist) {
+        if (!run.abil) run.abil = { n: 0 };
+        ab.n = Math.min(ab.max, Math.max(0, Math.floor(run.abil.n) || 0));
+      }
+      ab.n = Math.min(ab.max, ab.n + (def.start || 0) + M.abStart);
+    }
+    this.ab = ab;
+    this.syncAbil();
   };
-  P.canStarfall = function () {
-    return !!this.M.stars && this.stars >= this.starCost && this.status === 'running' && this.prep <= 0 && this.enemies.some((e) => !e.dead);
+  P.syncAbil = function () {
+    const ab = this.ab;
+    if (ab && ab.def.persist) this.run.abil.n = ab.n;
   };
-  P.starfall = function () {
-    if (!this.canStarfall()) return false;
-    this.setStars(this.stars - this.starCost);
-    const dmg = RS.levelHp(this.curL) * 1.5;
-    for (const e of this.enemies) if (!e.dead) this.damage(e, e.boss ? dmg * 0.35 : dmg, null, false, true);
+  P.abGain = function (v) {
+    const ab = this.ab;
+    if (!ab || !ab.max || !(v > 0)) return;
+    const before = ab.n;
+    ab.n = Math.min(ab.max, ab.n + v);
+    this.syncAbil();
+    // 결의·별 수에 따라 강해지는 효과(용맹의 서약·별자리)는 바로 다시 계산한다
+    if (ab.n !== before) this.dynT = 0;
+  };
+  P.abilityOnWave = function () {
+    const ab = this.ab;
+    if (ab && (ab.id === 'star' || ab.id === 'charge')) this.abGain(1);
+  };
+  // 별 부스러기: 적 N마리마다 별 +1. 별처럼 처치 수도 전투를 넘어 이어진다 (정수로 세서 30번째 처치에 정확히 준다)
+  P.abilityOnKill = function () {
+    const ab = this.ab;
+    if (!ab || ab.id !== 'star' || !this.M.starKill) return;
+    const per = Math.max(1, Math.round(1 / this.M.starKill));
+    const st = this.run.abil;
+    st.kills = (st.kills || 0) + 1;
+    if (st.kills >= per) {
+      st.kills -= per;
+      this.abGain(1);
+    }
+  };
+  // 강타를 끊으면 결의 +1 (방패 돌진이 들이받은 적의 강타는 빼고. 돌진의 기절로 옆의 적 강타가 끊기는 것은 센다)
+  P.abilityOnStagger = function () {
+    if (this.ab && this.ab.id === 'charge' && !this.abBusy) this.abGain(1);
+  };
+  P.canUseAbility = function () {
+    const ab = this.ab;
+    if (!ab || this.status !== 'running') return false;
+    // 원소 전환은 준비 시간에도 태세만 미리 바꿀 수 있다
+    if (ab.id === 'stance') return ab.cd <= 0;
+    if (this.prep > 0 || !this.enemies.some((e) => !e.dead && !(e.subT > 0))) return false;
+    return ab.n >= ab.cost;
+  };
+  // 지금 쓸 수 없는 이유 (화면 안내용). 쓸 수 있으면 null
+  P.abilityBlock = function () {
+    const ab = this.ab;
+    if (!ab) return '고유 능력이 없다';
+    if (this.canUseAbility()) return null;
+    if (ab.id === 'stance') return `${Math.ceil(ab.cd)}초 뒤에 다시 바꿀 수 있어요`;
+    if (ab.n < ab.cost) return `${ab.def.res}이(가) ${ab.cost}개 모여야 해요 (${ab.def.gain})`;
+    return '적이 있을 때 쓸 수 있어요';
+  };
+  // 방패 돌진 대상: 강타 준비 중 → 엘리트·보스 → 한 바퀴를 가장 많이 돈 적
+  P.chargeTarget = function () {
+    let best = null;
+    let bs = -Infinity;
+    for (const e of this.enemies) {
+      if (e.dead || e.subT > 0) continue;
+      const sc = (e.cast && e.cast.s.k === 'strike' ? 10 : 0) + (isBig(e) ? 5 : 0) + lapProg(e);
+      if (sc > bs) {
+        bs = sc;
+        best = e;
+      }
+    }
+    return best;
+  };
+  P.useAbility = function () {
+    if (!this.canUseAbility()) return false;
+    const ab = this.ab;
+    const n0 = ab.n;
+    // 비용을 먼저 낸다 (자원이 가득 찬 채로 써도 쓰는 동안 돌려받은 것이 최대치에 잘리지 않게: 연속 돌격)
+    if (ab.max) ab.n = n0 - ab.cost;
+    let ok = true;
+    if (ab.id === 'charge') ok = this.abCharge();
+    else if (ab.id === 'stance') this.abStance();
+    else if (ab.id === 'star') this.abStar();
+    if (!ok) {
+      ab.n = n0;
+      this.syncAbil();
+      return false;
+    }
+    ab.uses++;
+    this.stats.abil++;
+    this.syncAbil();
     this.reap();
-    this.emit({ k: 'bomb' });
+    this.dynT = 0;
     return true;
+  };
+
+  // 브론: 들이받아 강타를 끊고 큰 피해, 주변 적 기절
+  P.abCharge = function () {
+    const e = this.chargeTarget();
+    if (!e) return false;
+    const M = this.M;
+    const A = RS.ABILITY.charge;
+    const L = RS.levelHp(this.curL);
+    const mul = M.chargeAoe ? 2 : 1;
+    this.abBusy = true;
+    // 도발: 맞거나 기절한 적은 8초 동안 받는 피해가 늘고 느려진다
+    const taunt = (o) => {
+      if (!M.chargeTaunt || o.dead) return;
+      this.applySlow(o, 0.5, 8);
+      o.vuln = Math.max(o.vuln || 0, M.chargeTaunt);
+      o.vulnT = Math.max(o.vulnT || 0, 8);
+    };
+    const hit = (o) => {
+      this.damage(o, (isBig(o) ? o.maxHp * A.bigPct + L * A.bigFlat : L * A.hit) * mul, null, true, false);
+      taunt(o);
+    };
+    const casting = !!(e.cast && e.cast.s.k === 'strike');
+    hit(e);
+    if (casting && !e.dead && e.cast) this.staggerStrike(e, 'charge');
+    for (const o of this.enemies) {
+      if (o === e || o.dead || o.subT > 0) continue;
+      const dx = o.x - e.x;
+      const dy = o.y - e.y;
+      const d2 = dx * dx + dy * dy;
+      if (M.chargeAoe && d2 <= 30 * 30) hit(o);
+      if (!o.dead && !o.boss && d2 <= 20 * 20) {
+        o.stunT = Math.max(o.stunT, 1);
+        taunt(o);
+      }
+    }
+    this.abBusy = false;
+    // 되받아치기: 띄우는 숫자는 화면의 생명(올림)이 실제로 오른 만큼 (가득 찼거나 회복 불가 저주면 0)
+    let healed = 0;
+    if (casting && M.chargeHeal) {
+      const before = this.run.life;
+      RS.heal(this.run, M.chargeHeal);
+      healed = Math.max(0, Math.ceil(this.run.life) - Math.ceil(before));
+    }
+    if (casting && M.chargeRefund) this.abGain(M.chargeRefund); // 연속 돌격: 강타를 끊으면 결의를 돌려받는다
+    this.emit({ k: 'abil', id: 'charge', x: e.x, y: e.y, broke: casting, heal: healed });
+    return true;
+  };
+  // 엘라: 태세를 바꾸고 원소 폭발
+  P.abStance = function () {
+    const ab = this.ab;
+    const M = this.M;
+    const to = ab.stance === 'fire' ? 'ice' : 'fire';
+    ab.stance = to;
+    ab.cd = Math.max(3, RS.ABILITY.stance.cd - M.stanceCd);
+    if (M.stanceHaste) this.buffs.surge = 5; // 마력 역류
+    const A = RS.ABILITY.stance;
+    const amp = 1 + M.stanceBoom;
+    let hit = 0;
+    if (this.prep <= 0) {
+      for (const e of this.enemies) {
+        if (e.dead || e.subT > 0) continue;
+        // 원소 폭발: 모든 적의 최대 체력 비율 (엘리트·보스는 조금만)
+        let d = e.maxHp * (isBig(e) ? A.bigBoom : A.boom) * amp;
+        if (M.thermal && to === 'fire' && e.slow > 0) d *= 2; // 열충격: 냉기 → 화염
+        if (M.thermal && to === 'ice' && e.burnT > 0 && !e.boss) e.stunT = Math.max(e.stunT, 1.5); // 화염 → 냉기
+        this.damage(e, d, null, false, true);
+        hit++;
+      }
+    }
+    this.emit({ k: 'abil', id: 'stance', stance: to, hit });
+  };
+  // 아스트라: 별똥별 — 모든 적에게 큰 피해 (보스는 35%)
+  P.abStar = function () {
+    const M = this.M;
+    const A = RS.ABILITY.star;
+    const L = RS.levelHp(this.curL);
+    const fall = (mul) => {
+      const dmg = L * A.dmg * mul;
+      for (const e of this.enemies) {
+        if (e.dead || e.subT > 0) continue;
+        this.damage(e, e.boss && !M.supernova ? dmg * A.bossMul : dmg, null, false, true);
+        if (e.dead) continue;
+        if (M.starSlow) this.applySlow(e, M.starSlow, 4);
+        if (M.supernova) e.stunT = Math.max(e.stunT, e.boss ? 0.5 : 1);
+      }
+    };
+    // 별의 선물: 별똥별로 쓰러진 적의 처치 골드 ×2 (처치 정리까지 표시해 둔다)
+    this.starFalling = true;
+    fall(1);
+    this.reap();
+    if (M.starTwice) {
+      fall(M.starTwice);
+      this.reap();
+    }
+    this.starFalling = false;
+    this.emit({ k: 'bomb' });
+    this.emit({ k: 'abil', id: 'star' });
   };
 
   // 허수아비 시험처럼 제한 시간이 있는 전투의 남은 시간(초). 제한이 없으면 null

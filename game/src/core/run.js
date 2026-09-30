@@ -116,10 +116,12 @@
   };
 
   // 지휘관에 따라 잘 나오는 클래스가 다르다
+  // 모든 지휘관이 다섯 클래스를 고르게 부른다 (지휘관의 개성은 고유 능력과 전용 증강에서)
   RS.pickClass = function (run, rng) {
-    const w = RS.COMMANDER[run.commander].weights;
-    return rng.weighted(RS.CLASSES, (c) => w[c]);
+    return rng.pick(RS.CLASSES);
   };
+  // 이 모험에서 나올 수 있는 증강인가 (지휘관 전용 증강은 그 지휘관만)
+  RS.augAllowed = (run, a) => !a.cmd || a.cmd === run.commander;
   // 보드에 자리가 없으면 판매 가격만큼 골드로 돌려준다. { placed, gold } 를 돌려준다
   // worth: 이 유닛에 들인 골드 (상점 용병). 생략하면 무료 유닛
   RS.grantUnits = function (run, tier, n, worth) {
@@ -189,7 +191,7 @@
     const old = RS.augDef(run.augments[idx]);
     const owned = {};
     for (const id of run.augments) owned[RS.augDef(id).id] = true;
-    return RS.AUGMENTS.filter((a) => a.rarity === old.rarity && a.id !== old.id && !(a.unique && owned[a.id]) && !a.onPick);
+    return RS.AUGMENTS.filter((a) => a.rarity === old.rarity && a.id !== old.id && !(a.unique && owned[a.id]) && !a.onPick && RS.augAllowed(run, a));
   }
   // 즉시 효과 증강(onPick)은 바꿀 수 없다
   RS.canTransformAug = function (run, idx) {
@@ -227,7 +229,7 @@
       v: 2, seed, rngS: seed | 0, commander: cmd.id, asc,
       act: 1, floor: 0, lane: -1, nodeType: null, map: null,
       life: BAL.startLife, maxLife: BAL.startLife, gold: BAL.startGold,
-      board: RS.newBoard(), runes: RS.newBoard(), classLv, permDmg: 0, injury: 0,
+      board: RS.newBoard(), runes: RS.newBoard(), classLv, permDmg: 0, injury: 0, abil: { n: 0 },
       augments: [], relics: [], curses: [], items: [], relicState: {},
       keys: { ruby: false, emerald: false, sapphire: false },
       queue: [], afterQueue: null,
@@ -319,6 +321,14 @@
     RS.attachRng(run);
     RS.registerCustomAugs(run);
     run.injury = run.injury || 0;
+    // 빠진 지휘관(레온·벨·카이·미라)으로 저장된 모험은 가까운 지휘관으로 이어 간다
+    if (!RS.COMMANDER[run.commander]) run.commander = (RS.COMMANDER_ALIAS && RS.COMMANDER_ALIAS[run.commander]) || RS.COMMANDERS[0].id;
+    // 고유 능력 자원 (예전 저장본: 별의 왕홀이 모아 둔 별을 옮긴다)
+    if (!run.abil) run.abil = { n: 0 };
+    if (run.relicState && run.relicState.starScepter) {
+      if (run.commander === 'astra') run.abil.n = Math.max(run.abil.n || 0, Math.floor(run.relicState.starScepter.n) || 0);
+      delete run.relicState.starScepter;
+    }
     // 게임에서 빠진 유물·증강·저주(예: 고대 두루마리)는 조용히 뺀다
     if (Array.isArray(run.relics)) run.relics = run.relics.filter((id) => RS.REL[id]);
     if (Array.isArray(run.augments)) run.augments = run.augments.filter((id) => RS.augDef(id));
@@ -590,12 +600,14 @@
     for (const id of run.augments) owned[RS.augDef(id).id] = true;
     const taken = {};
     if (exclude) for (const id of exclude) taken[id] = true;
-    const avail = RS.AUGMENTS.filter((a) => !(a.unique && owned[a.id]));
+    const avail = RS.AUGMENTS.filter((a) => !(a.unique && owned[a.id]) && RS.augAllowed(run, a));
+    // 지휘관 전용 증강: 첫 장은 25% 확률로 전용 증강에서 (그 등급이 남아 있으면)
+    const cmdPull = n >= 2 && rng.chance(0.25);
     // 빌드 쪽으로 당기기: 태그가 있는 증강·유물을 가졌으면, 마지막 한 장은 50% 확률로
     // 가장 많이 가진 태그 두 개 중 하나와 겹치는 증강에서 뽑는다 (등급 확률은 그대로, 없으면 평소대로)
     let pull = null;
     if (n >= 2) {
-      const cnt = RS.synCounts(run);
+      const cnt = RS.synCounts(run, true);
       const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 2);
       if (top.length && rng.chance(0.5)) pull = top;
     }
@@ -609,7 +621,8 @@
         else if (rar === 1) run.prismPity = Math.min(0.4, run.prismPity + 0.01);
       }
       let pool = [];
-      if (pull && k === n - 1) pool = avail.filter((a) => a.rarity === rar && !taken[a.id] && RS.synTags(a).some((t) => pull.indexOf(t) >= 0));
+      if (cmdPull && k === 0) pool = avail.filter((a) => a.cmd && a.rarity === rar && !taken[a.id]);
+      if (!pool.length && pull && k === n - 1) pool = avail.filter((a) => a.rarity === rar && !taken[a.id] && RS.synTags(a).some((t) => pull.indexOf(t) >= 0));
       if (!pool.length) pool = avail.filter((a) => a.rarity === rar && !taken[a.id]);
       if (!pool.length) pool = avail.filter((a) => !taken[a.id]);
       if (!pool.length) break;

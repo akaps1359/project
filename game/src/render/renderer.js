@@ -561,6 +561,30 @@
           this.fxs.push({ k: 'flash', t: 0.3, max: 0.3, col: '#ffe46b' });
           this.shake = 0.35;
           break;
+        case 'abil': {
+          // 지휘관 고유 능력 (별똥별은 'bomb' 이 그린다)
+          const cx = (F.L + F.R) / 2;
+          const cy = (F.T + F.B) / 2;
+          if (ev.id === 'charge') {
+            // 방패 돌진: 보드 가운데에서 대상까지 금빛 궤적 + 충격 고리
+            for (let j = 0; j <= 8; j++) {
+              const q = j / 8;
+              this.emit(cx + (ev.x - cx) * q, cy + (ev.y - 6 - cy) * q, 1, { sp: [2, 8], life: [0.2, 0.35], cols: ['#ffd98a', '#ffffff'], glow: 2 });
+            }
+            this.fxs.push({ k: 'ring', x: ev.x, y: ev.y - 6, r: 22, t: 0.35, max: 0.35, col: '#ffd98a', glow: true });
+            this.fxs.push({ k: 'star', x: ev.x, y: ev.y - 8, t: 0.4, max: 0.4, col: '#ffffff' });
+            this.emit(ev.x, ev.y - 6, 12, { sp: [25, 60], life: [0.25, 0.45], cols: ['#ffd98a', '#dfe4ea', '#ffffff'], drag: 2, glow: 2 });
+            this.shake = Math.max(this.shake, 0.25);
+          } else if (ev.id === 'stance') {
+            // 원소 전환: 화염은 주황, 냉기는 하늘색 파동
+            const col = ev.stance === 'fire' ? '#ff9a3d' : '#a8ecff';
+            this.fxs.push({ k: 'flash', t: 0.25, max: 0.25, col });
+            this.fxs.push({ k: 'ring', x: cx, y: cy, r: 70, t: 0.5, max: 0.5, col, glow: true });
+            this.fxs.push({ k: 'ring', x: cx, y: cy, r: 40, t: 0.4, max: 0.4, col: '#ffffff' });
+            if (ev.hit) this.shake = Math.max(this.shake, 0.15);
+          }
+          break;
+        }
         case 'freezeAll':
           this.fxs.push({ k: 'flash', t: 0.3, max: 0.3, col: '#a8ecff' });
           break;
