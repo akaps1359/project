@@ -131,7 +131,7 @@
     A('crusade', '성전', 3, 'sword', '방패 돌진 피해 ×2, 부딪힌 적 주변의 적에게도 같은 피해', { chargeAoe: 1 }, { cmd: 'bron', unique: true }),
     A('valorOath', '용맹의 서약', 3, 'medal', '가진 결의 1개당 모든 유닛 피해 +6%', { resolveDmg: 0.06 }, { cmd: 'bron', unique: true }),
     // 엘라 · 원소 전환: 화염(불꽃 심화·업화·꺼지지 않는 불) / 냉기(서리 심화·열충격) / 전환(마력 역류·원소 순환·원소 합일)
-    A('kindle', '불꽃 심화', 1, 'flame', '화염 태세의 화상 +10%p (초당 그 공격 피해의 25%)', { stanceBurn: 0.1 }, { cmd: 'ella', unique: true }),
+    A('kindle', '불꽃 심화', 1, 'flame', '화염 태세의 화상 +10%p (초당 그 공격 피해의 40%)', { stanceBurn: 0.1 }, { cmd: 'ella', unique: true }),
     A('deepFrost', '서리 심화', 1, 'snow', '냉기 태세의 둔화 +10%p, 4% 확률로 빙결 (보스 제외)', { stanceSlow: 0.1, stanceFreeze: 0.04 }, { cmd: 'ella', unique: true }),
     A('manaSurge', '마력 역류', 1, 'bolt', '태세를 바꾸면 5초 동안 모든 유닛 공격 속도 +25%', { stanceHaste: 0.25 }, { cmd: 'ella', unique: true }),
     A('elemCycle', '원소 순환', 2, 'rainbow', '원소 전환 대기 -4초, 원소 폭발 피해 +50%', { stanceCd: 4, stanceBoom: 0.5 }, { cmd: 'ella', unique: true }),
@@ -170,7 +170,7 @@
     { id: 'regret', name: '불면', icon: 'curse', desc: '전투를 시작할 때 생명 -1', mods: { battleStartLifeLoss: 1 } },
     { id: 'doubt', name: '현기증', icon: 'curse', desc: '첫 웨이브 동안 무작위 칸 2곳이 기절한다', mods: { doubt: 2 } },
     { id: 'parasite', name: '곰팡이 포자', icon: 'curse', desc: '최대 생명 -3 (얻을 때 적용)', mods: {}, onGain(run) { RS.changeMaxLife(run, -3); } },
-    { id: 'ascBurden', name: '심연의 짐', icon: 'curse', desc: '모든 유닛 피해 -7%. 없앨 수 없다', mods: { dmgPct: -0.07 }, permanent: true },
+    { id: 'ascBurden', name: '심연의 짐', icon: 'curse', desc: '모든 유닛 피해 -10%. 없앨 수 없다', mods: { dmgPct: -0.1 }, permanent: true },
     { id: 'guilt', name: '찜찜함', icon: 'curse', desc: '전투를 시작할 때 생명 -1. 전투 5번 뒤 저절로 사라진다', mods: { battleStartLifeLoss: 1 }, fades: 5 },
     { id: 'debt', name: '빚', icon: 'curse', desc: '웨이브가 시작될 때마다 골드 -5', mods: { debt: 5 } },
     { id: 'bloomMark', name: '시든 꽃의 낙인', icon: 'curse', desc: '생명을 회복할 수 없다. 휴식해도 상처가 낫지 않는다. 없앨 수 없다', mods: {}, permanent: true },

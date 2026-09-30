@@ -99,7 +99,7 @@ function useAbilityBot(RS, b, danger) {
     case 'charge': {
       // 엘리트·보스가 없으면(강타 걱정 없음) 곧 빠져나갈 적을 들이받아 누수를 막는다
       let leak = false;
-      if (process.env.RS_BOT_CHARGE_LEAK === '1' && !b.enemies.some((e) => !e.dead && (e.elite || e.boss))) {
+      if (!b.enemies.some((e) => !e.dead && (e.elite || e.boss))) {
         for (const e of b.enemies) {
           if (!e.dead && !(e.subT > 0) && e.nextLap - e.d < RS.FIELD.PERIM * 0.12) {
             leak = true;

@@ -34,9 +34,10 @@ function loadRS() {
 // opts: { commander, asc, keys, params(smart 봇 조정값), trace }
 function playRun(RS, seed, kind, opts) {
   opts = opts || {};
-  const run = RS.newRun(seed, { commander: opts.commander, asc: opts.asc || 0 });
+  // opts.run: 저장본에서 이어 하기 (같은 상태에서 조건만 바꿔 다시 돌려 보는 측정용)
+  const run = opts.run || RS.newRun(seed, { commander: opts.commander, asc: opts.asc || 0 });
   // 실험용: 시작할 때 증강·유물을 쥐여 주는 등 (밸런스 측정 도구에서 쓴다)
-  if (typeof opts.onStart === 'function') opts.onStart(run, RS);
+  if (!opts.run && typeof opts.onStart === 'function') opts.onStart(run, RS);
   const bot = makeBot(RS, kind, new RS.Rng(seed ^ 0x9e3779b9), opts);
   const log = { battles: [], death: null, events: 0, ancients: [], nodes: [], shops: [], rests: [] };
   let open = null; // 추적 중인 칸 (가치 변화 측정)
@@ -50,6 +51,8 @@ function playRun(RS, seed, kind, opts) {
   };
   let steps = 0;
   while (steps++ < 400) {
+    // opts.stopAtAct: 그 막의 지도에 들어서면 멈춘다 (저장본을 모으는 용도)
+    if (opts.stopAtAct && run.act >= opts.stopAtAct && run.phase === 'map') return { run, log, won: false, bot, stopped: true };
     switch (run.phase) {
       case 'neow':
         log.neow = bot.neow(run, run.pending.blessings);

@@ -166,7 +166,7 @@
       trait: '빠르고 주변 적을 가속. 6초마다 보드를 가로질러 꿰뚫어 지나간 칸을 1.6초 기절시키고, 도착하면 스스로 1.8초 기절',
     },
     riftHeart: {
-      name: '고대신 옴네크', hp: 42, speed: 14, gold: 0, leak: 9, boss: true, dpsCap: 0.028, bossTimeAdd: 25,
+      name: '고대신 옴네크', hp: 27, speed: 14, gold: 0, leak: 9, boss: true, dpsCap: 0.028, bossTimeAdd: 25,
       skills: [
         { k: 'pulse', name: '광기의 시선', every: 9, warn: 0.9, dur: 2.5, amt: 0.35 },
         { k: 'spawn', every: 6, type: 'imp', n: 2, hp: 0.6, wind: 0 },
