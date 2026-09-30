@@ -23,7 +23,7 @@
     run.life = Math.max(1, run.life - v);
     return Math.max(0, before - run.life);
   };
-  // 상처: 하나당 모든 유닛 피해 -5% (따로 곱한다). 전투는 시작할 때의 값을 쓴다
+  // 상처: 하나당 모든 유닛 피해 -BAL.injuryPer (따로 곱한다). 전투는 시작할 때의 값을 쓴다
   RS.injuryMul = (run) => Math.max(0.1, 1 - BAL.injuryPer * (run.injury || 0));
   RS.changeMaxLife = function (run, d) {
     run.maxLife = Math.max(1, run.maxLife + d);

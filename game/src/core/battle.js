@@ -252,8 +252,8 @@
     const M = this.M;
     const asc = this.run.asc || 0;
     let hp = RS.levelHp(L) * def.hp * (1 + M.enemyHpPct) * (hpMul || 1);
-    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.1 : 1);
-    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.25 : 1);
+    if (def.boss) hp *= Math.max(0.2, 1 - M.bossHpPct) * (asc >= 7 ? 1.05 : 1);
+    else if (def.elite) hp *= Math.max(0.2, 1 + (M.eliteHpPct || 0)) * (asc >= 1 ? 1.15 : 1);
     else if (asc >= 3) hp *= 1.1;
     // 일반 적: 놓쳐도 한 번만 아프므로(빠져나감) 아슬아슬한 세기로 맞춘다 (막마다)
     if (!def.boss && !def.elite) hp *= RS.BAL.normalHpMul[Math.min(4, this.run.act)] || 1;
@@ -939,7 +939,7 @@
     this.stats.struck += dmg;
     this.emit({ k: 'strike', x: e.x, y: e.y, v: dmg, name: s.name, boss: e.def.name });
     this.loseLife(dmg);
-    // 생명을 깎은 강타는 상처를 남긴다 (다음 전투부터 모든 유닛 피해 -5%씩)
+    // 생명을 깎은 강타는 상처를 남긴다 (다음 전투부터 모든 유닛 피해 -injuryPer 씩)
     if (dmg > 0) {
       const run = this.run;
       const before = run.injury || 0;

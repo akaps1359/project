@@ -141,7 +141,7 @@
     { id: 'regret', name: '불면', icon: 'curse', desc: '전투를 시작할 때 생명 -1', mods: { battleStartLifeLoss: 1 } },
     { id: 'doubt', name: '현기증', icon: 'curse', desc: '첫 웨이브 동안 무작위 칸 2곳이 기절한다', mods: { doubt: 2 } },
     { id: 'parasite', name: '곰팡이 포자', icon: 'curse', desc: '최대 생명 -3 (얻을 때 적용)', mods: {}, onGain(run) { RS.changeMaxLife(run, -3); } },
-    { id: 'ascBurden', name: '심연의 짐', icon: 'curse', desc: '모든 유닛 피해 -10%. 없앨 수 없다', mods: { dmgPct: -0.1 }, permanent: true },
+    { id: 'ascBurden', name: '심연의 짐', icon: 'curse', desc: '모든 유닛 피해 -7%. 없앨 수 없다', mods: { dmgPct: -0.07 }, permanent: true },
     { id: 'guilt', name: '찜찜함', icon: 'curse', desc: '전투를 시작할 때 생명 -1. 전투 5번 뒤 저절로 사라진다', mods: { battleStartLifeLoss: 1 }, fades: 5 },
     { id: 'debt', name: '빚', icon: 'curse', desc: '웨이브가 시작될 때마다 골드 -5', mods: { debt: 5 } },
     { id: 'bloomMark', name: '시든 꽃의 낙인', icon: 'curse', desc: '생명을 회복할 수 없다. 휴식해도 상처가 낫지 않는다. 없앨 수 없다', mods: {}, permanent: true },
