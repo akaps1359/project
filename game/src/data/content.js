@@ -61,7 +61,7 @@
       unique: true, cost: '최대 생명 -4 · 막을 넘어갈 때 잃은 생명의 절반만 회복',
       onPick(run) { RS.changeMaxLife(run, -4); },
     }),
-    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 15% 확률로 2단계 상승', { mergeDouble: 0.15, mergeFail: 0.08 }, {
+    A('gamble', '도박꾼의 주사위', 2, 'dice', '합성에 성공하면 15% 확률로 2단계 상승 (전설까지)', { mergeDouble: 0.15, mergeFail: 0.08 }, {
       unique: true, cost: '8% 확률로 합성 실패(결과 소멸)',
     }),
     A('greed', '탐욕', 2, 'bag', '처치 골드 +60%', { killGoldPct: 0.6, enemyHpPct: 0.08 }, {
@@ -79,7 +79,7 @@
 
     // ── 프리즘 ──
     A('twinSummon', '쌍둥이 소환', 3, 'twin', '소환할 때 20% 확률로 같은 유닛 1기 추가', { twinChance: 0.2 }, { unique: true }),
-    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 8% 확률로 2단계 상승', { mergeDouble: 0.08 }, { unique: true }),
+    A('luckyMerge', '행운의 합성', 3, 'sparkle', '합성할 때 8% 확률로 2단계 상승 (전설까지)', { mergeDouble: 0.08 }, { unique: true }),
     A('berserk', '광전사', 3, 'rage', '잃은 생명 1당 모든 유닛 피해 +4%, 공격 속도 +1.2% (최대 +80% / +24%). 흡혈: 엘리트·보스 체력을 1/6 깎을 때마다 생명 +1', { berserk: 1, leech: 6 }, { unique: true }),
     A('timeWarp', '시간 왜곡', 3, 'hourglass', '모든 적 이동 속도 -25%', { enemySpeedPct: 0.25 }, { unique: true }),
     A('legendAura', '전설의 위엄', 3, 'crown', '전설 유닛 1기당 모든 유닛 피해 +12% (신화는 전설 4기로 친다)', { legendAura: 0.12 }, { unique: true }),
@@ -102,7 +102,7 @@
     A('apotheosis', '빛의 세례', 3, 'halo', '즉시 보드의 모든 일반 유닛이 같은 클래스의 희귀 유닛이 되고, 모든 클래스 강화 +1', {}, {
       onPick(run) { RS.promoteTier(run, 0); for (const c of RS.CLASSES) run.classLv[c] += 1; },
     }),
-    A('wraithForm', '혼령 빙의', 3, 'ghost2', '첫 웨이브 동안 한 바퀴를 돈 일반 적에게 생명을 잃지 않고(엘리트·보스는 피해 절반), 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
+    A('wraithForm', '혼령 빙의', 3, 'ghost2', '첫 웨이브의 적이 한 바퀴를 돌아도 생명을 잃지 않고, 모든 유닛 피해 +30%', { firstWaveNoLeak: 1, dmgPct: 0.3, capAdd: -10 }, {
       unique: true, cost: '필드 상한 60 → 50',
     }),
     A('corruption', '검은 풀무', 3, 'corrupt', '강화 비용 -60%', { upgradeCostPct: -0.6, summonCostPct: 0.1 }, {

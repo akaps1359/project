@@ -81,12 +81,12 @@
     return best;
   };
 
-  // 같은 유닛 칸 → 빈칸 순으로 찾는다. 자리가 없으면 -1
+  // 같은 유닛 칸 → 빈칸 순으로 찾는다. 자리가 없으면 -1 (봉인된 칸에는 보태지 않는다)
   RS.findSlotFor = function (board, cls, tier, prefer) {
     const order = RS.slotOrder(cls);
     for (const i of order) {
       const s = board[i];
-      if (s && s.cls === cls && s.tier === tier && s.n < RS.stackMax(tier)) return i;
+      if (s && !s.sealed && s.cls === cls && s.tier === tier && s.n < RS.stackMax(tier)) return i;
     }
     if (prefer != null && prefer >= 0 && !board[prefer]) return prefer;
     for (const i of order) if (!board[i]) return i;
@@ -245,15 +245,18 @@
     return g;
   };
 
+  // 비용 할인의 하한 (여러 할인을 겹쳐도 이 배율 아래로는 내려가지 않는다). 증강 연마도 이 하한을 넘겨 늘리지 않는다
+  RS.SUMMON_COST_FLOOR = 0.4;
+  RS.UPGRADE_COST_FLOOR = 0.3;
   RS.summonCost = function (run, M) {
     const base = RS.BAL.summonBase + RS.BAL.summonStep * run.summons;
-    return Math.max(1, Math.round(base * Math.max(0.4, 1 + M.summonCostPct)));
+    return Math.max(1, Math.round(base * Math.max(RS.SUMMON_COST_FLOOR, 1 + M.summonCostPct)));
   };
 
   RS.upgradeCost = function (run, cls, M) {
     const base = RS.BAL.upgradeBase + RS.BAL.upgradeStep * run.classLv[cls];
     const asc = (run.asc || 0) >= 8 ? 1.2 : 1; // 승천 8: 강화 비용 +20%
-    return Math.max(1, Math.round(base * Math.max(0.4, 1 + M.upgradeCostPct) * asc));
+    return Math.max(1, Math.round(base * Math.max(RS.UPGRADE_COST_FLOOR, 1 + M.upgradeCostPct) * asc));
   };
 
   // 소환 등급 굴림

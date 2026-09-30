@@ -569,17 +569,17 @@ function makeSmartBot(RS, rng, opts) {
     const wave = (BAL.waveGold[Math.min(3, a)] || 0) * 3 * (1 + (M.waveGoldPct || 0));
     const cap = RS.interestCap(M);
     const intr = 3 * (Math.min(cap, holdInt ? cap * 0.8 : 1.5) + (M.interestBonus || 0));
-    const kill = M.noKillGold ? 0 : KILL_B[a] * (1 + (M.killGoldPct || 0));
+    const kill = KILL_B[a] * (1 + (M.killGoldPct || 0));
     const clear = CLEAR_B[a] * (1 + (M.combatGoldPct || 0)) + (M.winGold || 0) * Math.min(3, a);
     const start = (M.battleStartGold || 0) * Math.min(3, a) - (M.debt || 0) * 3 - (M.sealSummon || 0) * 3;
     const S = summonCostAt(run, M, a);
-    const free = ((M.waveFreeSummon || 0) * 3 + (M.startSummons || 0) + (M.startRare ? M.startRare * 3 : 0) + (M.happyFlower ? 0.75 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
+    const free = ((M.waveFreeSummon || 0) * 3 + (M.startRare ? M.startRare * 3 : 0) + (M.sealSummon ? 3 : 0) + (M.echoForm ? 2.5 : 0) + (M.souls ? 40 / M.souls : 0)) * S;
     const fish = (M.ceramicFish || 0) * 1.1;
     return wave + intr + kill + EARLY_B[a] + clear + start + free + fish;
   }
   function summonCostAt(run, M, a) {
     const extra = Math.max(0, a - run.act) * 25;
-    return (BAL.summonBase + BAL.summonStep * (run.summons + extra)) * Math.max(0.4, 1 + (M.summonCostPct || 0));
+    return (BAL.summonBase + BAL.summonStep * (run.summons + extra)) * Math.max(RS.SUMMON_COST_FLOOR, 1 + (M.summonCostPct || 0));
   }
   function futureGold(run, M, rem) {
     let g = 0;
@@ -594,11 +594,10 @@ function makeSmartBot(RS, rng, opts) {
     const pe = M.noRare ? 0 : BAL.epicChance + (M.epicChance || 0);
     const units = (1 - pr - pe) + 3.2 * pr + 9 * pe;
     const merge = 1 + (M.mergeRefund || 0) * 0.33 + (M.mergeDouble || 0) * 0.9 + (M.mergeMirror || 0) * 0.9 - (M.mergeFail || 0) * 1.0;
-    const cost = Math.max(0.4, 1 + (M.summonCostPct || 0)) * (1 - (M.cloverChance || 0)) * (M.snakeEye ? 1.15 : 1);
+    const cost = Math.max(RS.SUMMON_COST_FLOOR, 1 + (M.summonCostPct || 0)) * (1 - (M.cloverChance || 0)) * (M.snakeEye ? 1.15 : 1);
     let es = (units * (1 + (M.twinChance || 0)) * merge) / cost;
-    if (M.summonCap) es *= 0.85;
     const es0 = 1 - BAL.rareChance - BAL.epicChance + 3.2 * BAL.rareChance + 9 * BAL.epicChance;
-    const eu = M.upgradeFree ? 5 : (M.upgradeDouble ? 2 : 1) / Math.max(0.4, 1 + (M.upgradeCostPct || 0));
+    const eu = M.upgradeFree ? 5 : (M.upgradeDouble ? 2 : 1) / Math.max(RS.UPGRADE_COST_FLOOR, 1 + (M.upgradeCostPct || 0));
     return 0.55 * (es / es0) + 0.45 * eu;
   }
 
@@ -667,7 +666,7 @@ function makeSmartBot(RS, rng, opts) {
     for (let k = 1; k <= 4; k++) {
       if (!rem[k]) continue;
       const L = LEAK_L[k];
-      const fac = (M.leakMult || 1) * (1 + (M.leakAdd || 0) * 0.7) * (M.leakReduce ? 0.8 : 1) * (M.firstWaveNoLeak ? 0.92 : 1) * (M.lastWaveLeakMult ? 1.4 : 1);
+      const fac = (M.leakMult || 1) * (1 + (M.leakAdd || 0) * 0.7) * (M.leakReduce ? 0.8 : 1) * (M.firstWaveNoLeak ? 0.92 : 1);
       let loss = L * fac - L;
       if (M.helix) loss -= Math.min(1, L) * 0.8;
       if (M.leakShield) loss -= Math.min(M.leakShield, L * 1.5) * 0.7;

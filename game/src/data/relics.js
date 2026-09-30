@@ -91,7 +91,7 @@
     R('stimulant', '각성제', 3, 'cup', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, noRestHeal: 1 }, {
       cost: '휴식처에서 휴식할 수 없다',
     }),
-    R('fusionHammer', '벼락 망치', 3, 'hammer', '합성할 때 15% 확률로 2단계 상승', { mergeDouble: 0.15, noSmith: 1 }, {
+    R('fusionHammer', '벼락 망치', 3, 'hammer', '합성할 때 15% 확률로 2단계 상승 (전설까지)', { mergeDouble: 0.15, noSmith: 1 }, {
       cost: '휴식처에서 수련·연마를 할 수 없다',
     }),
     R('sealedGourd', '막힌 표주박', 3, 'gourd', '강화 비용 -50%, 얻을 때 모든 클래스 강화 +2', { upgradeCostPct: -0.5, noItems: 1 }, {

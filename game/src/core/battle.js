@@ -89,7 +89,6 @@
     if (M.battleStartGold) RS.addGold(run, M.battleStartGold * Math.min(3, run.act));
     if (M.battleStartLifeLoss) run.life = Math.max(1, run.life - M.battleStartLifeLoss);
     if (M.pantograph && this.kind === 'boss') RS.heal(run, M.pantograph);
-    for (let k = 0; k < (M.startSummons || 0); k++) this.freeSummon(0);
     if (M.startRare && (M.startRare >= 1 || this.rng.chance(M.startRare))) this.freeSummon(1);
     if (M.doubt) {
       for (let k = 0; k < M.doubt; k++) this.slotStun[this.rng.int(F.SIZE)] = 999; // 첫 웨이브가 끝나면 풀린다
@@ -199,7 +198,8 @@
     const run = this.run;
     const M = this.M;
     this.curL = W.L;
-    for (const sp of W.list) this.spawnQ.push(sp);
+    // 혼령 빙의: 적마다 어느 웨이브에서 나왔는지 기억한다 (스테이지 데이터는 건드리지 않게 복사)
+    for (const sp of W.list) this.spawnQ.push(Object.assign({ wave: k + 1 }, sp));
     if (this.spawnT < 0) this.spawnT = 0;
     // 문지기의 세금: 웨이브 시작 골드 없음
     const wg = run.tax > 0 ? 0 : RS.BAL.waveGold[Math.min(3, run.act)] * (1 + M.waveGoldPct);
@@ -222,14 +222,6 @@
     }
     const wf = M.waveFreeSummon || 0;
     let free = Math.floor(wf) + (wf % 1 > 0 && this.rng.chance(wf % 1) ? 1 : 0);
-    if (M.happyFlower) {
-      const st = (run.relicState.happyFlower = run.relicState.happyFlower || { n: 0 });
-      st.n++;
-      if (st.n >= 4) {
-        st.n = 0;
-        free++;
-      }
-    }
     for (let i = 0; i < free; i++) this.freeSummon(0);
     // 황금 인장: 소환이 된 때만 골드를 낸다
     if (M.sealSummon && run.gold >= M.sealSummon && this.freeSummon(0, M.sealSummon, true) >= 0) RS.addGold(run, -M.sealSummon);
@@ -247,6 +239,7 @@
     while (this.spawnQ.length && this.spawnT <= 0) {
       const sp = this.spawnQ.shift();
       const e = this.spawnEnemy(sp.type, sp.L, 0, F.PERIM, sp.hpMul);
+      e.wave = sp.wave;
       if (sp.one) e.hp = e.maxHp = 1;
       if (sp.burning) e.burning = sp.burning;
       this.spawnT += sp.gap;
@@ -289,12 +282,13 @@
   };
 
   // 적이 적을 소환·분열할 때는 반복문이 끝난 뒤에 넣는다
-  P.queueSpawn = function (type, L, d, nextLap, hpMul) {
-    this.pending.push({ type, L, d, nextLap, hpMul });
+  // wave: 부모가 나온 웨이브 (분열·소환된 적도 같은 웨이브로 친다)
+  P.queueSpawn = function (type, L, d, nextLap, hpMul, wave) {
+    this.pending.push({ type, L, d, nextLap, hpMul, wave });
   };
   P.flushPending = function () {
     if (!this.pending.length) return;
-    for (const p of this.pending) this.spawnEnemy(p.type, p.L, p.d, p.nextLap, p.hpMul);
+    for (const p of this.pending) this.spawnEnemy(p.type, p.L, p.d, p.nextLap, p.hpMul).wave = p.wave;
     this.pending.length = 0;
   };
 
@@ -410,14 +404,16 @@
       if (e.d >= e.nextLap) {
         e.nextLap += F.PERIM;
         e.laps++;
-        this.leak(e);
-        if (this.status !== 'running') return;
-        // 일반 적은 균열로 빠져나간다 (한 번만 생명을 앗아 간다). 엘리트·보스는 균열에서 다시 나와 계속 돈다
-        if (!e.dead && !e.boss && !e.elite) {
+        // 일반 적은 균열로 빠져나간다 (한 번만 생명을 앗아 간다). 엘리트·보스는 균열에서 다시 나와 계속 돈다.
+        // 빠져나가는 적은 먼저 치워 둔다 → 가시 갑옷·화약통에 쓰러져 처치 골드를 주지 않는다
+        const leaving = !e.boss && !e.elite;
+        if (leaving) {
           e.dead = true;
           e.escaped = true;
-          continue;
         }
+        this.leak(e);
+        if (this.status !== 'running') return;
+        if (leaving) continue;
       }
       RS.pathPos(e.d, e);
     }
@@ -489,7 +485,7 @@
     } else if (def.summon && e.timer >= def.summon.every) {
       e.timer = 0;
       for (let k = 0; k < def.summon.n; k++) {
-        this.queueSpawn(def.summon.type, e.L, e.d - 7 * (k + 1), e.nextLap, def.summon.hp);
+        this.queueSpawn(def.summon.type, e.L, e.d - 7 * (k + 1), e.nextLap, def.summon.hp, e.wave);
       }
       this.emit({ k: 'summonFx', x: e.x, y: e.y });
     } else if (def.rift && e.timer >= def.rift.every) {
@@ -581,12 +577,16 @@
       case 'mend':
         if (!(e.hp < e.maxHp * (s.below || 1))) return false;
         break;
-      case 'strike':
+      case 'strike': {
+        // 늪의 여왕: 물속에 있거나 준비 도중 잠수하게 되면 끊을 틈이 없으니, 떠오른 뒤로 미룬다
+        const sub = e.def.submerge;
+        if (e.subT > 0 || (sub && (e.subTimer || 0) + (s.wind || 0) + 0.2 >= sub.every)) return false;
         // 강타: 준비하는 동안 체력의 brk 만큼 깎으면(또는 기절·빙결시키면) 끊긴다
         pre.need = e.maxHp * s.brk;
         pre.taken = 0;
         pre.dmg = this.strikeDmg(e, s);
         break;
+      }
     }
     return pre;
   };
@@ -666,7 +666,7 @@
         break;
       }
       case 'spawn':
-        for (let k = 0; k < s.n; k++) this.queueSpawn(s.type, e.L, e.d - 8 * (k + 1), e.nextLap, s.hp);
+        for (let k = 0; k < s.n; k++) this.queueSpawn(s.type, e.L, e.d - 8 * (k + 1), e.nextLap, s.hp, e.wave);
         this.emit({ k: 'summonFx', x: e.x, y: e.y });
         if (s.name) said('spawn');
         break;
@@ -824,32 +824,45 @@
     this.emit({ k: 'msg', text: def.phase2.msg || `${def.name}이(가) 각성했다!`, warn: true });
   };
 
+  // 한 바퀴를 돈 적이 앗아 갈 생명 (생명 보호 전). laps: 이번이 몇 바퀴째인가
+  P.lapBase = function (e, laps) {
+    const M = this.M;
+    let dmg = (e.def.leak + M.leakAdd) * M.leakMult;
+    // 엘리트·보스는 처음엔 조금, 다시 돌 때마다 두 배로 (1 → 2 → 4 → 8 …)
+    if (e.elite || e.boss) dmg *= Math.pow(2, Math.min(5, Math.max(0, laps - 1)));
+    if ((e.elite || e.boss) && this.run.asc >= 5) dmg += 1;
+    if (e.boss && this.enraged) dmg *= 2;
+    // 쇠말뚝: -1 (최소 1). 원래 생명을 앗지 않는 적(허수아비)은 그대로 0
+    if (M.leakReduce) dmg = Math.max(dmg > 0 ? 1 : 0, dmg - M.leakReduce);
+    return Math.max(0, dmg);
+  };
+  // 지금 한 바퀴를 돌면 통할 생명 보호 (횟수는 쓰지 않고 보기만 한다)
+  P.leakGuard = function (e) {
+    if (this.ghostT > 0) return 'ghost';
+    if (this.M.firstWaveNoLeak && e.wave === 1) return 'wraith';
+    if (this.M.helix && !this.helixUsed) return 'helix';
+    if (this.leakShield > 0) return 'shield';
+    return null;
+  };
+  // e 가 다음 바퀴를 마치면 잃을 생명 (미리보기용 — leak() 와 같은 계산)
+  RS.lapLoss = function (b, e) {
+    const dmg = b.lapBase(e, e.laps + 1);
+    if (!b.leakGuard(e)) return dmg;
+    return e.boss || e.elite ? dmg * 0.5 : 0;
+  };
+
   P.leak = function (e) {
     const M = this.M;
     const run = this.run;
-    const nW = this.stage.waves.length;
-    let dmg = (e.def.leak + M.leakAdd) * M.leakMult;
-    // 엘리트·보스는 처음엔 조금, 다시 돌 때마다 두 배로 (1 → 2 → 4 → 8 …)
-    if (e.elite || e.boss) dmg *= Math.pow(2, Math.min(5, Math.max(0, e.laps - 1)));
-    if ((e.elite || e.boss) && run.asc >= 5) dmg += 1;
-    if (e.boss && this.enraged) dmg *= 2;
-    if (M.lastWaveLeakMult && this.waveIdx >= nW) dmg *= 2;
-    if (M.leakReduce) dmg = Math.max(1, dmg - M.leakReduce);
+    let dmg = this.lapBase(e, e.laps);
     // 생명 보호(유령 망토·혼령 빙의·철갑 소라·버팀 닻·되감기 모래)는 일반 적에게만 완전히 통한다.
     // 엘리트·보스는 막지 못하고 피해를 절반으로만 줄인다 (횟수가 있는 보호는 한 번 쓴다)
     const big = e.boss || e.elite;
     let blocked = false;
-    let guarded = false;
-    if (this.ghostT > 0) guarded = true;
-    else if (M.firstWaveNoLeak && this.waveIdx <= 1) guarded = true;
-    else if (M.helix && !this.helixUsed) {
-      this.helixUsed = true;
-      guarded = true;
-    } else if (this.leakShield > 0) {
-      this.leakShield--;
-      guarded = true;
-    }
-    if (guarded) {
+    const guard = this.leakGuard(e);
+    if (guard === 'helix') this.helixUsed = true;
+    else if (guard === 'shield') this.leakShield--;
+    if (guard) {
       if (big) dmg *= 0.5;
       else blocked = true;
     }
@@ -905,12 +918,21 @@
     const elite = e.elite && !e.boss;
     return s.dmg + (elite ? Math.floor((Math.max(1, Math.min(3, this.run.act)) - 1) * (RS.BAL.eliteStrikeStep || 0)) + (this.run.asc >= 1 ? 1 : 0) : 0);
   };
-  P.strikeHit = function (e, s, pre) {
-    const M = this.M;
-    let dmg = (pre ? pre.dmg : this.strikeDmg(e, s)) * M.leakMult;
-    if (e.boss && this.enraged) dmg *= 2;
+  // 강타 s 가 지금 떨어지면 잃을 생명 (미리보기와 실제 강타가 같은 계산을 쓴다).
+  // s 를 생략하면 e 가 준비 중인 강타. pre 를 생략하면 준비 중인 강타의 값(없으면 새로 계산)
+  RS.strikeLoss = function (b, e, s, pre) {
+    const M = b.M;
+    if (!s) s = e.cast && e.cast.s;
+    if (!s) return 0;
+    if (!pre && e.cast && e.cast.s === s) pre = e.cast.pre;
+    let dmg = (pre && pre.dmg != null ? pre.dmg : b.strikeDmg(e, s)) * M.leakMult;
+    if (e.boss && b.enraged) dmg *= 2;
     if (M.strikeReduce) dmg = Math.max(0, dmg - M.strikeReduce);
     if (M.leakReduce) dmg = Math.max(dmg > 0 ? 1 : 0, dmg - M.leakReduce);
+    return Math.max(0, dmg);
+  };
+  P.strikeHit = function (e, s, pre) {
+    const dmg = RS.strikeLoss(this, e, s, pre);
     this.stats.struck += dmg;
     this.emit({ k: 'strike', x: e.x, y: e.y, v: dmg, name: s.name, boss: e.def.name });
     this.loseLife(dmg);
@@ -1327,10 +1349,12 @@
       e.capLeft -= dm;
     }
     // 강타 준비 중: 들어간 피해만큼 경직이 쌓인다
+    // (끊기는 이 피해를 다 반영한 뒤에 한다 — 반격 피해가 이 피해 계산 안에 끼어들지 않게)
+    let stagger = false;
     if (e.cast && e.cast.s.k === 'strike' && dm > 0) {
       const pre = e.cast.pre;
       pre.taken += dm;
-      if (pre.taken >= pre.need) this.staggerStrike(e, 'dmg');
+      if (pre.taken >= pre.need) stagger = true;
     }
     // 보호막이 먼저 피해를 받는다
     if (e.shield > 0 && dm > 0) {
@@ -1344,6 +1368,7 @@
       }
       if (dm <= 0) {
         if (!isDot) e.flash = 0.08;
+        if (stagger) this.staggerStrike(e, 'dmg');
         return 0;
       }
     }
@@ -1356,8 +1381,8 @@
         const n = Math.floor(e.leechAcc);
         e.leechAcc -= n;
         if (this.run.life < this.run.maxLife) {
-          RS.heal(this.run, n);
-          this.emit({ k: 'leech', x: e.x, y: e.y, v: n });
+          const h = RS.heal(this.run, n);
+          if (h > 0) this.emit({ k: 'leech', x: e.x, y: e.y, v: h });
         }
       }
     }
@@ -1372,7 +1397,7 @@
       for (let k = e.splitDone; k < def.splitAt.length; k++) {
         if (e.hp > e.maxHp * def.splitAt[k]) break;
         e.splitDone = k + 1;
-        for (let j = 0; j < def.splitN; j++) this.queueSpawn('slime', e.L, e.d - 5 * (j + 1), e.nextLap, def.splitHp);
+        for (let j = 0; j < def.splitN; j++) this.queueSpawn('slime', e.L, e.d - 5 * (j + 1), e.nextLap, def.splitHp, e.wave);
         this.emit({ k: 'summonFx', x: e.x, y: e.y });
       }
     }
@@ -1380,23 +1405,30 @@
       e.dead = true;
       if (this.lastSlot >= 0 && this.slotStats[this.lastSlot] && this.slotStats[this.lastSlot].runeGold) e.runeGold = this.slotStats[this.lastSlot].runeGold;
     }
+    if (stagger) this.staggerStrike(e, 'dmg');
     return dealt;
   };
 
   // 죽은 적 정리 + 보상
+  // (목록을 먼저 다 정리한 뒤에 처치 효과를 낸다 — 역병 확산이 정리 중인 목록을 훑지 않게)
   P.reap = function () {
     const list = this.enemies;
+    const dead = this._reapBuf || (this._reapBuf = []);
+    dead.length = 0;
     let w = 0;
     for (let k = 0; k < list.length; k++) {
       const e = list[k];
-      if (e.dead) {
-        if (e.escaped) {
-          this.stats.escaped++;
-          this.emit({ k: 'escape', x: e.x, y: e.y });
-        } else this.onKill(e);
-      } else list[w++] = e;
+      if (e.dead) dead.push(e);
+      else list[w++] = e;
     }
     list.length = w;
+    for (const e of dead) {
+      if (e.escaped) {
+        this.stats.escaped++;
+        this.emit({ k: 'escape', x: e.x, y: e.y });
+      } else this.onKill(e);
+    }
+    dead.length = 0;
     this.flushPending();
   };
 
@@ -1414,15 +1446,15 @@
         this.emit({ k: 'soul', x1: e.x, y1: e.y, x2: bz.x, y2: bz.y });
       }
     }
-    let g = M.noKillGold ? 0 : def.gold * RS.BAL.killGoldMul[Math.min(3, run.act)] * (1 + M.killGoldPct);
-    if (e.runeGold && !M.noKillGold) g += e.runeGold; // 엑토 심장이면 황금 룬 골드도 없다
+    let g = def.gold * RS.BAL.killGoldMul[Math.min(3, run.act)] * (1 + M.killGoldPct);
+    if (e.runeGold) g += e.runeGold; // 황금 룬 골드는 처치 골드 배율(유령 젤리 등)을 받지 않는다
     RS.addGold(run, g);
     this.stats.goldEarned += g;
     this.stats.kills++;
     if (M.souls) {
       run.souls = Math.min(M.souls, (run.souls || 0) + 1);
       if (run.souls >= M.souls) {
-        const tier = M.soulTier || 0;
+        const tier = 0;
         // 자리가 없으면 영혼을 모아 둔 채로 다음 처치 때 다시 일으킨다
         if (this.freeSummon(tier, undefined, true) >= 0) {
           run.souls = 0;
@@ -1455,7 +1487,7 @@
       if (spread) this.emit({ k: 'plague', x: e.x, y: e.y });
     }
     if (def.split) {
-      for (let j = 0; j < def.split.n; j++) this.queueSpawn(def.split.type, e.L, e.d - 4 * j, e.nextLap, def.split.hp);
+      for (let j = 0; j < def.split.n; j++) this.queueSpawn(def.split.type, e.L, e.d - 4 * j, e.nextLap, def.split.hp, e.wave);
     }
     if (e.boss) {
       const alive = this.bosses.filter((b) => !b.dead);

@@ -48,7 +48,7 @@
     'dmgPct', 'aspdPct', 'rangeAdd', 'critChance', 'critMult', 'killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus',
     'rareChance', 'twinChance', 'mergeRefund', 'mergeDouble', 'mergeMirror', 'enemySpeedPct', 'eliteDmgPct',
     'firstStrike', 'shrapnel', 'freezeChance', 'diversity', 'purity', 'eliteSquad', 'rich', 'legendAura', 'demonForm',
-    'noxious', 'poison', 'eliteKillHeal', 'sellPct',
+    'noxious', 'poison', 'eliteKillHeal',
     'shatter', 'critHaste', 'burnArrow', 'dotAmp', 'lowLifeDmg', 'curseDmg', 'itemDmg', 'burn',
   ];
   // 정수여야 하는 수치 (생명·골드·사거리)
@@ -72,8 +72,10 @@
         out[k] = INT_KEYS[k] ? Math.round(v * f) : v * f;
         any = true;
       } else if (GOOD_DOWN.indexOf(k) >= 0 && v < 0) {
-        out[k] = Math.max(-0.9, v * f);
-        any = true;
+        // 비용 하한보다 더 깎아 봐야 소용없다 → 하한까지만. 이미 하한이면 강화한 것으로 치지 않는다
+        const floor = (k === 'upgradeCostPct' ? RS.UPGRADE_COST_FLOOR : RS.SUMMON_COST_FLOOR) || 0.1;
+        out[k] = Math.max(floor - 1, v * f);
+        if (out[k] < v) any = true;
       } else out[k] = v;
     }
     return any ? out : null;
@@ -139,7 +141,7 @@
     item: ['itemSlots', 'itemPotency', 'itemDmg', 'itemDropBonus'],
     elite: ['eliteDmgPct', 'eliteBattleDmg', 'bigBattleDmg', 'eliteHpPct', 'eliteKillMaxLife', 'eliteKillHeal', 'blackStar', 'eliteUpgrade', 'bossHpPct', 'strikeReduce', 'counterStrike', 'leech'],
     merge: ['mergeDouble', 'mergeRefund', 'mergeMirror'],
-    summon: ['twinChance', 'cloverChance', 'waveFreeSummon', 'startSummons', 'happyFlower', 'echoForm', 'sealSummon', 'startRare', 'souls'],
+    summon: ['twinChance', 'cloverChance', 'waveFreeSummon', 'echoForm', 'sealSummon', 'startRare', 'souls'],
     high: ['legendAura', 'eliteSquad', 'epicChance'],
     low: ['noRare'],
     wave: ['demonForm', 'pocketWatch', 'stars'],
@@ -156,11 +158,11 @@
     strawberry: ['life'], mango: ['life'], loomingFruit: ['life'], bloodPactCup: ['life'], bloodCrown: ['life'], cursedCrown: ['life'],
     recruits: ['low', 'summon'], promotion: ['summon'], apotheosis: ['low'], pandoraBox: ['low'], luckySummon: ['high'], snakeEye: ['high'],
     callingBell: ['curse'], cursedKey: ['curse'], omamori: ['curse'], peacePipe: ['curse'], emptyCage: ['curse', 'life'],
-    potionBelt: ['item'], sacredBark: ['item'], alchemyPot: ['item'], sealedGourd: ['item'],
+    potionBelt: ['item'], sacredBark: ['item'], alchemyPot: ['item'], sealedGourd: ['item', 'upg'],
     iceHeart: ['control'], ember: ['mage'], powderKeg: ['leak'], fusionHammer: ['merge', 'high'], gamble: ['merge', 'high'], luckyMerge: ['high'],
-    twinStar: ['merge'], mirror: ['merge'], scroll: ['merge'], massProduction: ['summon'], discount: ['summon'], philStone: ['summon'], velvetChoker: ['summon'],
+    twinStar: ['merge'], mirror: ['merge'], massProduction: ['summon'], discount: ['summon'], philStone: ['summon'], velvetChoker: ['summon'],
     goldRush: ['gold'], shrapnel: ['knight', 'archer', 'rogue'], mawBank: ['gold', 'route'], wingBoots: ['route'], matryoshka: ['route'],
-    orrery: ['aug'], tinyHouse: ['aug', 'life'], forbiddenIndex: ['aug'], crystalBall: ['aug'], sealedGourd: ['upg'], limitBreak: ['upg'],
+    orrery: ['aug'], tinyHouse: ['aug', 'life'], forbiddenIndex: ['aug'], crystalBall: ['aug'], limitBreak: ['upg'],
     anvil: ['upg'], girya: ['upg'], corruption: ['upg'], smithDiscount: ['upg'], eliteSquad: ['high', 'comp'],
     shatter: ['frost', 'knight'], burnArrow: ['archer'], fireArrow: ['archer', 'dot'], bloodRush: ['rogue'],
   };
