@@ -1456,7 +1456,7 @@
         case 'strike': {
           // 의도: 잃을 생명 숫자와 경직 막대 (채우면 끊긴다), 균열로 이어지는 붉은 점선
           if (!pre) break;
-          RS.drawNum(ctx, '-' + pre.dmg, gx + 10, gy + 2, 'r', 1);
+          RS.drawNum(ctx, '-' + RS.strikeLoss(b, e), gx + 10, gy + 2, 'r', 1);
           const k = Math.min(1, pre.taken / Math.max(1, pre.need));
           ctx.fillStyle = '#15111d';
           ctx.fillRect(gx - 7, gy + 14, 15, 3);

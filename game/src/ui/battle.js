@@ -49,6 +49,7 @@
         UI.setPanel('upgrade');
         UI.tutDone('upgrade');
       }
+      UI.updateHud();
     });
     $('#b-speed').addEventListener('click', () => {
       RS.sfx('click');
@@ -150,7 +151,9 @@
     UI.bossReserved = !!bossId;
     bb.classList.remove('enraged');
     $('#strikebar').hidden = true;
+    $('#boss-cast').classList.remove('now');
     $('#boss-cast').classList.add('idle');
+    $('#h-gold').classList.remove('plunder');
     $('#boss-cast b').textContent = bossId ? '특성' : '';
     $('#boss-cast span').textContent = bossId ? RS.ENEMY[bossId].trait || '' : '';
     $('#boss-ticks').innerHTML = '';
@@ -178,7 +181,7 @@
       const BUFF = { hp: '체력 +40%', fast: '속도 +30%', regen: '재생', armor: '받는 피해 -25%' };
       UI.toast(run.burning ? `성난 엘리트(${BUFF[st.spec && st.spec.burnBuff] || '강화'}) · 이기면 초록 봉인석` : '엘리트전 · 마지막 웨이브에 강적 등장', 'warn');
     }
-    if (run.lament > 0) setTimeout(() => UI.toast('졸음의 별: 첫 웨이브 적 체력 1', 'good'), 900);
+    if (run.lament > 0 && !trialLimit(b)) setTimeout(() => UI.toast('졸음의 별: 첫 웨이브 적 체력 1', 'good'), 900);
     if (run.tax > 0) setTimeout(() => UI.toast(`빈 주머니 별: 웨이브 골드 없음 (${run.tax}번 남음)`, 'warn'), 1400);
   };
 
@@ -201,14 +204,11 @@
   function enemyTip(b, e, cx, cy) {
     const def = e.def;
     const M = b.M;
-    let leak = (def.leak + (M.leakAdd || 0)) * (M.leakMult || 1);
-    if ((e.elite || e.boss) && b.run.asc >= 5) leak += 1;
-    if (e.boss && b.enraged) leak *= 2;
-    if (M.leakReduce) leak = Math.max(1, leak - M.leakReduce);
     const hp = M.blindfold ? '?' : Math.max(1, Math.ceil((100 * Math.max(0, e.hp)) / e.maxHp));
     const big = e.boss || e.elite;
-    const nextLap = big ? leak * Math.pow(2, Math.min(5, e.laps || 0)) : leak;
-    const lapTxt = big ? `이번 바퀴를 돌면 생명 -${Math.round(nextLap * 10) / 10} (돌 때마다 두 배: 1→2→4→8)` : `빠져나가면 생명 -${Math.round(leak * 10) / 10}`;
+    // 실제 누수(core leak)와 같은 계산: 심연·쇠말뚝·폭주·생명 보호까지 반영
+    const nextLap = Math.round(RS.lapLoss(b, e) * 10) / 10;
+    const lapTxt = big ? `이번 바퀴를 돌면 생명 -${nextLap} (돌 때마다 두 배)` : `빠져나가면 생명 -${nextLap}`;
     UI.tipAt(cx, cy, def.name + (e.boss ? ' · 보스' : e.elite ? ' · 엘리트' : ''), `체력 ${hp}${hp === '?' ? '' : '%'} · ${lapTxt}`, def.trait || null);
   }
 
@@ -307,9 +307,14 @@
         if (!reachAt(s, d.from)) warnDrop();
         UI.onceTip('tapSwap', '자리를 바꿨어요! 유닛을 고른 채 다른 칸(빈칸·유닛)을 누르면 옮기거나 바꿔요. 다른 유닛을 보려면 고른 유닛을 한 번 더 눌러 선택을 푸세요');
       } else {
-        // 합성할 수 있는 선택된 칸을 다시 누르면 선택을 풀지 않는다
-        if (UI.sel === d.from && !RS.canMerge(board, d.from)) UI.select(-1);
-        else UI.select(d.from);
+        // 선택된 칸을 다시 누르면 선택을 푼다. 단 합성할 수 있는 칸을 곧바로 두 번 누른 것(연타)은
+        // [합성] 버튼이 뜨자마자 패널이 닫히지 않게 선택을 유지한다
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (UI.sel === d.from && !(RS.canMerge(board, d.from) && now - (UI.selAt || 0) < 400)) UI.select(-1);
+        else {
+          UI.select(d.from);
+          UI.selAt = now;
+        }
         RS.sfx('click');
       }
     };
@@ -533,6 +538,13 @@
     if (UI.hudCache) {
       UI.hudCache.coach = null;
       UI.hudCache.coachOn = null;
+      // 패널을 새로 그리면 칸도 새것이다: 예전 패널의 값을 기억한 캐시를 비워야 다음 갱신이 채운다
+      for (const k of ['pdps', 'punits', 'pint']) delete UI.hudCache[k];
+      for (const cl of RS.CLASSES) {
+        delete UI.hudCache['lv' + cl];
+        delete UI.hudCache['uc' + cl];
+        delete UI.hudCache['uo' + cl];
+      }
     }
     const b = G.battle;
     const run = G.run;
@@ -610,6 +622,18 @@
         h('div', { class: 'pinfo' }, h('b', null, it.name), h('p', { class: 'pdesc' }, it.desc + (b.M.itemPotency ? ' (효과 2배)' : ''))),
         h('div', { class: 'pbtns' },
           btn('사용', () => {
+            // 효과가 없는 사용은 막는다 (아이템 사용 자체가 힘이 되는 유물이 있으면 그대로 쓴다)
+            const noFoe = !b.enemies.some((e) => !e.dead);
+            const why = b.M.itemDmg ? null
+              : (it.id === 'bomb' || it.id === 'freeze') && noFoe ? '적이 있을 때 쓸 수 있어요'
+              : it.id === 'potion' && !RS.canHeal(run) ? '시든 꽃의 낙인: 회복할 수 없어요'
+              : it.id === 'potion' && run.life >= run.maxLife ? '생명이 가득해요'
+              : null;
+            if (why) {
+              RS.sfx('error');
+              UI.toast(why, 'warn');
+              return;
+            }
             const r = b.useItem(idx);
             if (r.err) {
               RS.sfx('error');
@@ -823,6 +847,10 @@
 
   function updateBossBar(b, c, blind) {
     const bb = $('#bossbar');
+    // 약탈 예고: 보스가 준비 중에 쓰러져도 바로 꺼지도록 보스가 있든 없든 매번 계산한다
+    let plw = false;
+    for (const o of b.bosses || []) if (!o.dead && o.cast && o.cast.s.k === 'plunder') plw = true;
+    setCls($('#h-gold'), 'plw', 'plunder', plw);
     if (b.boss) {
       if (bb.hidden || c.bwait !== false) {
         c.bwait = false;
@@ -860,6 +888,7 @@
         $('#boss-hp').style.width = '0%';
       }
       setCls(bb, 'enr', 'enraged', false);
+      setCls($('#boss-cast'), 'cnow', 'now', false);
     }
   }
 
@@ -871,7 +900,7 @@
     if (!f) return;
     const pre = f.cast.pre;
     setText(el.querySelector('.sb-name'), 'sbn', `${f.def.name} · ${f.cast.s.name} ${Math.max(0, f.cast.t).toFixed(1)}`);
-    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${pre.dmg}`);
+    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${RS.strikeLoss(b, f)}`);
     const k = Math.min(1, pre.taken / Math.max(1, pre.need));
     const w = (k * 100).toFixed(0) + '%';
     if (c.sbw !== w) {
@@ -925,7 +954,7 @@
       k = cast.k;
       name = `${cast.name || CAST_NAME[k] || '기술'} ${Math.max(0, cast.t).toFixed(1)}`;
       txt = CAST_TXT[k] || '';
-      if (k === 'strike' && cast.pre) txt = `생명 -${cast.pre.dmg} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
+      if (k === 'strike' && cast.pre) txt = `생명 -${RS.strikeLoss(b, e)} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
       frac = 1 - cast.t / cast.T;
       col = RS.CAST_COL[k] || '#ffe46b';
     }
@@ -943,9 +972,7 @@
       }
     }
     setCls(el, 'cidle', 'idle', !k);
-    let plw = false;
-    for (const o of b.bosses) if (!o.dead && o.cast && o.cast.s.k === 'plunder') plw = true;
-    setCls($('#h-gold'), 'plw', 'plunder', plw);
+    setCls(el, 'cnow', 'now', !!k && k !== 'dozing' && frac > 0.65);
     setText(el.querySelector('b'), 'cn', name);
     setText(el.querySelector('span'), 'ct', txt);
     if (c.ccol !== col) {
@@ -958,7 +985,6 @@
       c.cw = w;
       el.querySelector('i').style.width = w;
     }
-    setCls(el, 'cnow', 'now', k !== 'dozing' && frac > 0.65);
   }
 
   // 전투 이벤트 → 소리·토스트
