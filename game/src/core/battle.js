@@ -1957,7 +1957,10 @@
       const dmg = L * A.dmg * mul;
       for (const e of this.enemies) {
         if (e.dead || e.subT > 0) continue;
-        this.damage(e, e.boss && !M.supernova ? dmg * A.bossMul : dmg, null, false, true);
+        // 보스: 레벨 피해의 bossMul 과 최대 체력의 bossPct 중 큰 쪽 (초신성은 레벨 피해 그대로, 체력 비율 ×2)
+        let d = dmg;
+        if (e.boss) d = Math.max(M.supernova ? dmg : dmg * A.bossMul, e.maxHp * (A.bossPct || 0) * mul * (M.supernova ? 2 : 1));
+        this.damage(e, d, null, false, true);
         if (e.dead) continue;
         if (M.starSlow) this.applySlow(e, M.starSlow, 4);
         if (M.supernova) e.stunT = Math.max(e.stunT, e.boss ? 0.5 : 1);
