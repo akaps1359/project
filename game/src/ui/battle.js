@@ -833,6 +833,8 @@
     if (UI.abBtn && b.ab) {
       setText(UI.abBtn, 'ab', UI.abLabel(b));
       setCls(UI.abBtn, 'abOn', 'off', !b.canUseAbility());
+      // 지금 쓰면 준비 중인 강타를 끊을 수 있다: 금빛으로 반짝
+      setCls(UI.abBtn, 'abBrk', 'brk', b.abilityBreaksStrike());
       if (b.ab.id === 'stance') setCls(UI.abBtn, 'abIce', 'ice', b.ab.stance === 'ice');
     }
     // 합성 가능한 칸 수 + 길에 닿지 않는 칸 (0.1초마다 20칸)

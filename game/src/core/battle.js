@@ -1948,19 +1948,34 @@
     }
     this.emit({ k: 'abil', id: 'stance', stance: to, hit });
   };
+  // 별똥별 한 번(mul: 유성우의 두 번째는 0.5)이 이 적에게 주는 피해 (피해 배율을 곱하기 전)
+  // 보스: 레벨 피해의 bossMul 과 최대 체력의 bossPct 중 큰 쪽 (초신성은 레벨 피해 그대로, 체력 비율 ×2)
+  P.starDmgTo = function (e, mul) {
+    const M = this.M;
+    const A = RS.ABILITY.star;
+    const dmg = RS.levelHp(this.curL) * A.dmg * mul;
+    if (!e.boss) return dmg;
+    return Math.max(M.supernova ? dmg : dmg * A.bossMul, e.maxHp * (A.bossPct || 0) * mul * (M.supernova ? 2 : 1));
+  };
+  // 지금 능력을 쓰면 준비 중인 강타가 끊기는가 (능력 버튼 반짝임 · 봇이 같이 쓴다)
+  // 방패 돌진은 강타를 준비하는 적부터 들이받아 늘 끊는다. 별똥별은 한 방 피해가 남은 경직을 넘거나 초신성(기절)일 때
+  P.abilityBreaksStrike = function () {
+    const ab = this.ab;
+    if (!ab || (ab.id !== 'charge' && ab.id !== 'star') || !this.canUseAbility()) return false;
+    for (const e of this.enemies) {
+      if (e.dead || e.subT > 0 || !e.cast || e.cast.s.k !== 'strike') continue;
+      if (ab.id === 'charge' || this.M.supernova) return true;
+      if (this.starDmgTo(e, 1) >= e.cast.pre.need - e.cast.pre.taken) return true;
+    }
+    return false;
+  };
   // 아스트라: 별똥별 — 모든 적에게 큰 피해 (보스는 35%)
   P.abStar = function () {
     const M = this.M;
-    const A = RS.ABILITY.star;
-    const L = RS.levelHp(this.curL);
     const fall = (mul) => {
-      const dmg = L * A.dmg * mul;
       for (const e of this.enemies) {
         if (e.dead || e.subT > 0) continue;
-        // 보스: 레벨 피해의 bossMul 과 최대 체력의 bossPct 중 큰 쪽 (초신성은 레벨 피해 그대로, 체력 비율 ×2)
-        let d = dmg;
-        if (e.boss) d = Math.max(M.supernova ? dmg : dmg * A.bossMul, e.maxHp * (A.bossPct || 0) * mul * (M.supernova ? 2 : 1));
-        this.damage(e, d, null, false, true);
+        this.damage(e, this.starDmgTo(e, mul), null, false, true);
         if (e.dead) continue;
         if (M.starSlow) this.applySlow(e, M.starSlow, 4);
         if (M.supernova) e.stunT = Math.max(e.stunT, e.boss ? 0.5 : 1);

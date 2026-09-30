@@ -590,6 +590,9 @@ img { max-width: 100%; }
 .btn.star.ab-charge { background: #3a2f22; color: #ffd98a; }
 .btn.star.ab-stance { background: #4a2418; color: #ffb870; }
 .btn.star.ab-stance.ice { background: #173a4a; color: #a8ecff; }
+/* 지금 쓰면 준비 중인 강타를 끊을 수 있다 */
+.btn.star.brk { animation: brk 0.5s steps(2) infinite; }
+@keyframes brk { 50% { box-shadow: var(--px), 0 0 0 4px var(--gold); } }
 /* 보드 칸 고르기 (룬·복제·제물) */
 .bpick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 280px; margin: 12px auto; }
 .bcell { position: relative; aspect-ratio: 1; border: 0; padding: 0; background: var(--panel2); box-shadow: var(--px), inset 0 0 0 2px var(--rune, transparent); display: grid; place-items: center; touch-action: manipulation; font: inherit; color: var(--text); }
@@ -1535,7 +1538,7 @@ img { max-width: 100%; }
       name: '방패 돌진', res: '결의', icon: 'shield2', max: 5, cost: 2, start: 1,
       hit: 3, bigPct: 0.05, bigFlat: 1, // 피해: 일반 적 웨이브 레벨 체력 ×3, 엘리트·보스 최대 체력 5% + 레벨 체력 ×1
       gain: '웨이브마다 결의 +1, 적의 강타를 끊을 때마다 +1',
-      tip: '결의 2개로 강타를 준비하는 적을 들이받아 끊어요. 결의는 웨이브마다 +1',
+      tip: '결의 2개로 강타를 준비하는 적을 들이받아 끊어요 (끊을 수 있으면 버튼이 반짝임)',
       desc: '강타를 준비하는 적(없으면 엘리트·보스, 그다음 가장 앞선 적)을 들이받는다: 강타를 끊고 큰 피해, 주변 적 1초 기절',
     },
     stance: {
@@ -1549,8 +1552,8 @@ img { max-width: 100%; }
       name: '별똥별', res: '별', icon: 'star', max: 5, cost: 3, start: 0, persist: true,
       dmg: 1.5, bossMul: 0.35, // 피해 = 레벨 체력 ×dmg (보스 ×bossMul)
       gain: '웨이브마다 별 +1 (전투가 끝나도 남는다)',
-      tip: '별 3개로 모든 적에게 별똥별. 별은 웨이브마다 +1, 다음 전투로 이어져요',
-      desc: '별 3개로 모든 적에게 큰 피해 (보스는 35%)',
+      tip: '별 3개로 모든 적에게 별똥별. 엘리트가 강타를 준비할 때 쓰면 끊겨요 (버튼이 반짝임)',
+      desc: '별 3개로 모든 적에게 큰 피해 (보스는 35%). 강타를 준비하는 엘리트에게 떨어뜨리면 강타가 끊긴다',
     },
   };
 
@@ -1568,7 +1571,7 @@ img { max-width: 100%; }
     },
     {
       id: 'astra', name: '아스트라', title: '별의 섭정', relic: 'starScepter', ability: 'star', portrait: ['archer', 2],
-      desc: '웨이브마다 별을 모아 [별똥별]로 모든 적을 내리친다. 모아 둘지, 바로 쏟을지가 승부.',
+      desc: '웨이브마다 별을 모아 [별똥별]로 모든 적을 내리친다. 엘리트의 강타를 끊는 데 쓸지, 모아 둘지가 승부.',
       unlock: { wins: 1, text: '한 번 클리어하면 해금' },
     },
   ];
@@ -5233,19 +5236,34 @@ img { max-width: 100%; }
     }
     this.emit({ k: 'abil', id: 'stance', stance: to, hit });
   };
+  // 별똥별 한 번(mul: 유성우의 두 번째는 0.5)이 이 적에게 주는 피해 (피해 배율을 곱하기 전)
+  // 보스: 레벨 피해의 bossMul 과 최대 체력의 bossPct 중 큰 쪽 (초신성은 레벨 피해 그대로, 체력 비율 ×2)
+  P.starDmgTo = function (e, mul) {
+    const M = this.M;
+    const A = RS.ABILITY.star;
+    const dmg = RS.levelHp(this.curL) * A.dmg * mul;
+    if (!e.boss) return dmg;
+    return Math.max(M.supernova ? dmg : dmg * A.bossMul, e.maxHp * (A.bossPct || 0) * mul * (M.supernova ? 2 : 1));
+  };
+  // 지금 능력을 쓰면 준비 중인 강타가 끊기는가 (능력 버튼 반짝임 · 봇이 같이 쓴다)
+  // 방패 돌진은 강타를 준비하는 적부터 들이받아 늘 끊는다. 별똥별은 한 방 피해가 남은 경직을 넘거나 초신성(기절)일 때
+  P.abilityBreaksStrike = function () {
+    const ab = this.ab;
+    if (!ab || (ab.id !== 'charge' && ab.id !== 'star') || !this.canUseAbility()) return false;
+    for (const e of this.enemies) {
+      if (e.dead || e.subT > 0 || !e.cast || e.cast.s.k !== 'strike') continue;
+      if (ab.id === 'charge' || this.M.supernova) return true;
+      if (this.starDmgTo(e, 1) >= e.cast.pre.need - e.cast.pre.taken) return true;
+    }
+    return false;
+  };
   // 아스트라: 별똥별 — 모든 적에게 큰 피해 (보스는 35%)
   P.abStar = function () {
     const M = this.M;
-    const A = RS.ABILITY.star;
-    const L = RS.levelHp(this.curL);
     const fall = (mul) => {
-      const dmg = L * A.dmg * mul;
       for (const e of this.enemies) {
         if (e.dead || e.subT > 0) continue;
-        // 보스: 레벨 피해의 bossMul 과 최대 체력의 bossPct 중 큰 쪽 (초신성은 레벨 피해 그대로, 체력 비율 ×2)
-        let d = dmg;
-        if (e.boss) d = Math.max(M.supernova ? dmg : dmg * A.bossMul, e.maxHp * (A.bossPct || 0) * mul * (M.supernova ? 2 : 1));
-        this.damage(e, d, null, false, true);
+        this.damage(e, this.starDmgTo(e, mul), null, false, true);
         if (e.dead) continue;
         if (M.starSlow) this.applySlow(e, M.starSlow, 4);
         if (M.supernova) e.stunT = Math.max(e.stunT, e.boss ? 0.5 : 1);
@@ -11880,6 +11898,8 @@ img { max-width: 100%; }
     if (UI.abBtn && b.ab) {
       setText(UI.abBtn, 'ab', UI.abLabel(b));
       setCls(UI.abBtn, 'abOn', 'off', !b.canUseAbility());
+      // 지금 쓰면 준비 중인 강타를 끊을 수 있다: 금빛으로 반짝
+      setCls(UI.abBtn, 'abBrk', 'brk', b.abilityBreaksStrike());
       if (b.ab.id === 'stance') setCls(UI.abBtn, 'abIce', 'ice', b.ab.stance === 'ice');
     }
     // 합성 가능한 칸 수 + 길에 닿지 않는 칸 (0.1초마다 20칸)

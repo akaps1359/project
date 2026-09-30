@@ -578,6 +578,9 @@ img { max-width: 100%; }
 .btn.star.ab-charge { background: #3a2f22; color: #ffd98a; }
 .btn.star.ab-stance { background: #4a2418; color: #ffb870; }
 .btn.star.ab-stance.ice { background: #173a4a; color: #a8ecff; }
+/* 지금 쓰면 준비 중인 강타를 끊을 수 있다 */
+.btn.star.brk { animation: brk 0.5s steps(2) infinite; }
+@keyframes brk { 50% { box-shadow: var(--px), 0 0 0 4px var(--gold); } }
 /* 보드 칸 고르기 (룬·복제·제물) */
 .bpick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 280px; margin: 12px auto; }
 .bcell { position: relative; aspect-ratio: 1; border: 0; padding: 0; background: var(--panel2); box-shadow: var(--px), inset 0 0 0 2px var(--rune, transparent); display: grid; place-items: center; touch-action: manipulation; font: inherit; color: var(--text); }

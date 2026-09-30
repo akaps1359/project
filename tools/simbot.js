@@ -90,11 +90,26 @@ function useAbilityBot(RS, b, danger) {
     // 별: 위험·보스·가득 참·몰려옴 (별자리가 있으면 5개는 남겨 둔다)
     case 'star': {
       const keep = b.M.starHoard ? 5 : 0; // 별자리: 5개 이상이면 피해가 오르니 위험하지 않으면 남긴다
-      go = (danger || !!b.boss || crowd || ab.n >= ab.max) && (danger || ab.n - ab.cost >= keep);
+      // 별똥별 한 방으로 끊을 수 있는 강타가 준비 중이면 끊는다 (사람도 배우는 쓰임새)
+      const brk = b.abilityBreaksStrike();
+      go = (brk || danger || !!b.boss || crowd || ab.n >= ab.max) && (brk || danger || ab.n - ab.cost >= keep);
       break;
     }
     // 결의: 강타를 끊는 데 쓰고, 넘치면 앞선 적에게
-    case 'charge': go = casting || danger || ab.n >= ab.max; break;
+    case 'charge': {
+      // 엘리트·보스가 없으면(강타 걱정 없음) 곧 빠져나갈 적을 들이받아 누수를 막는다
+      let leak = false;
+      if (process.env.RS_BOT_CHARGE_LEAK === '1' && !b.enemies.some((e) => !e.dead && (e.elite || e.boss))) {
+        for (const e of b.enemies) {
+          if (!e.dead && !(e.subT > 0) && e.nextLap - e.d < RS.FIELD.PERIM * 0.12) {
+            leak = true;
+            break;
+          }
+        }
+      }
+      go = casting || danger || leak || ab.n >= ab.max;
+      break;
+    }
     // 태세: 적이 있으면 대기가 끝날 때마다 바꿔 폭발을 낸다
     case 'stance': go = live >= 3 || danger; break;
   }
