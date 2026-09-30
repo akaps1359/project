@@ -6,18 +6,25 @@
   let ctx = null;
   let master = null;
   let muted = false;
+  let bgmOff = false;
   const last = {};
 
   try {
     muted = localStorage.getItem('rs_muted') === '1';
+    bgmOff = localStorage.getItem('rs_bgm_off') === '1';
   } catch (e) {
     /* 저장소를 못 쓰면 기본값 */
   }
 
-  // 무음 스위치를 켜 둔 아이폰에서도 효과음이 나게 오디오 세션을 '재생'으로 둔다 (iOS 17+)
+  // 무음 스위치를 켜 둔 아이폰에서도 소리가 나게 오디오 세션을 '재생'으로 둔다 (iOS 17+).
+  // 단 '재생'은 다른 앱 음악을 멈추므로 게임 음악을 끄면 '주변음'(섞임)으로 되돌린다
   function setSession() {
     try {
-      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+      const s = navigator.audioSession;
+      if (!s) return;
+      if (!muted && !bgmOff) {
+        if (s.type !== 'playback') s.type = 'playback';
+      } else if (s.type === 'playback' || (!muted && s.type !== 'ambient')) s.type = 'ambient';
     } catch (e) {
       /* 지원하지 않으면 무시 */
     }
@@ -54,6 +61,14 @@
       master = ctx.createGain();
       master.gain.value = 0.35;
       master.connect(ctx.destination);
+      // 멈춰 있던 동안 바뀐 장면·음악 설정을 깨어나자마자 적용 (못 받는 옛 브라우저는 700ms 확인이 대신)
+      try {
+        ctx.onstatechange = () => {
+          if (ctx.state === 'running') apply();
+        };
+      } catch (e) {
+        /* 무시 */
+      }
     }
     // iOS 는 백그라운드·전화 뒤에 'interrupted' 로 멈출 수 있다
     if (ctx.state !== 'running' && ctx.state !== 'closed') {
@@ -223,7 +238,7 @@
   RS.unlockAudio = function () {
     if (muted) return;
     setSession();
-    kickHtmlAudio();
+    if (!bgmOff) kickHtmlAudio(); // 옛 iOS 의 HTML 오디오 깨우기는 다른 앱 음악을 멈춘다: 음악을 켰을 때만
     const c = ensure();
     if (c && !primed) {
       primed = true;
@@ -335,8 +350,31 @@
 
   const raw = {}; // 곡 id → 받은 mp3 (Promise<ArrayBuffer>)
   const decoded = new Map(); // 곡 id → { buf, off, dur } (최근 3곡만: 폰 메모리)
+  // 못 받은 곡은 5·10·20·40·60초 간격으로만 다시 받는다. 못 푸는 곡은 이번에는 포기
+  const fail = {}; // 곡 id → { n, t, hard }
+  function blocked(id) {
+    const f = fail[id];
+    return !!f && (f.hard || Date.now() - f.t < Math.min(60000, 5000 * Math.pow(2, f.n - 1)));
+  }
+  function clearFails() {
+    for (const k in fail) if (!fail[k].hard) delete fail[k];
+  }
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('online', clearFails);
   function getRaw(id) {
-    if (!raw[id]) raw[id] = fetchBytes(BASE + 'bgm/' + id + '.mp3').catch((e) => { delete raw[id]; throw e; });
+    if (!raw[id]) {
+      if (blocked(id)) return Promise.reject(new Error('backoff'));
+      raw[id] = fetchBytes(BASE + 'bgm/' + id + '.mp3').then(
+        (b) => {
+          delete fail[id];
+          return b;
+        },
+        (e) => {
+          delete raw[id];
+          fail[id] = { n: ((fail[id] && fail[id].n) || 0) + 1, t: Date.now() };
+          throw e;
+        }
+      );
+    }
     return raw[id];
   }
   function getTrack(id) {
@@ -348,7 +386,13 @@
     }
     const info = MAN.bgm[id];
     return getRaw(id)
-      .then((bytes) => decode(bytes.slice(0)))
+      .then((bytes) =>
+        decode(bytes.slice(0)).catch((e) => {
+          fail[id] = { hard: true };
+          delete raw[id];
+          throw e;
+        })
+      )
       .then((buf) => {
         // 한 채널로 합쳐 메모리를 반으로
         let b = buf;
@@ -371,16 +415,11 @@
       });
   }
 
-  let bgmOff = false;
-  try {
-    bgmOff = localStorage.getItem('rs_bgm_off') === '1';
-  } catch (e) {
-    /* 기본값 */
-  }
   let want = null; // { scene, act }
   let cur = null; // { scene, act, id, src, gain }
   let musicBus = null;
-  let jingle = null;
+  let jingle = null; // { src, g }
+  let jingleSeq = 0;
   let reqSeq = 0;
   let pend = null; // 받는 중인 { scene, act }
 
@@ -397,6 +436,22 @@
       /* 이미 멈춤 */
     }
     cur = null;
+  }
+  // 승리 팡파르: 소리를 끄거나 장면이 바뀌면 멈춘다 (아직 받는 중이면 틀지 않게)
+  function stopJingle(fade) {
+    jingleSeq++;
+    if (!jingle) return;
+    const { src, g } = jingle;
+    jingle = null;
+    const now = ctx.currentTime;
+    try {
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0, now + fade);
+      src.stop(now + fade + 0.05);
+    } catch (e) {
+      /* 이미 멈춤 */
+    }
   }
   function startId(scene, act, id, delay) {
     const seq = ++reqSeq;
@@ -430,9 +485,11 @@
   }
   function playJingle() {
     const info = MAN.bgm.winJingle;
-    if (!info) return 0;
+    if (!info || blocked('winJingle')) return 0;
+    const seq = ++jingleSeq;
     getTrack('winJingle')
       .then((t) => {
+        if (seq !== jingleSeq || !ctx) return; // 그사이 소리를 끄거나 장면이 바뀜
         const src = ctx.createBufferSource();
         src.buffer = t.buf;
         const g = ctx.createGain();
@@ -440,31 +497,45 @@
         src.connect(g);
         g.connect(musicBus || master);
         src.start(ctx.currentTime + 0.05, t.off, t.dur);
-        jingle = src;
+        jingle = { src, g };
+        src.onended = () => {
+          if (jingle && jingle.src === src) jingle = null;
+        };
       })
       .catch(() => {});
     return info.dur;
   }
 
   function apply() {
-    if (!ctx || ctx.state !== 'running') return;
+    if (!ctx) return;
     const target = muted || bgmOff ? null : want;
+    // 끄기는 멈춘 상태에서도 바로 (예약된 멈춤은 깨어날 때 적용된다)
     if (!target) {
       reqSeq++;
       pend = null;
+      stopJingle(0.3);
       stopCur(0.4);
       return;
     }
+    // 새 곡은 깨어난 뒤에: onstatechange 와 700ms 확인이 다시 부른다
+    if (ctx.state !== 'running') return;
     if (pend && pend.scene === target.scene && pend.act === target.act) return;
     // 같은 장면(같은 막)이면 틀던 곡을 그대로 둔다
     if (cur && cur.scene === target.scene && cur.act === target.act) return;
     const id = trackFor(target.scene, target.act);
     if (!id) return;
+    if (target.scene !== 'win') stopJingle(0.3);
     stopCur(0.8);
+    if (blocked(id)) {
+      // 못 받은 곡: 기다리는 동안은 조용히 (확인 때마다 다시 받지 않는다)
+      reqSeq++;
+      pend = null;
+      return;
+    }
     let delay = 0.05;
     if (target.scene === 'win') delay = playJingle() + 0.2;
     startId(target.scene, target.act, id, delay);
-    for (const n of nextOf(target.scene, target.act)) if (MAN.bgm[n]) getRaw(n).catch(() => {});
+    for (const n of nextOf(target.scene, target.act)) if (MAN.bgm[n] && !blocked(n)) getRaw(n).catch(() => {});
   }
 
   // scene: title·map·battle·elite·boss·shop·rest·event·win·lose. act 로 막마다 곡이 바뀐다
@@ -473,8 +544,9 @@
     apply();
   };
   // 터치로 오디오가 깨어난 뒤에도 원하는 곡이 나오게 가끔 확인한다
+  // apply 는 같은 곡이면 바로 돌아오므로, 멈춰 있던 동안 놓친 장면·끄기 변경도 여기서 따라잡는다
   if (typeof setInterval === 'function') setInterval(() => {
-    if (ctx && ctx.state === 'running' && want && !cur && !bgmOff && !muted) apply();
+    if (ctx && ctx.state === 'running') apply();
   }, 700);
 
   RS.audioHidden = function (hidden) {
@@ -497,7 +569,11 @@
     } catch (e) {
       /* 무시 */
     }
-    if (!off) RS.unlockAudio();
+    setSession();
+    if (!off) {
+      clearFails(); // 직접 다시 켜면 한 번은 바로 다시 받아 본다
+      RS.unlockAudio();
+    }
     apply();
   };
 
@@ -509,7 +585,11 @@
     } catch (e) {
       /* 무시 */
     }
-    if (!m) RS.unlockAudio();
+    setSession();
+    if (!m) {
+      clearFails();
+      RS.unlockAudio();
+    }
     apply();
   };
 })((globalThis.RS = globalThis.RS || {}));

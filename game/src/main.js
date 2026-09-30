@@ -251,6 +251,7 @@
     G.renderer.reset();
     G.renderer.setTheme(RS.actDef(run).theme);
     G.acc = 0;
+    G.slow = 1; // 지난 전투의 강타 집중 감속을 넘기지 않는다
     G.paused = false;
     UI.showBattle();
     requestWake();

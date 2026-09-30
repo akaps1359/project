@@ -508,12 +508,17 @@
           if (ev.big) this.shake = Math.max(this.shake, 0.25);
           break;
         }
-        case 'leak':
+        case 'leak': {
+          // 방어막으로 반감된 누수는 0.5 단위: HUD 와 같은 소수 한 자리. 다 막았으면 숫자·흔들림 없이 균열만
+          const v = Math.round(ev.v * 10) / 10;
           this.fxs.push({ k: 'leak', x: F.L, y: F.T, t: 0.5, max: 0.5 });
-          this.nums.push({ x: F.L + 6, y: F.T + 4, vx: 6, vy: -16, s: '-' + Math.round(ev.v), c: 'r', t: 0.9, max: 0.9, big: 1.6 });
-          this.emit(F.L, F.T, 12, { sp: [20, 55], life: [0.3, 0.6], cols: ['#e04a52', '#f07fb0', '#ffffff'], drag: 2.5, glow: 2 });
-          this.shake = Math.max(this.shake, 0.18);
+          this.emit(F.L, F.T, v > 0 ? 12 : 4, { sp: [20, 55], life: [0.3, 0.6], cols: ['#e04a52', '#f07fb0', '#ffffff'], drag: 2.5, glow: 2 });
+          if (v > 0) {
+            this.nums.push({ x: F.L + 6, y: F.T + 4, vx: 6, vy: -16, s: '-' + v, c: 'r', t: 0.9, max: 0.9, big: 1.6 });
+            this.shake = Math.max(this.shake, 0.18);
+          }
           break;
+        }
         case 'summon':
           this.startPop(ev.slot, 1, 0.38);
           if (ev.twin != null) this.startPop(ev.twin, 1, 0.38);
@@ -619,7 +624,8 @@
           }
           this.fxs.push({ k: 'leak', x: F.L, y: F.T, t: 0.5, max: 0.5 });
           this.fxs.push({ k: 'flash', t: 0.22, max: 0.22, col: '#e04a52' });
-          this.nums.push({ x: F.L + 8, y: F.T + 4, vx: 6, vy: -16, s: '-' + Math.round(ev.v), c: 'r', t: 1, max: 1, big: 1.8 });
+          const v = Math.round(ev.v * 10) / 10;
+          if (v > 0) this.nums.push({ x: F.L + 8, y: F.T + 4, vx: 6, vy: -16, s: '-' + v, c: 'r', t: 1, max: 1, big: 1.8 });
           this.shake = Math.max(this.shake, 0.3);
           break;
         }
@@ -1456,7 +1462,7 @@
         case 'strike': {
           // 의도: 잃을 생명 숫자와 경직 막대 (채우면 끊긴다), 균열로 이어지는 붉은 점선
           if (!pre) break;
-          RS.drawNum(ctx, '-' + RS.strikeLoss(b, e), gx + 10, gy + 2, 'r', 1);
+          RS.drawNum(ctx, '-' + Math.round(RS.strikeLoss(b, e) * 10) / 10, gx + 10, gy + 2, 'r', 1);
           const k = Math.min(1, pre.taken / Math.max(1, pre.need));
           ctx.fillStyle = '#15111d';
           ctx.fillRect(gx - 7, gy + 14, 15, 3);
@@ -1742,7 +1748,7 @@
       const s = this.shots[k];
       s.t -= dt;
       if (s.t <= 0) {
-        if (s.cls !== 'mage') this.impact(s); // 마법사는 폭발(boom)이 따로 있다
+        if (s.cls !== 'mage' && !s.hit) this.impact(s); // 기사는 베는 도중 이미 터뜨렸다. 마법사는 폭발(boom)이 따로 있다
         continue;
       }
       this.shots[w++] = s;
@@ -2136,6 +2142,9 @@
     this.pop.fill(0);
     this.face.fill(1);
     if (this.noReach) this.noReach.fill(0);
+    // 지난 전투의 강타 집중 어둠이 새 전투 첫 프레임에 남지 않게
+    this.focusK = 0;
+    this.focusE = null;
   };
 
   RS.Renderer = Renderer;
