@@ -115,7 +115,7 @@
       cost: '소환 비용이 매번 50~200% 사이에서 무작위',
     }),
     R('cursedKey', '도굴꾼의 열쇠', 3, 'key', '웨이브 시작 골드 2배, 이자 한도 +3', { waveGoldPct: 1, interestCap: 3, cursedKey: 1 }, {
-      cost: '보물 상자를 열 때마다 저주를 받는다',
+      cost: '보물 층 밖에서 보물 상자를 열 때마다 저주를 받는다',
     }),
     R('markPain', '가시 문신', 3, 'brand', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, capAdd: -15 }, {
       cost: '필드 상한 60 → 45',

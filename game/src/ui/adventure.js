@@ -533,6 +533,7 @@
     const summary = r.gold ? [`골드 +${r.gold}`] : [];
     if (r.heal) summary.push(`생명 +${r.heal}`);
     if (r.item) summary.push(`소모품 [${RS.ITEM[r.item].name}]`);
+    if (r.lostItem && RS.ITEM[r.lostItem]) summary.push(`가방이 가득 차 [${RS.ITEM[r.lostItem].name}] 버림`);
     if (r.key) body.appendChild(h('div', { class: 'keygot' }, icon('key_emerald', '', 4), h('b', null, '초록 봉인석을 얻었다!')));
     const pickCard = (id) => {
       RS.sfx('click');

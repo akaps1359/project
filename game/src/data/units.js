@@ -26,7 +26,7 @@
     earlyBonus: [0, 2, 3, 4], // [막] 웨이브를 일찍 정리하면 받는 골드
     interestPer: 10, // 보유 골드 10당 이자 1
     interestCap: 5,
-    clearGold: { combat: [0, 20, 30, 40], elite: [0, 35, 50, 65], boss: [0, 60, 80, 0] },
+    clearGold: { combat: [0, 20, 30, 40], elite: [0, 35, 50, 65], boss: [0, 60, 80, 100] },
     skipGold: [0, 25, 40, 55], // 증강 건너뛰기 골드
     upgradeBase: 30, // 강화 비용 = base + step × 레벨
     upgradeStep: 20,

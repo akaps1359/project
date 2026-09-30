@@ -246,6 +246,65 @@
     run.rngS = run.rng.s;
     return JSON.stringify(run);
   };
+  const okRelic = (id) => !!RS.REL[id];
+  const okAug = (id) => typeof id === 'string' && !!RS.augDef(id);
+  const okShopEntry = (it) => {
+    if (!it) return false;
+    if (it.kind === 'relic') return okRelic(it.id);
+    if (it.kind === 'aug') return okAug(it.id);
+    if (it.kind === 'item') return !!RS.ITEM[it.id];
+    if (it.kind === 'rune') return !!RS.RUNE[it.id];
+    return true;
+  };
+  function purgePending(run, p) {
+    if (!p) return;
+    if (Array.isArray(p.relics)) p.relics = p.relics.filter(okRelic);
+    if (Array.isArray(p.got)) p.got = p.got.filter(okRelic);
+    if (p.curse && !RS.CURSE[p.curse]) p.curse = null;
+    const r = p.reward;
+    if (r) {
+      if (Array.isArray(r.relics)) r.relics = r.relics.filter(okRelic);
+      if (Array.isArray(r.aug)) {
+        const n = r.aug.length;
+        r.aug = r.aug.filter(okAug);
+        // 모두 빠졌으면 같은 가중치로 다시 굴린다
+        if (n && !r.aug.length && !r.augDone) {
+          if (r.augW) r.aug = RS.rollAugments(run, RS.augChoiceCount(run), r.augW);
+          if (!r.aug.length) r.augDone = true;
+        }
+      }
+      if (r.item && !RS.ITEM[r.item]) r.item = null;
+    }
+    const shop = p.shop;
+    if (shop && Array.isArray(shop.list) && !shop.list.every(okShopEntry)) {
+      // 빠진 물건은 목록에서 없앤다 (팔린 칸도 카드로 그려지므로 'sold' 표시로는 부족하다).
+      // 대기열의 구매 취소 기록(undo.shopIdx)도 새 위치로 옮긴다
+      const map = [];
+      const list = [];
+      shop.list.forEach((it, i) => {
+        if (okShopEntry(it)) {
+          map[i] = list.length;
+          list.push(it);
+        } else map[i] = -1;
+      });
+      shop.list = list;
+      for (const q of run.queue || []) {
+        if (q && q.undo && q.undo.shopIdx != null) q.undo.shopIdx = q.undo.shopIdx >= 0 && q.undo.shopIdx < map.length ? map[q.undo.shopIdx] : -1;
+      }
+    }
+  }
+  function purgeMissing(run) {
+    purgePending(run, run.pending);
+    purgePending(run, run.afterPending);
+    for (const q of run.queue || []) {
+      if (!q || !Array.isArray(q.ids)) continue;
+      if (q.k === 'relicList') q.ids = q.ids.filter(okRelic); // 비면 pruneQueue 가 건너뛴다
+      else if (q.k === 'aug' || q.k === 'augList') {
+        q.ids = q.ids.filter(okAug);
+        if (q.k === 'aug' && !q.ids.length) delete q.ids; // 보여 줄 때 다시 굴린다
+      }
+    }
+  }
   RS.loadString = function (str) {
     const run = JSON.parse(str);
     if (!run || run.v !== 2) return null;
@@ -256,6 +315,9 @@
     if (Array.isArray(run.augments)) run.augments = run.augments.filter((id) => RS.augDef(id));
     if (Array.isArray(run.curses)) run.curses = run.curses.filter((id) => RS.CURSE[id]);
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
+    if (Array.isArray(run.items)) run.items = run.items.filter((id) => RS.ITEM[id]);
+    // 보물·상점·보상 화면이나 대기열에 남은 빠진 id 도 뺀다 (그대로 두면 화면을 그리다 멈춘다)
+    purgeMissing(run);
     // 예전 저장본: 마지막 보스를 이기고 보상 화면에 멈춰 있었다면 그대로 끝낸다
     if (run.phase === 'reward' && run.nodeType === 'boss' && typeof RS.isFinalBoss === 'function' && RS.isFinalBoss(run)) {
       run.phase = 'victory';
@@ -435,6 +497,8 @@
     const u = run.unknown;
     const M = RS.collectMods(run);
     u.count++;
+    // 고요의 구슬: ? 칸에 들어설 때마다 마음이 가라앉아 생명 +2 (꼬마 궤짝이 보물로 바꿔도)
+    if (M.juzu) RS.heal(run, 2);
     // 꼬마 궤짝: 얻은 뒤부터 센다 (유물마다 따로 센다)
     if (M.tinyChest) {
       const st = run.relicState.tinyChest || (run.relicState.tinyChest = { n: 0 });
@@ -442,8 +506,6 @@
       if (st.n % 3 === 0) return 'treasure';
     }
     const r = run.rng.next();
-    // 고요의 구슬: ? 칸에 들어설 때마다 마음이 가라앉아 생명 +2
-    if (M.juzu) RS.heal(run, 2);
     const combat = M.juzu ? 0 : u.combat;
     if (r < combat) {
       u.combat = 0.1;
@@ -614,15 +676,19 @@
     const act = Math.min(3, run.act);
     const rng = run.rng;
     let gold = BAL.clearGold[type === 'boss' ? 'boss' : type === 'elite' ? 'elite' : 'combat'][act];
+    // 이벤트 보스전(소원의 꽃)은 골드 대신 유물을 준다
+    if (type === 'boss' && stage.type === 'eventFight') gold = 0;
     gold = Math.round(gold * (0.85 + rng.next() * 0.3) * (1 + M.combatGoldPct)) + (M.winGold || 0) * act;
     if (run.burning && type === 'elite') gold += 30 * act;
     RS.addGold(run, gold);
-    if (M.winHeal) RS.heal(run, M.winHeal);
+    // 보상 화면에는 실제로 회복한 양을 보여 준다 (가득 찼거나 시든 꽃의 낙인이면 0)
+    let healed = 0;
+    if (M.winHeal) healed += RS.heal(run, M.winHeal);
     if (M.winMaxLife) {
       RS.changeMaxLife(run, M.winMaxLife);
-      RS.heal(run, M.winMaxLife);
+      healed += RS.heal(run, M.winMaxLife);
     }
-    if (M.meatBone && run.life <= run.maxLife / 2) RS.heal(run, M.meatBone);
+    if (M.meatBone && run.life <= run.maxLife / 2) healed += RS.heal(run, M.meatBone);
     if (M.eliteUpgrade && type === 'elite') {
       const idxs = run.augments.map((id, i) => i).filter((i) => RS.canUpgradeAug(run.augments[i]));
       rng.shuffle(idxs);
@@ -630,12 +696,13 @@
     }
     if (type === 'elite') run.stats.elites++;
     if (type === 'boss' && run.nodeType === 'boss') run.stats.bosses++;
-    const reward = { gold, heal: M.winHeal, augDone: false, rerolls: M.augRerolls, relics: null, relicDone: false, item: null, key: null };
+    const reward = { gold, heal: healed, augDone: false, rerolls: M.augRerolls, relics: null, relicDone: false, item: null, key: null };
     // 소모품: 기본 40%, 나오면 -10%p, 안 나오면 +10%p
     if (!M.noItems && type !== 'boss') {
       if (rng.chance(run.itemChance + (M.itemDropBonus || 0))) {
         const id = RS.randomItemId(rng);
         if (RS.addItem(run, id)) reward.item = id;
+        else reward.lostItem = id; // 가방이 가득 차 두고 왔다
         run.itemChance = Math.max(0, run.itemChance - 0.1);
       } else run.itemChance = Math.min(1, run.itemChance + 0.1);
     }
@@ -949,7 +1016,8 @@
   RS.removeCost = function (run) {
     const M = RS.collectMods(run);
     if (M.fixedRemoveCost) return M.fixedRemoveCost;
-    return Math.round((75 + 25 * run.removeCount) * (run.asc >= 2 ? 1.15 : 1));
+    // 상점 할인 유물은 제거 서비스에도 적용된다 (막 배율은 적용하지 않는다)
+    return Math.round((75 + 25 * run.removeCount) * (run.asc >= 2 ? 1.15 : 1) * Math.max(0.3, 1 - M.shopDiscount));
   };
 
   const relicEntry = (id) => ({ kind: 'relic', id, base: RS.REL[id].rarity === 2 ? 170 : 120 });
@@ -1202,6 +1270,8 @@
     const tier = battle.stage.spec.trial;
     const ok = battle.result === 'won' && !battle.trialFailed;
     const reward = { gold: 0, augDone: true, relics: null, relicDone: true, trial: { tier, ok, text: null } };
+    // 시험은 전투 보상 증강이 없으니, 성공·실패와 상관없이 지나칠 때처럼 길 위의 발견을 준다
+    RS.enqueue(run, { k: 'aug', w: AUG_W[Math.min(4, run.act)], title: '길 위의 발견' });
     if (ok) {
       const a = Math.min(3, run.act);
       const fallback = (g, why) => {
