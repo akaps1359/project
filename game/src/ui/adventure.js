@@ -336,7 +336,7 @@
       UI.cancelQueued(run, item);
       done();
     };
-    const paid = !!(item.undo || item.refund || item.refundLife || item.undoCurse || item.undoCharm);
+    const paid = !!(item.undo || item.refund || item.refundLife || item.undoCurse || item.undoKarma || item.undoCharm);
     // 취소 버튼: 유료면 '구매 취소 (+NG)', 고를 대상이 없으면 '계속', 그 밖에는 확인을 거친다
     const cancelBtn = (label, hasTargets) => {
       if (paid) {

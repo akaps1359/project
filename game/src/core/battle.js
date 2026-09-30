@@ -932,6 +932,8 @@
     if (M.leakReduce) dmg = Math.max(dmg > 0 ? 1 : 0, dmg - M.leakReduce);
     return Math.max(0, dmg);
   };
+  // 이 강타가 상처를 남기는가 (생명을 깎고, 아직 최대치가 아닐 때) — 미리보기와 strikeHit 이 같이 쓴다
+  RS.strikeInjures = (run, loss) => loss > 0 && (run.injury || 0) < RS.BAL.injuryMax;
   P.strikeHit = function (e, s, pre) {
     const dmg = RS.strikeLoss(this, e, s, pre);
     this.stats.struck += dmg;
@@ -1396,8 +1398,11 @@
         const n = Math.floor(e.leechAcc);
         e.leechAcc -= n;
         if (this.run.life < this.run.maxLife) {
-          const h = RS.heal(this.run, n);
-          if (h > 0) this.emit({ k: 'leech', x: e.x, y: e.y, v: h });
+          // 띄우는 숫자는 화면의 생명(올림)이 실제로 오른 만큼 (반 칸 회복이 +0.5 로 보이지 않게)
+          const before = this.run.life;
+          RS.heal(this.run, n);
+          const v = Math.ceil(this.run.life) - Math.ceil(before);
+          if (v > 0) this.emit({ k: 'leech', x: e.x, y: e.y, v });
         }
       }
     }

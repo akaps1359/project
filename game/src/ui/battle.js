@@ -39,10 +39,18 @@
   UI.starMax = (b) => (typeof b.starMax === 'number' && b.starMax > 0 ? b.starMax : 3);
 
 
-  // 상처 설명 한 줄 (없으면 null)
-  function injuryLine(run) {
+  // 이번 전투에 실제로 걸린 상처 피해 감소(%) — 전투를 시작할 때 고정된다
+  const injApplied = (b) => Math.round((1 - (b && b.dyn && b.dyn.injMul != null ? b.dyn.injMul : 1)) * 100);
+  // 상처 설명 한 줄 (없으면 null). b 를 주면 이번 전투 값과 다음 전투 값을 나눠 쓴다
+  function injuryLine(run, b) {
     if (!run || !(run.injury > 0)) return null;
-    return `상처 ${run.injury}: 전투를 시작할 때 모든 유닛 피해 -${Math.round((1 - RS.injuryMul(run)) * 100)}% · 강타에 맞으면 +1 · 일반 전투를 이기면 -1 · 휴식하면 모두 낫는다`;
+    const next = Math.round((1 - RS.injuryMul(run)) * 100);
+    const tail = ' · 강타에 맞으면 +1 · 일반 전투를 이기면 -1 · 휴식하면 모두 낫는다';
+    if (b) {
+      const cur = injApplied(b);
+      if (cur !== next) return `상처 ${run.injury}: 이번 전투 피해 -${cur}% · 다음 전투부터 -${next}%${tail}`;
+    }
+    return `상처 ${run.injury}: 전투를 시작할 때 모든 유닛 피해 -${next}%${tail}`;
   }
   UI.injuryLine = injuryLine;
 
@@ -73,7 +81,7 @@
       const t = fn(G.battle, G.run);
       UI.tip(e.currentTarget, t[0], t[1], t[2] || null);
     });
-    hudTip('#h-life', (b, run) => ['생명', '한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 가요. 엘리트·보스는 다시 나와 계속 돌고, 머리 위에 붉은 숫자가 뜨면 강타로 생명을 쳐요(몰아치거나 기절시키면 끊겨요). 전투가 끝나도 생명은 이어지니 휴식처에서 관리하세요.', injuryLine(run)]);
+    hudTip('#h-life', (b, run) => ['생명', '한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 가요. 엘리트·보스는 다시 나와 계속 돌고, 머리 위에 붉은 숫자가 뜨면 강타로 생명을 쳐요(몰아치거나 기절시키면 끊겨요). 전투가 끝나도 생명은 이어지니 휴식처에서 관리하세요.', injuryLine(run, b)]);
     // 생명 칸 아래 작은 상처 표시
     $('#h-life').appendChild(h('small', { class: 'inj', id: 'h-inj', hidden: true }));
     hudTip('#h-gold', (b) => ['골드', `처치·웨이브마다 들어와요. 웨이브 시작 때 보유 10G당 1G 이자 (최대 ${RS.interestCap(b.M)}).`]);
@@ -791,7 +799,9 @@
     const injEl = $('#h-inj');
     if (injEl) {
       setAttrHidden(injEl, 'injh', !inj);
-      if (inj) setText(injEl, 'inj', `상처 ${inj} (−${Math.round((1 - RS.injuryMul(run)) * 100)}%)`);
+      // 퍼센트는 이번 전투에 실제로 걸린 값 (이번에 맞은 상처는 다음 전투부터 — 설명 칸에)
+      const applied = injApplied(b);
+      if (inj) setText(injEl, 'inj', `상처 ${inj}${applied > 0 ? ` (−${applied}%)` : ''}`);
     }
     const nW = b.stage.waves.length;
     const tl = b.prep > 0 ? null : trialLeft(b);
@@ -916,7 +926,7 @@
     const pre = f.cast.pre;
     setText(el.querySelector('.sb-name'), 'sbn', `${f.def.name} · ${f.cast.s.name} ${Math.max(0, f.cast.t).toFixed(1)}`);
     const loss = RS.strikeLoss(b, f);
-    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${loss}${loss > 0 ? ' · 상처 +1' : ''}`);
+    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${loss}${RS.strikeInjures(b.run, loss) ? ' · 상처 +1' : ''}`);
     const k = Math.min(1, pre.taken / Math.max(1, pre.need));
     const w = (k * 100).toFixed(0) + '%';
     if (c.sbw !== w) {
@@ -970,7 +980,8 @@
       k = cast.k;
       name = `${cast.name || CAST_NAME[k] || '기술'} ${Math.max(0, cast.t).toFixed(1)}`;
       txt = CAST_TXT[k] || '';
-      if (k === 'strike' && cast.pre) txt = `생명 -${RS.strikeLoss(b, e)}${RS.strikeLoss(b, e) > 0 ? '·상처 +1' : ''} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
+      const sl = k === 'strike' && cast.pre ? RS.strikeLoss(b, e) : 0;
+      if (k === 'strike' && cast.pre) txt = `생명 -${sl}${RS.strikeInjures(b.run, sl) ? '·상처 +1' : ''} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
       frac = 1 - cast.t / cast.T;
       col = RS.CAST_COL[k] || '#ffe46b';
     }

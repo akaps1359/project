@@ -368,11 +368,12 @@
       h('div', { class: 'tb-title' }, title),
       h('div', { class: 'tb-stats' },
         UI.keysEl(run),
-        h('span', { class: 'stat' }, UI.icon('heart', '', 3), h('b', null, `${Math.ceil(run.life)}/${run.maxLife}`)),
+        // 상처는 생명 옆에 작은 배지로만 (좁은 폰에서 제목 폭을 먹지 않게). 탭하면 설명.
         run.injury > 0 ? h('button', {
-          class: 'stat inj', 'aria-label': '상처',
-          onclick(e) { UI.tip(e.currentTarget, `상처 ${run.injury}`, `강타에 맞으면 생긴다. 하나당 전투를 시작할 때 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 일반 전투를 이기면 1씩 아물고, 휴식처에서 쉬면 모두 낫는다. 새 막에서는 사라진다.`); },
-        }, `상처 ${run.injury}`, h('small', null, `−${Math.round((1 - RS.injuryMul(run)) * 100)}%`)) : null,
+          class: 'stat life hurt', 'aria-label': `생명, 상처 ${run.injury}`,
+          onclick(e) { UI.tip(e.currentTarget, `상처 ${run.injury} · 피해 −${Math.round((1 - RS.injuryMul(run)) * 100)}%`, `강타에 맞으면 생긴다. 하나당 전투를 시작할 때 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 일반 전투를 이기면 1씩 아물고, 휴식처에서 쉬면 모두 낫는다. 새 막에서는 사라진다.`); },
+        }, UI.icon('heart', '', 3), h('b', null, `${Math.ceil(run.life)}/${run.maxLife}`), h('small', { class: 'inj-badge' }, `상처 ${run.injury}`))
+          : h('span', { class: 'stat life' }, UI.icon('heart', '', 3), h('b', null, `${Math.ceil(run.life)}/${run.maxLife}`)),
         h('span', { class: 'stat' }, UI.icon('coin', '', 3), h('b', null, UI.fmt(run.gold))),
         UI.btn('빌드', () => UI.openBuild(), 'sm tb-build'),
         h('button', { class: 'btn sm menu-btn', 'aria-label': '메뉴', onclick() { RS.sfx('click'); UI.openMenu(); } }, '≡'),

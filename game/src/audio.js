@@ -420,6 +420,7 @@
   let musicBus = null;
   let jingle = null; // { src, g }
   let jingleSeq = 0;
+  let jingleFor = null; // 승리 팡파르를 튼 want (다시 받기 재시도 때 또 틀지 않는다)
   let reqSeq = 0;
   let pend = null; // 받는 중인 { scene, act }
 
@@ -513,6 +514,7 @@
     if (!target) {
       reqSeq++;
       pend = null;
+      jingleFor = null;
       stopJingle(0.3);
       stopCur(0.4);
       return;
@@ -524,7 +526,10 @@
     if (cur && cur.scene === target.scene && cur.act === target.act) return;
     const id = trackFor(target.scene, target.act);
     if (!id) return;
-    if (target.scene !== 'win') stopJingle(0.3);
+    if (target.scene !== 'win') {
+      jingleFor = null;
+      stopJingle(0.3);
+    }
     stopCur(0.8);
     if (blocked(id)) {
       // 못 받은 곡: 기다리는 동안은 조용히 (확인 때마다 다시 받지 않는다)
@@ -533,7 +538,11 @@
       return;
     }
     let delay = 0.05;
-    if (target.scene === 'win') delay = playJingle() + 0.2;
+    // 팡파르는 승리 화면에 들어올 때 한 번만 (곡을 못 받아 다시 시도할 때는 곡만)
+    if (target.scene === 'win' && jingleFor !== want) {
+      jingleFor = want;
+      delay = playJingle() + 0.2;
+    }
     startId(target.scene, target.act, id, delay);
     for (const n of nextOf(target.scene, target.act)) if (MAN.bgm[n] && !blocked(n)) getRaw(n).catch(() => {});
   }

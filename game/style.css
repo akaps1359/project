@@ -669,5 +669,6 @@ img { max-width: 100%; }
 /* 상처: 생명 옆 작은 붉은 표시 (전투 HUD는 생명 칸 아래, 맵 위쪽 줄은 따로) */
 .hud #h-inj { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); z-index: 3; padding: 0 3px; font-size: 9px; line-height: 11px; color: #ffd0d4; background: #7a1f2b; box-shadow: 0 0 0 1px #15111d; white-space: nowrap; pointer-events: none; }
 .hud #h-inj[hidden] { display: none; }
-.tb-stats .stat.inj { font: inherit; font-size: 11px; color: #ffd0d4; background: #7a1f2b; border: 0; padding: 2px 4px; gap: 2px; cursor: pointer; box-shadow: var(--px); }
-.tb-stats .stat.inj small { font-size: 9px; color: #ffb0b8; }
+.tb-stats .stat.life { position: relative; }
+.tb-stats .stat.hurt { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; touch-action: manipulation; }
+.tb-stats .stat.hurt .inj-badge { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); padding: 0 2px; font-size: 9px; line-height: 11px; color: #ffd0d4; background: #7a1f2b; box-shadow: 0 0 0 1px #15111d; white-space: nowrap; pointer-events: none; }

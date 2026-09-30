@@ -633,7 +633,8 @@ function makeSmartBot(RS, rng, opts) {
     return Math.min(0.95, (p / 100) * scale);
   }
   function hazScale(run) {
-    return P.hazScale * Math.max(1, 0.5 + 0.05 * Math.min(10, run.asc || 0)) * Math.max(0.6, Math.min(2.5, strength(run)));
+    // 승천 0 은 ×0.5, 승천 10 은 ×1.0 (G5 의 'Math.max(1, …)' 바닥은 이 항을 늘 1 로 만들어 없앴다 — 되돌림)
+    return P.hazScale * (0.5 + 0.05 * Math.min(10, run.asc || 0)) * Math.max(0.6, Math.min(2.5, strength(run)));
   }
   // 이번 막이 끝날 때까지 죽을 확률 (남은 층: 전투·엘리트 섞임, 보스 앞 휴식처, 보스)
   function deathRisk(run, life, maxLife) {

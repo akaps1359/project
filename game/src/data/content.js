@@ -45,7 +45,7 @@
     // ── 골드 ──
     A('luckySummon', '행운의 소환', 2, 'clover', '소환 시 희귀 등급 확률 +8%', { rareChance: 0.08 }),
     A('recycle', '재활용', 2, 'recycle', '합성할 때 18% 확률로 재료 1기 반환', { mergeRefund: 0.18 }, { unique: true }),
-    A('diversity', '다양성', 2, 'rainbow', '보드의 클래스마다 희귀 이상 유닛이 있으면 +8% (최대 +40%)', { diversity: 0.08 }, { unique: true }),
+    A('diversity', '다양성', 2, 'rainbow', '보드에 희귀 이상 유닛이 있는 클래스마다 피해 +8%', { diversity: 0.08 }, { unique: true }),
     A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +75%', { purity: 0.75 }, { unique: true }),
     A('eliteSquad', '정예주의', 2, 'medal', '보드 유닛이 12기 이하면 피해 +45%', { eliteSquad: 0.45 }, { unique: true }),
     A('rich', '부자의 여유', 2, 'crown', '골드를 100 이상 보유하면 피해 +30%', { rich: 0.3 }, { unique: true }),

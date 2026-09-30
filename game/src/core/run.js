@@ -703,14 +703,16 @@
     // 일반 전투를 이기면 상처가 조금 아문다 (엘리트·보스전은 아니다)
     const injury0 = run.injury || 0;
     if (type === 'combat' && injury0 > 0) run.injury = Math.max(0, injury0 - BAL.injuryDecay);
-    // 보상 화면에는 실제로 회복한 양을 보여 준다 (가득 찼거나 시든 꽃의 낙인이면 0)
-    let healed = 0;
-    if (M.winHeal) healed += RS.heal(run, M.winHeal);
+    // 보상 화면에는 실제로 회복한 양을 보여 준다 (가득 찼거나 시든 꽃의 낙인이면 0).
+    // 생명은 반 칸이 될 수 있으니 화면에 보이는 값(올림)의 차이로 센다
+    const life0 = run.life;
+    if (M.winHeal) RS.heal(run, M.winHeal);
     if (M.winMaxLife) {
       RS.changeMaxLife(run, M.winMaxLife);
-      healed += RS.heal(run, M.winMaxLife);
+      RS.heal(run, M.winMaxLife);
     }
-    if (M.meatBone && run.life <= run.maxLife / 2) healed += RS.heal(run, M.meatBone);
+    if (M.meatBone && run.life <= run.maxLife / 2) RS.heal(run, M.meatBone);
+    const healed = Math.max(0, Math.ceil(run.life) - Math.ceil(life0));
     if (M.eliteUpgrade && type === 'elite') {
       const idxs = run.augments.map((id, i) => i).filter((i) => RS.canUpgradeAug(run.augments[i]));
       rng.shuffle(idxs);
@@ -880,7 +882,7 @@
     let guard = 0;
     while (run.queue.length && guard++ < 50 && !RS.choiceActionable(run, run.queue[0])) {
       const it = run.queue[0];
-      if (it.undo || it.refund || it.refundLife || it.undoCurse || it.undoCharm) RS.cancelChoice(run, it);
+      if (it.undo || it.refund || it.refundLife || it.undoCurse || it.undoKarma || it.undoCharm) RS.cancelChoice(run, it);
       run.queue.shift();
     }
   }
@@ -911,7 +913,7 @@
       if (shop) RS.repriceShop(run, shop);
       texts.push(u.gold > 0 ? `구매를 취소했다. 골드 +${u.gold}` : '구매를 취소했다.');
     }
-    if (item.refund || item.refundLife || item.undoCurse || item.undoCharm) {
+    if (item.refund || item.refundLife || item.undoCurse || item.undoKarma || item.undoCharm) {
       // 이벤트에서 값을 치른 서비스
       const g = item.refund || 0;
       if (g > 0) {
@@ -928,12 +930,18 @@
         if (i >= 0) {
           run.curses.splice(i, 1);
           texts.push(`저주 [${RS.CURSE[item.undoCurse].name}]도 사라졌다.`);
+          // 그 저주로 받은 업보 골드도 돌려놓는다
+          if (item.undoKarma > 0) {
+            RS.addGold(run, -item.undoKarma);
+            texts.push(`업보 골드 ${item.undoKarma}도 돌려놓았다.`);
+          }
         }
       }
       if (item.undoCharm && run.relicState.omamori) run.relicState.omamori.charges += item.undoCharm;
       item.refund = 0;
       item.refundLife = 0;
       item.undoCurse = null;
+      item.undoKarma = 0;
       item.undoCharm = 0;
       // 한 번에 산 묶음(제거 + 연마 등)의 나머지도 함께 취소
       if (item.group) {
@@ -1208,7 +1216,8 @@
         break;
       case 'lift':
         run.relicState.girya.lifts++;
-        run.permDmg = (run.permDmg || 0) + 0.08;
+        // 단련은 한 번마다 ×1.08 을 곱한다 (세 번이면 ×1.26)
+        run.permDmg = (1 + (run.permDmg || 0)) * 1.08 - 1;
         break;
       case 'recall':
         run.keys.ruby = true;

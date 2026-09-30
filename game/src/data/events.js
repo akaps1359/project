@@ -673,9 +673,12 @@
           label: '몸을 씻는다', desc: '증강이나 저주 하나 제거 · 저주 [찜찜함](전투 5번 뒤 사라짐)', cond: hasRemovable,
           apply(run) {
             const charm = !!(run.relicState.omamori && run.relicState.omamori.charges > 0);
+            const g0 = run.gold;
             const got = RS.addCurse(run, 'guilt');
+            // 업보로 받은 골드 (그만두면 저주와 함께 돌려놓는다)
+            const karma = got ? Math.max(0, run.gold - g0) : 0;
             // 제거를 그만두면 찜찜함도(액막이 매듭이 막았다면 그 횟수도) 되돌린다
-            q(run, { k: 'remove', title: '이끼 샘터', undoCurse: got ? 'guilt' : null, undoCharm: !got && charm ? 1 : 0 });
+            q(run, { k: 'remove', title: '이끼 샘터', undoCurse: got ? 'guilt' : null, undoKarma: karma, undoCharm: !got && charm ? 1 : 0 });
             return got ? '물이 차갑다. 어쩐지 개운하지가 않다. 저주 [찜찜함]' : '물이 차갑다. 액막이 매듭이 찜찜함을 막았다!';
           },
         },

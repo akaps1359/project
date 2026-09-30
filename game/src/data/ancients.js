@@ -77,7 +77,7 @@
     {
       id: 'sera', name: '혈맹의 여왕 세라', icon: 'chalice', acts: [3],
       text: '"피로 맺은 약속은 깨지지 않아. 너도 그 맛을 보겠느냐?"',
-      pools: [['bloodPactCup', 'loomingFruit'], ['bloodCrown', 'spikedGauntlet'], ['epic2', 'cleanse']],
+      pools: [['bloodPactCup', 'loomingFruit'], ['bloodCrown', 'spikedGauntlet'], ['epic2', 'cleanse', 'maxLife15']],
     },
     {
       id: 'gemi', name: '쌍둥이 별 제미', icon: 'twin', acts: [3],
@@ -103,8 +103,10 @@
     const owned = {};
     for (const id of run.relics) owned[id] = true;
     const boons = [];
+    // 정화는 지울 수 있는 저주가 있을 때만 (없으면 최대 생명 +6 뿐인 빈 선택지가 된다)
+    const cleansable = run.curses.some((id) => RS.CURSE[id] && !RS.CURSE[id].permanent);
     // 전설 유닛은 2막에서 너무 결정적이라 3막에서만 나온다
-    const fresh = (b) => !owned[b] && boons.indexOf(b) < 0 && !(b === 'legend' && run.act < 3);
+    const fresh = (b) => !owned[b] && boons.indexOf(b) < 0 && !(b === 'legend' && run.act < 3) && !(b === 'cleanse' && !cleansable);
     for (const p of A.pools) {
       let opts = p.filter(fresh);
       // 풀이 다 떨어졌으면 다른 풀에서 아직 안 나온 것을 고른다 (같은 선택지가 두 번 나오지 않게)
