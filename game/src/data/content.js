@@ -37,6 +37,7 @@
       unique: true, cost: '소환 시 희귀 이상 등급이 나오지 않음',
     }),
     A('fireArrow', '불화살', 1, 'firearrow', '궁수 공격이 3초 동안 화상 (초당 그 피해의 30%)', { burnArrow: 0.3 }),
+    A('karma', '업보', 1, 'idol', '저주를 얻을 때마다 골드 +30×막', { karmaGold: 30 }, { unique: true }),
     A('hastyWaves', '속전속결', 1, 'clock', '웨이브 시작 골드 2배', { waveGoldPct: 1, waveIntervalPct: 0.15 }, {
       unique: true, cost: '웨이브 간격 15% 단축',
     }),
@@ -44,7 +45,7 @@
     // ── 골드 ──
     A('luckySummon', '행운의 소환', 2, 'clover', '소환 시 희귀 등급 확률 +8%', { rareChance: 0.08 }),
     A('recycle', '재활용', 2, 'recycle', '합성할 때 18% 확률로 재료 1기 반환', { mergeRefund: 0.18 }, { unique: true }),
-    A('diversity', '다양성', 2, 'rainbow', '보드에 다섯 클래스가 모두 있으면 피해 +40%', { diversity: 0.4 }, { unique: true }),
+    A('diversity', '다양성', 2, 'rainbow', '보드의 클래스마다 희귀 이상 유닛이 있으면 +8% (최대 +40%)', { diversity: 0.08 }, { unique: true }),
     A('purity', '순수 혈통', 2, 'crest', '보드의 클래스가 3종 이하면 피해 +75%', { purity: 0.75 }, { unique: true }),
     A('eliteSquad', '정예주의', 2, 'medal', '보드 유닛이 12기 이하면 피해 +45%', { eliteSquad: 0.45 }, { unique: true }),
     A('rich', '부자의 여유', 2, 'crown', '골드를 100 이상 보유하면 피해 +30%', { rich: 0.3 }, { unique: true }),
@@ -72,7 +73,7 @@
     }),
 
     // 키워드 보상: 이미 가진 것과 이어질 때 강해진다
-    A('shatter', '얼음 깨기', 2, 'icecrack', '기절·빙결된 적에게 피해 +50%, 둔화된 적에게 +20%', { shatter: 0.5 }, { unique: true }),
+    A('shatter', '얼음 깨기', 2, 'icecrack', '기절·빙결된 적에게 피해 +50%, 둔화(서리술사·서리 룬)된 적에게 +20%', { shatter: 0.5 }, { unique: true }),
     A('counterStrike', '반격', 2, 'shield2', '적의 강타를 끊을 때마다 생명 +4, 그 적에게 최대 체력의 8% 피해', { counterStrike: 4 }, { unique: true }),
     A('bloodRush', '피의 흥분', 2, 'bloodrush', '치명타를 낸 유닛은 2초 동안 공격 속도 +30%', { critHaste: 0.3 }, { unique: true }),
     A('plague', '역병 확산', 2, 'plague', '화상·독·독안개 피해 +50%. 화상·독에 걸린 적이 쓰러지면 주변 적 3명에게 옮는다', { dotAmp: 0.5, contagion: 1 }, { unique: true }),
@@ -90,8 +91,8 @@
     A('glassCannon', '도자기 대포', 3, 'cannon', '모든 유닛 피해 +55%', { dmgPct: 0.55, leakMult: 2 }, {
       unique: true, cost: '누수·강타·균열 게이지로 잃는 생명 2배',
     }),
-    A('lastStand', '배수의 진', 3, 'skull', '모든 유닛 피해 +45%, 공격 속도 +15%', { dmgPct: 0.45, aspdPct: 0.15, restHealCut: 0.5 }, {
-      unique: true, cost: '최대 생명 절반 · 휴식처 회복 절반',
+    A('lastStand', '배수의 진', 3, 'skull', '모든 유닛 피해 +45%, 공격 속도 +15%', { dmgPct: 0.45, aspdPct: 0.15 }, {
+      unique: true, cost: '최대 생명 절반',
       onPick(run) { RS.changeMaxLife(run, -Math.floor(run.maxLife / 2)); },
     }),
     // ── 슬레이 더 스파이어의 '파워' 카드에서 착안 ──
@@ -143,7 +144,7 @@
     { id: 'ascBurden', name: '심연의 짐', icon: 'curse', desc: '모든 유닛 피해 -10%. 없앨 수 없다', mods: { dmgPct: -0.1 }, permanent: true },
     { id: 'guilt', name: '찜찜함', icon: 'curse', desc: '전투를 시작할 때 생명 -1. 전투 5번 뒤 저절로 사라진다', mods: { battleStartLifeLoss: 1 }, fades: 5 },
     { id: 'debt', name: '빚', icon: 'curse', desc: '웨이브가 시작될 때마다 골드 -5', mods: { debt: 5 } },
-    { id: 'bloomMark', name: '시든 꽃의 낙인', icon: 'curse', desc: '생명을 회복할 수 없다. 없앨 수 없다', mods: {}, permanent: true },
+    { id: 'bloomMark', name: '시든 꽃의 낙인', icon: 'curse', desc: '생명을 회복할 수 없다. 휴식해도 상처가 낫지 않는다. 없앨 수 없다', mods: {}, permanent: true },
   ];
 
   const index = (list) => {

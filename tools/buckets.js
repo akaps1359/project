@@ -29,11 +29,12 @@ P.finish = function (result, reason) {
       for (const id of run.curses) add('cur:' + id, RS.CURSE[id].mods.dmgPct || 0);
       let legends = 0; for (const b of run.board) if (b && b.tier >= 3) legends += b.n * (b.tier >= 4 ? 4 : 1);
       add('dyn:분노의 뿔(웨이브 누적)', this.demon);
-      add('dyn:단련(무쇠 아령 등)', run.permDmg || 0);
       add('dyn:전설의 위엄', M.legendAura ? M.legendAura * legends : 0);
       add('dyn:광전사', M.berserk ? Math.min(1, 0.05 * Math.max(0, run.maxLife - run.life) * M.berserk) : 0);
-      add('dyn:나머지', dyn - this.demon - (run.permDmg || 0) - (M.legendAura ? M.legendAura * legends : 0) - (M.berserk ? Math.min(1, 0.05 * Math.max(0, run.maxLife - run.life) * M.berserk) : 0));
-      rows.push({ src, won: result === 'won', pct, lv, lvN: run.classLv[best.s.cls], aspd, critF: 1 + Math.min(1, crit) * (cm2 - 1), elite: M.eliteDmgPct, corr: run.augments.some((id) => RS.augDef(id).id === 'corruption'), augs: run.augments.length, tier: best.s.tier });
+      add('dyn:나머지', dyn - this.demon - (M.legendAura ? M.legendAura * legends : 0) - (M.berserk ? Math.min(1, 0.05 * Math.max(0, run.maxLife - run.life) * M.berserk) : 0));
+      // 단련(permDmg)·상처(injMul)는 피해% 묶음 밖에서 따로 곱한다
+      const sep = (1 + (run.permDmg || 0)) * (this.dyn && this.dyn.injMul != null ? this.dyn.injMul : 1);
+      rows.push({ src, won: result === 'won', pct, lv, sep, lvN: run.classLv[best.s.cls], aspd, critF: 1 + Math.min(1, crit) * (cm2 - 1), elite: M.eliteDmgPct, corr: run.augments.some((id) => RS.augDef(id).id === 'corruption'), augs: run.augments.length, tier: best.s.tier });
     }
   }
   return oldFinish.call(this, result, reason);
@@ -43,11 +44,12 @@ const q = (a, f) => { const s = a.slice().sort((x, y) => x - y); return s[Math.f
 const show = (name, f) => { const a = rows.map(f); console.log(name.padEnd(22), 'p10', q(a, 0.1).toFixed(2), ' p50', q(a, 0.5).toFixed(2), ' p90', q(a, 0.9).toFixed(2), ' max', Math.max(...a).toFixed(2)); };
 console.log('3막 보스전 도달', rows.length, '판 · 가장 센 칸 기준 배율');
 show('피해% 합 (1+합)', (r) => 1 + r.pct);
-show('강화 배율 (1+0.15Lv)', (r) => r.lv);
+show('강화 배율 (1+pct×Lv)', (r) => r.lv);
+show('단련×상처 배율', (r) => r.sep);
 show('강화 레벨', (r) => r.lvN);
 show('공속% 합 (1+합)', (r) => 1 + r.aspd);
 show('치명 기대 배율', (r) => r.critF);
-show('곱 (피해×강화×공속×치명)', (r) => (1 + r.pct) * r.lv * (1 + r.aspd) * r.critF);
+show('곱 (피해×강화×단련상처×공속×치명)', (r) => (1 + r.pct) * r.lv * r.sep * (1 + r.aspd) * r.critF);
 const agg = {};
 for (const r of rows) for (const [k, v] of Object.entries(r.src)) { const a = agg[k] || (agg[k] = { n: 0, sum: 0 }); a.n++; a.sum += v; }
 console.log('피해% 출처 (보유 판 수 · 보유 시 평균 +%) 상위:');

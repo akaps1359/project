@@ -67,7 +67,7 @@
     {
       id: 'chrono', name: '시간의 파수꾼 크로노', icon: 'hourglass', acts: [2, 3],
       text: '"시간은 강물이야. 조금만 비틀면 너에게 유리하게 흐르지."',
-      pools: [['stoppedClock', 'rewindSand'], ['pumpkinCandle', 'waxToys'], ['legend', 'trainAll2']],
+      pools: [['stoppedClock', 'rewindSand'], ['pumpkinCandle', 'waxToys'], ['legend', 'trainAll2', 'maxLife15']],
     },
     {
       id: 'varga', name: '탐욕의 용 바르가', icon: 'egg', acts: [2],
@@ -77,7 +77,7 @@
     {
       id: 'sera', name: '혈맹의 여왕 세라', icon: 'chalice', acts: [3],
       text: '"피로 맺은 약속은 깨지지 않아. 너도 그 맛을 보겠느냐?"',
-      pools: [['bloodPactCup', 'loomingFruit'], ['bloodCrown', 'spikedGauntlet'], ['maxLife15', 'epic2']],
+      pools: [['bloodPactCup', 'loomingFruit'], ['bloodCrown', 'spikedGauntlet'], ['epic2', 'cleanse']],
     },
     {
       id: 'gemi', name: '쌍둥이 별 제미', icon: 'twin', acts: [3],
@@ -87,7 +87,7 @@
     {
       id: 'dar', name: '수집가 다르', icon: 'bag', acts: [2, 3],
       text: '"예전 도전자들이 두고 간 것들이야. 하나쯤 가져가도 되겠지."',
-      pools: [['bossRelic'], ['relicPair'], ['legend', 'gold400']],
+      pools: [['bossRelic'], ['relicPair'], ['legend', 'gold400', 'upgrade2']],
     },
   ];
   RS.ANCIENT = {};

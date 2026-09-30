@@ -665,3 +665,9 @@ img { max-width: 100%; }
 .upnote p, p.upnote { margin: 0; font-size: 11px; line-height: 1.45; color: #e8dcc0; }
 .upnote b { color: var(--gold); font-weight: normal; font-size: 11px; }
 .upnote em { color: var(--gold); font-style: normal; }
+
+/* 상처: 생명 옆 작은 붉은 표시 (전투 HUD는 생명 칸 아래, 맵 위쪽 줄은 따로) */
+.hud #h-inj { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); z-index: 3; padding: 0 3px; font-size: 9px; line-height: 11px; color: #ffd0d4; background: #7a1f2b; box-shadow: 0 0 0 1px #15111d; white-space: nowrap; pointer-events: none; }
+.hud #h-inj[hidden] { display: none; }
+.tb-stats .stat.inj { font: inherit; font-size: 11px; color: #ffd0d4; background: #7a1f2b; border: 0; padding: 2px 4px; gap: 2px; cursor: pointer; box-shadow: var(--px); }
+.tb-stats .stat.inj small { font-size: 9px; color: #ffb0b8; }

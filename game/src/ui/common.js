@@ -242,9 +242,9 @@
     killGoldPct: '처치 골드', waveGoldPct: '웨이브 골드', interestCap: ['이자 한도', 'n'], interestBonus: ['이자', 'n'],
     rareChance: '희귀 소환 확률', twinChance: '한 기 더 소환 확률', mergeRefund: '재료 반환 확률', mergeDouble: '2단계 상승 확률',
     mergeMirror: '결과 2기 확률', enemySpeedPct: ['적 이동 속도', 'neg'], eliteDmgPct: '엘리트·보스에게 피해', firstStrike: '첫 공격 피해',
-    shrapnel: '파편 피해', freezeChance: '빙결 확률', diversity: '조건 충족 시 피해', purity: '조건 충족 시 피해', eliteSquad: '조건 충족 시 피해',
+    shrapnel: '파편 피해', freezeChance: '빙결 확률', diversity: '클래스당 피해', purity: '조건 충족 시 피해', eliteSquad: '조건 충족 시 피해',
     rich: '골드 100 이상일 때 피해', legendAura: '전설 1기당 피해', demonForm: '웨이브마다 쌓이는 피해', noxious: '초당 독안개 피해',
-    poison: '독 피해', eliteKillHeal: ['엘리트 처치 시 회복', 'n'], sellPct: '판매 가격', summonCostPct: '소환 비용', upgradeCostPct: '강화 비용',
+    poison: '독 피해', eliteKillHeal: ['엘리트 처치 시 회복', 'n'], karmaGold: ['저주당 골드(×막)', 'n'], sellPct: '판매 가격', summonCostPct: '소환 비용', upgradeCostPct: '강화 비용',
   };
   const CLS_LABEL = { dmg: '피해', aspd: '공격 속도', range: ['사거리', 'n'], crit: '치명타 확률', splash: ['폭발 범위', 'n'], slow: '둔화' };
   function fmtMod(v, kind) {
@@ -369,6 +369,10 @@
       h('div', { class: 'tb-stats' },
         UI.keysEl(run),
         h('span', { class: 'stat' }, UI.icon('heart', '', 3), h('b', null, `${Math.ceil(run.life)}/${run.maxLife}`)),
+        run.injury > 0 ? h('button', {
+          class: 'stat inj', 'aria-label': '상처',
+          onclick(e) { UI.tip(e.currentTarget, `상처 ${run.injury}`, `강타에 맞으면 생긴다. 하나당 전투를 시작할 때 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 일반 전투를 이기면 1씩 아물고, 휴식처에서 쉬면 모두 낫는다. 새 막에서는 사라진다.`); },
+        }, `상처 ${run.injury}`, h('small', null, `−${Math.round((1 - RS.injuryMul(run)) * 100)}%`)) : null,
         h('span', { class: 'stat' }, UI.icon('coin', '', 3), h('b', null, UI.fmt(run.gold))),
         UI.btn('빌드', () => UI.openBuild(), 'sm tb-build'),
         h('button', { class: 'btn sm menu-btn', 'aria-label': '메뉴', onclick() { RS.sfx('click'); UI.openMenu(); } }, '≡'),

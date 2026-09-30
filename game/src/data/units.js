@@ -27,14 +27,19 @@
     interestPer: 10, // 보유 골드 10당 이자 1
     interestCap: 5,
     clearGold: { combat: [0, 20, 30, 40], elite: [0, 35, 50, 65], boss: [0, 60, 80, 100] },
-    skipGold: [0, 25, 40, 55], // 증강 건너뛰기 골드
+    skipGold: [0, 40, 60, 80], // 증강 건너뛰기 골드
     upgradeBase: 30, // 강화 비용 = base + step × 레벨
     upgradeStep: 20,
-    upgradePct: 0.15, // 강화 1레벨당 해당 클래스 피해 +15%
+    upgradePct: 0.18, // 강화 1레벨당 해당 클래스 피해 +18% (상처를 보충한다)
     bossTime: 75, // 보스 제한 시간. 넘기면 폭주
     restHealPct: 0.3,
     trainLevels: 2,
     actHealPct: 1, // 막을 넘어갈 때 잃은 생명 중 이만큼 회복 (1 = 모두)
+    // 상처: 생명을 깎은 강타마다 1 (최대 injuryMax). 하나당 모든 유닛 피해 -injuryPer (따로 곱한다).
+    // 휴식하면 모두 낫고, 막을 넘어가면 사라지고, 일반 전투를 이길 때마다 injuryDecay 씩 준다
+    injuryPer: 0.05,
+    injuryMax: 8,
+    injuryDecay: 1,
     // 판매가 = 그 유닛에 들인 골드 × 0.5 (미다스 등으로 올라도 최대 0.8). 합성하면 재료에 들인 골드가 결과로 옮겨 간다.
     // 돈을 내지 않고 얻은 유닛(보상·무료 소환)은 freeWorth × 3^등급 만큼 들인 것으로 친다.
     sellRate: 0.5,

@@ -60,7 +60,7 @@ const AUG_SCORE = {
   vampRite: 3, smithDiscount: 3,
   demonForm: 8, echoForm: 6, apotheosis: 6, wraithForm: 6, corruption: 5, creativeAI: 5,
   noxious: 6, poisonBlade: 4, offering: 5, limitBreak: 5,
-  fireArrow: 4, shatter: 5, bloodRush: 5, plague: 5, counterStrike: 4,
+  fireArrow: 4, shatter: 5, bloodRush: 5, plague: 5, counterStrike: 4, karma: 3,
 };
 const ANC_SCORE = {
   bloodCrown: 8, spikedGauntlet: 8, whisperEarring: 7, twinStar: 7, luckyStar: 7, legend: 7, epic2: 7,
@@ -378,7 +378,8 @@ function makeSmartBot(RS, rng, opts) {
     const C = RS.CLASS[cls];
     const T = RS.TIER[tier];
     const lv = 1 + (run.classLv[cls] || 0) * BAL.upgradePct;
-    st0.dps = (C.dmg * T.dmg * lv * (1 + M.dmgPct + (dyn ? dyn.dmgPct : 0))) / ((C.interval * T.spd) / (1 + M.aspdPct));
+    const mul = (1 + (run.permDmg || 0)) * (dyn && dyn.injMul != null ? dyn.injMul : 1);
+    st0.dps = (C.dmg * T.dmg * lv * mul * (1 + M.dmgPct + (dyn ? dyn.dmgPct : 0))) / ((C.interval * T.spd) / (1 + M.aspdPct));
     st0.range = C.range + 3 * tier;
     st0.splash = C.splash ? C.splash[tier] : 0;
     return st0;
@@ -408,20 +409,25 @@ function makeSmartBot(RS, rng, opts) {
   }
   // 전투 밖에서 추정하는 동적 보너스 (battle.updateDyn 과 같은 규칙)
   function dynFor(run, M, future) {
-    let dmg = run.permDmg || 0;
+    // 단련(permDmg)은 unitStats 가 따로 곱한다
+    let dmg = 0;
     let aspd = 0;
     if (M.diversity || M.purity || M.eliteSquad || M.legendAura) {
       const kinds = {};
+      const rareKinds = {};
       let cnt = 0;
       let legends = 0;
       for (const s of run.board) {
         if (!s) continue;
         kinds[s.cls] = 1;
+        if (s.tier >= 1) rareKinds[s.cls] = 1;
         cnt += s.n;
         if (s.tier >= 3) legends += s.n * (s.tier >= 4 ? 4 : 1);
       }
       const k = Object.keys(kinds).length;
-      if (M.diversity) dmg += M.diversity * (k === 5 ? 1 : future ? 0.6 : 0);
+      // 다양성: 희귀 이상 유닛이 있는 클래스마다 (앞으로는 보드가 자라며 조금 더 채워진다고 본다)
+      const kr = Object.keys(rareKinds).length;
+      if (M.diversity) dmg += M.diversity * (future ? Math.min(5, Math.max(kr, k * 0.8) + 0.5) : kr);
       if (M.purity) dmg += M.purity * (k > 0 && k <= 3 ? (future ? 0.4 : 1) : future ? 0.1 : 0);
       if (M.eliteSquad) dmg += M.eliteSquad * (cnt > 0 && cnt <= 12 ? (future ? 0.2 : 1) : 0);
       if (M.legendAura) dmg += M.legendAura * (legends + (future ? 1 : 0));
@@ -436,13 +442,16 @@ function makeSmartBot(RS, rng, opts) {
     }
     if (M.lowLifeDmg) dmg += M.lowLifeDmg * (run.life <= run.maxLife / 2 ? 1 : future ? 0.35 : 0);
     if (M.curseDmg) dmg += M.curseDmg * run.curses.length;
+    if (M.curseAspd) aspd += M.curseAspd * run.curses.length;
     if (M.itemDmg) dmg += M.itemDmg * Math.min(3, run.items.length) * 0.5;
     const rst = run.relicState || {};
     if (rst.pumpkinCandle && rst.pumpkinCandle.charges > 0) dmg += 0.4 * (future ? Math.min(1, rst.pumpkinCandle.charges / 10) : 1);
     if (rst.waxToys) aspd += Math.max(0, 0.3 - 0.1 * Math.floor(rst.waxToys.fights / 3)) * (future ? 0.4 : 1);
     if (M.demonForm) dmg += M.demonForm * 2;
     if (M.pocketWatch) aspd += 0.15;
-    return { dmgPct: dmg, aspdPct: aspd };
+    // 상처: 지금 값 그대로 (휴식으로 낫거나 일반 전투로 아물면 올라간다)
+    const injMul = RS.injuryMul ? RS.injuryMul(run) : 1;
+    return { dmgPct: dmg, aspdPct: aspd, injMul };
   }
   // 유닛 스탯에 안 잡히는 전투 효과를 전체 배율로
   function globalFactor(M) {
@@ -624,7 +633,7 @@ function makeSmartBot(RS, rng, opts) {
     return Math.min(0.95, (p / 100) * scale);
   }
   function hazScale(run) {
-    return P.hazScale * (0.5 + 0.05 * Math.min(10, run.asc || 0)) * Math.max(0.6, Math.min(2.5, strength(run)));
+    return P.hazScale * Math.max(1, 0.5 + 0.05 * Math.min(10, run.asc || 0)) * Math.max(0.6, Math.min(2.5, strength(run)));
   }
   // 이번 막이 끝날 때까지 죽을 확률 (남은 층: 전투·엘리트 섞임, 보스 앞 휴식처, 보스)
   function deathRisk(run, life, maxLife) {
@@ -778,8 +787,10 @@ function makeSmartBot(RS, rng, opts) {
       }
       // 소모품
       for (const id of s.items) v += itemValue(s, M, id, E);
-      // 저주 하나하나의 번거로움
-      v -= s.curses.length * 8 * g;
+      // 저주 하나하나의 번거로움 (저주 인형·업보가 있으면 덜하다)
+      v -= s.curses.length * 8 * g * (M.curseDmg ? 0.4 : M.karmaGold ? 0.7 : 1);
+      // 업보: 앞으로 얻을 저주 (막마다 1개쯤)
+      if (M.karmaGold) v += M.karmaGold * s.act * actsLeft * 0.8;
       // 증강 선택·휴식·상점·보스 관련 효과
       const picks = remTot * 1.1;
       v += picks * E.augV * ((M.augChoices || 0) * 0.12 + (M.augRerolls || 0) * 0.06 + (M.augUpChance || 0) * 0.35);
@@ -788,7 +799,7 @@ function makeSmartBot(RS, rng, opts) {
       v += (M.eliteUpgrade || 0) * elitesRem * E.augV * 0.25;
       if (M.blackStar) v += elitesRem * E.relV * 0.8;
       if (M.shovel) v += restsRem * E.relV * 0.4;
-      if (M.girya && s.relicState.girya) v += Math.min(3 - s.relicState.girya.lifts, restsRem) * 0.06 * F0 * 0.5;
+      if (M.girya && s.relicState.girya) v += Math.min(3 - s.relicState.girya.lifts, restsRem) * 0.08 * F0 * 0.5;
       if (M.dreamCatcher) v += restsRem * E.augV * 0.3;
       if (M.peacePipe) v += 15 * g;
       if (M.noSmith) v -= restsRem * 25 * g;

@@ -886,26 +886,30 @@
       text: '사람 키만 한 꽃이 꽃잎을 펼치자 달콤한 향기가 머릿속을 채운다. "소원을 하나만 떠올려 봐. 그대로 피워 줄게."',
       options: [
         {
-          label: '싸움을 바란다', desc: '강해진 1막 보스(슬라임 킹)와 싸운다 · 이기면 프리즘 증강 선택 + 희귀 유물',
+          label: '싸움을 바란다', desc: '1막 보스(슬라임 킹)와 진짜 보스전 · 지면 모험이 끝난다 · 이기면 프리즘 증강 선택 + 희귀 유물',
           apply() {
-            return { text: '눈앞에 거대한 슬라임이 나타난다!', fight: { as: 'boss', boss: 'slimeKing', hpMul: 2, relic: [2], relicChoices: 1 } };
+            return { text: '눈앞에 거대한 슬라임이 나타난다!', fight: { as: 'boss', boss: 'slimeKing', hpMul: 1.15, relic: [2], relicChoices: 1 } };
           },
         },
         {
-          label: '깨달음을 바란다', desc: '모든 증강 연마 · 저주 [시든 꽃의 낙인] (생명 회복 불가, 없앨 수 없다)', cond: hasUpgradable,
+          label: '깨달음을 바란다', desc: '모든 증강 연마 · 최대 생명 -30% · 저주 [시든 꽃의 낙인] (회복·휴식 치료 불가, 없앨 수 없다)', cond: hasUpgradable,
           apply(run) {
             let n = 0;
             for (let i = 0; i < run.augments.length; i++) if (RS.upgradeAug(run, i)) n++;
-            if (run.curses.indexOf('bloomMark') < 0) run.curses.push('bloomMark');
-            return `세상이 선명해진다. 증강 ${n}개 연마. 대신 꽃이 시들며 상처가 더는 아물지 않는다.`;
+            const lost = Math.round(run.maxLife * 0.3);
+            RS.changeMaxLife(run, -lost);
+            if (run.curses.indexOf('bloomMark') < 0) {
+              run.curses.push('bloomMark');
+              RS.curseGained(run, 'bloomMark');
+            }
+            return `세상이 선명해진다. 증강 ${n}개 연마, 최대 생명 -${lost}. 대신 꽃이 시들며 몸이 더는 아물지 않는다.`;
           },
         },
         {
-          label: '금화를 바란다', desc: '골드 +400 · 저주 [세금] 2개',
+          label: '금화를 바란다', desc: '골드 +400 · 저주 [세금]',
           apply(run) {
             RS.addGold(run, 400);
-            const n = [RS.addCurse(run, 'taxed'), RS.addCurse(run, 'taxed')].filter(Boolean).length;
-            const tail = n === 2 ? ', 저주 [세금] 2개' : n === 1 ? ', 저주 [세금] 1개 (하나는 액막이 매듭이 막았다)' : ' (액막이 매듭이 세금을 모두 막았다)';
+            const tail = RS.addCurse(run, 'taxed') ? ', 저주 [세금]' : ' (액막이 매듭이 세금을 막았다)';
             return `금화가 쏟아진다. 골드 +400${tail}`;
           },
         },

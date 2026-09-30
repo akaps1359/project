@@ -23,6 +23,8 @@
     run.life = Math.max(1, run.life - v);
     return Math.max(0, before - run.life);
   };
+  // 상처: 하나당 모든 유닛 피해 -5% (따로 곱한다). 전투는 시작할 때의 값을 쓴다
+  RS.injuryMul = (run) => Math.max(0.1, 1 - BAL.injuryPer * (run.injury || 0));
   RS.changeMaxLife = function (run, d) {
     run.maxLife = Math.max(1, run.maxLife + d);
     run.life = Math.min(run.life, run.maxLife);
@@ -49,7 +51,13 @@
     run.curses.push(id);
     if (def.fades) run.curseTimers.push({ id, at: run.stats.battles });
     if (def.onGain) def.onGain(run);
+    RS.curseGained(run, id);
     return true;
+  };
+  // 저주가 실제로 붙은 뒤 (RS.addCurse 를 거치지 않고 붙이는 곳도 이것을 부른다): 업보
+  RS.curseGained = function (run, id) {
+    const M = RS.collectMods(run);
+    if (M.karmaGold) RS.addGold(run, Math.round(M.karmaGold * (run.act || 1)));
   };
 
   // 사라지는 저주(찜찜함)의 수명은 저주 하나하나가 생긴 시점(그때까지 치른 전투 수)으로 센다.
@@ -219,7 +227,7 @@
       v: 2, seed, rngS: seed | 0, commander: cmd.id, asc,
       act: 1, floor: 0, lane: -1, nodeType: null, map: null,
       life: BAL.startLife, maxLife: BAL.startLife, gold: BAL.startGold,
-      board: RS.newBoard(), runes: RS.newBoard(), classLv, permDmg: 0,
+      board: RS.newBoard(), runes: RS.newBoard(), classLv, permDmg: 0, injury: 0,
       augments: [], relics: [], curses: [], items: [], relicState: {},
       keys: { ruby: false, emerald: false, sapphire: false },
       queue: [], afterQueue: null,
@@ -310,6 +318,7 @@
     if (!run || run.v !== 2) return null;
     RS.attachRng(run);
     RS.registerCustomAugs(run);
+    run.injury = run.injury || 0;
     // 게임에서 빠진 유물·증강·저주(예: 고대 두루마리)는 조용히 뺀다
     if (Array.isArray(run.relics)) run.relics = run.relics.filter((id) => RS.REL[id]);
     if (Array.isArray(run.augments)) run.augments = run.augments.filter((id) => RS.augDef(id));
@@ -582,6 +591,14 @@
     const taken = {};
     if (exclude) for (const id of exclude) taken[id] = true;
     const avail = RS.AUGMENTS.filter((a) => !(a.unique && owned[a.id]));
+    // 빌드 쪽으로 당기기: 태그가 있는 증강·유물을 가졌으면, 마지막 한 장은 50% 확률로
+    // 가장 많이 가진 태그 두 개 중 하나와 겹치는 증강에서 뽑는다 (등급 확률은 그대로, 없으면 평소대로)
+    let pull = null;
+    if (n >= 2) {
+      const cnt = RS.synCounts(run);
+      const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 2);
+      if (top.length && rng.chance(0.5)) pull = top;
+    }
     const out = [];
     for (let k = 0; k < n; k++) {
       const w = rarityW.slice();
@@ -591,7 +608,9 @@
         if (rar === 3) run.prismPity = 0;
         else if (rar === 1) run.prismPity = Math.min(0.4, run.prismPity + 0.01);
       }
-      let pool = avail.filter((a) => a.rarity === rar && !taken[a.id]);
+      let pool = [];
+      if (pull && k === n - 1) pool = avail.filter((a) => a.rarity === rar && !taken[a.id] && RS.synTags(a).some((t) => pull.indexOf(t) >= 0));
+      if (!pool.length) pool = avail.filter((a) => a.rarity === rar && !taken[a.id]);
       if (!pool.length) pool = avail.filter((a) => !taken[a.id]);
       if (!pool.length) break;
       const a = rng.pick(pool);
@@ -681,6 +700,9 @@
     gold = Math.round(gold * (0.85 + rng.next() * 0.3) * (1 + M.combatGoldPct)) + (M.winGold || 0) * act;
     if (run.burning && type === 'elite') gold += 30 * act;
     RS.addGold(run, gold);
+    // 일반 전투를 이기면 상처가 조금 아문다 (엘리트·보스전은 아니다)
+    const injury0 = run.injury || 0;
+    if (type === 'combat' && injury0 > 0) run.injury = Math.max(0, injury0 - BAL.injuryDecay);
     // 보상 화면에는 실제로 회복한 양을 보여 준다 (가득 찼거나 시든 꽃의 낙인이면 0)
     let healed = 0;
     if (M.winHeal) healed += RS.heal(run, M.winHeal);
@@ -696,7 +718,7 @@
     }
     if (type === 'elite') run.stats.elites++;
     if (type === 'boss' && run.nodeType === 'boss') run.stats.bosses++;
-    const reward = { gold, heal: healed, augDone: false, rerolls: M.augRerolls, relics: null, relicDone: false, item: null, key: null };
+    const reward = { gold, heal: healed, mend: injury0 - (run.injury || 0), augDone: false, rerolls: M.augRerolls, relics: null, relicDone: false, item: null, key: null };
     // 소모품: 기본 40%, 나오면 -10%p, 안 나오면 +10%p
     if (!M.noItems && type !== 'boss') {
       if (rng.chance(run.itemChance + (M.itemDropBonus || 0))) {
@@ -794,6 +816,8 @@
       // 막을 넘어가면 잃은 생명을 회복한다 (슬더스처럼 막 하나가 생명 관리의 한 판. 심연 4부터 75%만)
       const cut = Math.min(0.9, RS.collectMods(run).actHealCut || 0);
       RS.heal(run, Math.ceil(Math.max(0, run.maxLife - run.life) * BAL.actHealPct * (run.asc >= 4 ? 0.75 : 1) * (1 - cut)));
+      // 새 막에서는 상처가 모두 사라진다
+      run.injury = 0;
       run.phase = 'actStart';
       run.pending = run.act <= 3 ? { ancient: RS.rollAncient(run) } : null;
     } else {
@@ -1020,6 +1044,8 @@
     return Math.round((75 + 25 * run.removeCount) * (run.asc >= 2 ? 1.15 : 1) * Math.max(0.3, 1 - M.shopDiscount));
   };
 
+  // 상점에는 황금 주문서(골드로 사서 골드를 얻는 것)를 놓지 않는다
+  const shopItemId = (rng) => rng.pick(RS.ITEMS.filter((x) => x.id !== 'goldScroll')).id;
   const relicEntry = (id) => ({ kind: 'relic', id, base: RS.REL[id].rarity === 2 ? 170 : 120 });
 
   RS.genShop = function (run) {
@@ -1027,7 +1053,7 @@
     const list = [];
     // 한 번에 굴려야 서로 겹치지 않는다 (유물 3개)
     for (const id of RS.rollRelics(run, 3, [1, 2], [65, 35])) list.push(relicEntry(id));
-    for (let k = 0; k < 3; k++) list.push({ kind: 'item', id: RS.randomItemId(rng), base: 45 + rng.int(26) });
+    for (let k = 0; k < 3; k++) list.push({ kind: 'item', id: shopItemId(rng), base: 45 + rng.int(26) });
     const augs = RS.rollAugments(run, 2, [0, 30, 55, 15]);
     augs.forEach((id, k) => list.push({ kind: 'aug', id, base: [0, 80, 110, 160][RS.AUG[id].rarity], sale: k === 0 }));
     list.push({ kind: 'unit', tier: 1, base: 120 });
@@ -1081,7 +1107,7 @@
       if (it.kind === 'relic') {
         const ids = RS.rollRelics(run, 1, [1, 2], [65, 35], shop.list.filter((x) => x.kind === 'relic').map((x) => x.id));
         if (ids.length) fresh = relicEntry(ids[0]);
-      } else if (it.kind === 'item') fresh = { kind: 'item', id: RS.randomItemId(run.rng), base: 45 + run.rng.int(26) };
+      } else if (it.kind === 'item') fresh = { kind: 'item', id: shopItemId(run.rng), base: 45 + run.rng.int(26) };
       else if (it.kind === 'aug') {
         const a = RS.rollAugments(run, 1, [0, 30, 55, 15], shop.list.filter((x) => x.kind === 'aug').map((x) => x.id));
         if (a.length) fresh = { kind: 'aug', id: a[0], base: [0, 80, 110, 160][RS.AUG[a[0]].rarity] };
@@ -1130,9 +1156,10 @@
     const opts = [];
     const bloom = !RS.canHeal(run);
     const dream = M.dreamCatcher ? ' · 증강 선택' : '';
+    const inj = run.injury > 0 && !bloom ? ` · 상처 ${run.injury} 치료` : '';
     opts.push({
       id: 'heal', label: '휴식',
-      desc: bloom ? `회복할 수 없다 (시든 꽃의 낙인)${dream}` : `생명 +${RS.restHealAmount(run)}${dream}`,
+      desc: bloom ? `회복할 수 없다 (시든 꽃의 낙인)${dream}` : `생명 +${RS.restHealAmount(run)}${inj}${dream}`,
       off: M.noRestHeal ? '각성제 때문에 잠들 수 없다' : bloom && !M.dreamCatcher ? '시든 꽃의 낙인 때문에 회복할 수 없다' : null,
     });
     opts.push({ id: 'train', label: '수련', desc: `클래스 하나 강화 +${RS.restTrainAmount(run)}`, off: M.noSmith ? '벼락 망치 때문에 할 수 없다' : null });
@@ -1142,7 +1169,7 @@
     if (M.shovel) opts.push({ id: 'dig', label: '발굴', desc: '유물 하나를 얻는다' });
     if (M.girya) {
       const lifts = run.relicState.girya.lifts;
-      opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 +6% (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });
+      opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 ×1.08 (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });
     }
     const candle = run.relicState.pumpkinCandle;
     if (candle && candle.charges < 12) opts.push({ id: 'kindle', label: '불 붙이기', desc: `박 등잔을 다시 켠다 (남은 ${candle.charges}번 → 12번)` });
@@ -1163,6 +1190,8 @@
     switch (id) {
       case 'heal':
         RS.heal(run, RS.restHealAmount(run));
+        // 실제로 잠들어 회복할 때만 상처가 낫는다 (시든 꽃의 낙인·각성제면 낫지 않는다)
+        if (RS.canHeal(run) && !RS.collectMods(run).noRestHeal) run.injury = 0;
         if (RS.collectMods(run).dreamCatcher) RS.enqueue(run, { k: 'aug', w: [0, 50, 42, 8], title: '꿈 그물' });
         break;
       case 'train':
@@ -1179,7 +1208,7 @@
         break;
       case 'lift':
         run.relicState.girya.lifts++;
-        run.permDmg += 0.06;
+        run.permDmg = (run.permDmg || 0) + 0.08;
         break;
       case 'recall':
         run.keys.ruby = true;

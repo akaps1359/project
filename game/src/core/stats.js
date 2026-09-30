@@ -20,7 +20,7 @@
       augChoices: 0, augRerolls: 0, restTrainBonus: 0, pocketWatch: 0,
       diversity: 0, purity: 0, eliteSquad: 0, rich: 0, berserk: 0, legendAura: 0, missChance: 0,
       // 시너지 연결 고리 (키워드 보상)
-      shatter: 0, critHaste: 0, burnArrow: 0, dotAmp: 0, contagion: 0, lowLifeDmg: 0, curseDmg: 0, itemDmg: 0,
+      shatter: 0, critHaste: 0, burnArrow: 0, dotAmp: 0, contagion: 0, lowLifeDmg: 0, curseDmg: 0, curseAspd: 0, karmaGold: 0, itemDmg: 0,
       strikeReduce: 0, counterStrike: 0, leech: 0, actHealCut: 0, restHealCut: 0,
     };
   };
@@ -49,10 +49,10 @@
     'rareChance', 'twinChance', 'mergeRefund', 'mergeDouble', 'mergeMirror', 'enemySpeedPct', 'eliteDmgPct',
     'firstStrike', 'shrapnel', 'freezeChance', 'diversity', 'purity', 'eliteSquad', 'rich', 'legendAura', 'demonForm',
     'noxious', 'poison', 'eliteKillHeal',
-    'shatter', 'critHaste', 'burnArrow', 'dotAmp', 'lowLifeDmg', 'curseDmg', 'itemDmg', 'burn',
+    'shatter', 'critHaste', 'burnArrow', 'dotAmp', 'lowLifeDmg', 'curseDmg', 'curseAspd', 'karmaGold', 'itemDmg', 'burn',
   ];
   // 정수여야 하는 수치 (생명·골드·사거리)
-  const INT_KEYS = { interestCap: true, interestBonus: true, rangeAdd: true, eliteKillHeal: true };
+  const INT_KEYS = { interestCap: true, interestBonus: true, rangeAdd: true, eliteKillHeal: true, karmaGold: true };
   const GOOD_DOWN = ['summonCostPct', 'upgradeCostPct'];
   RS.upgradeScale = function (mods, f) {
     const out = {};
@@ -106,7 +106,7 @@
   RS.SYN = {
     crit: { name: '치명타', col: '#f07fb0', desc: '치명타 확률·배율을 올리고, 치명타가 날 때 보상을 받는다' },
     control: { name: '기절·빙결', col: '#a8ecff', desc: '적을 멈춰 세운다. 얼음 깨기로 멈춘 적을 크게 때린다' },
-    slow: { name: '둔화', col: '#52b6e0', desc: '적을 느리게. 한 바퀴를 늦게 돌아 누수가 줄고, 얼음 깨기와 이어진다' },
+    slow: { name: '둔화', col: '#52b6e0', desc: '적을 느리게. 한 바퀴를 늦게 돌아 누수와 균열이 줄어든다. 서리술사·서리 룬의 둔화는 얼음 깨기와 이어진다' },
     dot: { name: '화상·독', col: '#ff9a3d', desc: '지속 피해. 역병 확산으로 주변에 옮긴다' },
     knight: { name: '전사', col: '#dfe4ea', desc: '휘두르기·기절' },
     archer: { name: '궁수', col: '#94c1f7', desc: '긴 사거리·연사' },
@@ -137,7 +137,7 @@
     dot: ['burn', 'burnArrow', 'poison', 'noxious', 'dotAmp', 'contagion'],
     gold: ['killGoldPct', 'waveGoldPct', 'interestCap', 'interestBonus', 'combatGoldPct', 'rich', 'battleStartGold', 'winGold', 'ceramicFish', 'sellPct', 'skipGoldMul', 'freeFirstBuy', 'shopDiscount'],
     life: ['berserk', 'lowLifeDmg', 'winHeal', 'eliteKillHeal', 'eliteKillMaxLife', 'restHealAdd', 'meatBone', 'pantograph', 'winMaxLife', 'battleStartLifeLoss', 'strikeReduce', 'counterStrike', 'leech'],
-    curse: ['curseDmg'],
+    curse: ['curseDmg', 'curseAspd', 'karmaGold'],
     item: ['itemSlots', 'itemPotency', 'itemDmg', 'itemDropBonus'],
     elite: ['eliteDmgPct', 'eliteBattleDmg', 'bigBattleDmg', 'eliteHpPct', 'eliteKillMaxLife', 'eliteKillHeal', 'blackStar', 'eliteUpgrade', 'bossHpPct', 'strikeReduce', 'counterStrike', 'leech'],
     merge: ['mergeDouble', 'mergeRefund', 'mergeMirror'],

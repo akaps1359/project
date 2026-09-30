@@ -39,6 +39,13 @@
   UI.starMax = (b) => (typeof b.starMax === 'number' && b.starMax > 0 ? b.starMax : 3);
 
 
+  // 상처 설명 한 줄 (없으면 null)
+  function injuryLine(run) {
+    if (!run || !(run.injury > 0)) return null;
+    return `상처 ${run.injury}: 전투를 시작할 때 모든 유닛 피해 -${Math.round((1 - RS.injuryMul(run)) * 100)}% · 강타에 맞으면 +1 · 일반 전투를 이기면 -1 · 휴식하면 모두 낫는다`;
+  }
+  UI.injuryLine = injuryLine;
+
   UI.initBattle = function () {
     for (const img of document.querySelectorAll('img[data-icon]')) img.src = RS.iconURL(img.dataset.icon, 3);
     $('#b-summon').addEventListener('click', () => UI.doSummon());
@@ -66,7 +73,9 @@
       const t = fn(G.battle, G.run);
       UI.tip(e.currentTarget, t[0], t[1], t[2] || null);
     });
-    hudTip('#h-life', () => ['생명', '한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 가요. 엘리트·보스는 다시 나와 계속 돌고, 머리 위에 붉은 숫자가 뜨면 강타로 생명을 쳐요(몰아치거나 기절시키면 끊겨요). 전투가 끝나도 생명은 이어지니 휴식처에서 관리하세요.']);
+    hudTip('#h-life', (b, run) => ['생명', '한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 가요. 엘리트·보스는 다시 나와 계속 돌고, 머리 위에 붉은 숫자가 뜨면 강타로 생명을 쳐요(몰아치거나 기절시키면 끊겨요). 전투가 끝나도 생명은 이어지니 휴식처에서 관리하세요.', injuryLine(run)]);
+    // 생명 칸 아래 작은 상처 표시
+    $('#h-life').appendChild(h('small', { class: 'inj', id: 'h-inj', hidden: true }));
     hudTip('#h-gold', (b) => ['골드', `처치·웨이브마다 들어와요. 웨이브 시작 때 보유 10G당 1G 이자 (최대 ${RS.interestCap(b.M)}).`]);
     hudTip('#h-foe', (b) => ['적', `지금 필드에 있는 적 수. ${b.cap}마리가 되면 즉시 패배.`]);
     hudTip('#h-wave', (b) => ['웨이브', '준비: 첫 웨이브까지 남은 시간 · n/3: 현재 웨이브와 다음 웨이브까지 남은 시간', trialLimit(b) ? `허수아비 시험: ${trialLimit(b)}초 안에 쓰러뜨려야 해요` : null]);
@@ -393,7 +402,7 @@
         let min = Infinity;
         for (const c of RS.CLASSES) min = Math.min(min, b.upgradeCost(c));
         if (run.gold >= min) {
-          text = '③ [강화]: 골드로 한 클래스의 피해를 레벨당 +15%';
+          text = `③ [강화]: 골드로 한 클래스의 피해를 레벨당 +${Math.round(RS.BAL.upgradePct * 1000) / 10}%`;
           pulse = 'upg';
         }
       }
@@ -778,6 +787,12 @@
     setText($('#h-foe-m'), 'foeM', '/' + b.cap);
     setCls($('#h-foe'), 'danger', 'danger', b.enemies.length >= b.cap * 0.7);
     setCls($('#h-life'), 'low', 'danger', run.life <= run.maxLife * 0.3);
+    const inj = run.injury || 0;
+    const injEl = $('#h-inj');
+    if (injEl) {
+      setAttrHidden(injEl, 'injh', !inj);
+      if (inj) setText(injEl, 'inj', `상처 ${inj} (−${Math.round((1 - RS.injuryMul(run)) * 100)}%)`);
+    }
     const nW = b.stage.waves.length;
     const tl = b.prep > 0 ? null : trialLeft(b);
     if (b.prep > 0) {
@@ -900,7 +915,8 @@
     if (!f) return;
     const pre = f.cast.pre;
     setText(el.querySelector('.sb-name'), 'sbn', `${f.def.name} · ${f.cast.s.name} ${Math.max(0, f.cast.t).toFixed(1)}`);
-    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${RS.strikeLoss(b, f)}`);
+    const loss = RS.strikeLoss(b, f);
+    setText(el.querySelector('.sb-dmg'), 'sbd', `생명 -${loss}${loss > 0 ? ' · 상처 +1' : ''}`);
     const k = Math.min(1, pre.taken / Math.max(1, pre.need));
     const w = (k * 100).toFixed(0) + '%';
     if (c.sbw !== w) {
@@ -954,7 +970,7 @@
       k = cast.k;
       name = `${cast.name || CAST_NAME[k] || '기술'} ${Math.max(0, cast.t).toFixed(1)}`;
       txt = CAST_TXT[k] || '';
-      if (k === 'strike' && cast.pre) txt = `생명 -${RS.strikeLoss(b, e)} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
+      if (k === 'strike' && cast.pre) txt = `생명 -${RS.strikeLoss(b, e)}${RS.strikeLoss(b, e) > 0 ? '·상처 +1' : ''} · 경직 ${Math.min(99, Math.floor((100 * cast.pre.taken) / Math.max(1, cast.pre.need)))}% (채우면 끊겨요)`;
       frac = 1 - cast.t / cast.T;
       col = RS.CAST_COL[k] || '#ffe46b';
     }
@@ -1004,7 +1020,7 @@
     rift: '표시된 칸이 곧 기절해요',
     submerge: '곧 물속에 숨어 잠시 공격받지 않아요',
     anchor: '표시된 열이 곧 기절해요',
-    strike: '강타! 붉은 숫자만큼 생명을 쳐요. 준비하는 동안 노란 경직 막대를 채우도록 몰아치거나, 기절·빙결시키면 끊겨요',
+    strike: '강타! 붉은 숫자만큼 생명을 쳐요(맞으면 상처가 남아요). 준비하는 동안 노란 경직 막대를 채우도록 몰아치거나, 기절·빙결시키면 끊겨요',
   };
   const SKILL_SFX = { strike: 'leak', glue: 'glue', pulse: 'heartbeat', shield: 'shield', spawn: 'boss', rally: 'wave', mend: 'coin', cross: 'charge', shuffle: 'blink', plunder: 'error' };
   UI.onFx = function (ev) {
@@ -1048,6 +1064,12 @@
           UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
           UI.hudFloat(el, '-' + Math.round(ev.v * 10) / 10, 'bad');
         }
+        break;
+      }
+      case 'injury': {
+        const el = $('#h-life');
+        if (ev.up) setTimeout(() => UI.hudFloat(el, '상처!', 'bad'), 250);
+        UI.onceTip('injury', `강타에 맞아 상처가 났어요! 상처 하나당 다음 전투부터 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 휴식처에서 쉬면 낫고, 일반 전투를 이길 때마다 1씩 아물어요`);
         break;
       }
       case 'pressure': {

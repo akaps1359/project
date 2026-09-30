@@ -66,14 +66,14 @@
     R('dreamCatcher', '꿈 그물', 2, 'dream', '휴식처에서 휴식하면 증강 하나를 고른다', { dreamCatcher: 1 }),
     R('peacePipe', '곰방대', 2, 'pipe', '휴식처에서 [명상]: 증강이나 저주 하나를 없앤다', { peacePipe: 1 }),
     R('shovel', '모종삽', 2, 'shovel', '휴식처에서 [발굴]: 유물을 하나 얻는다', { shovel: 1 }),
-    R('girya', '무쇠 아령', 2, 'kettle', '모든 유닛 피해 +10%. 휴식처에서 [단련]: 모든 유닛 피해 +6% 더 (최대 3번)', { girya: 1, dmgPct: 0.1 }, { state: { lifts: 0 } }),
+    R('girya', '무쇠 아령', 2, 'kettle', '모든 유닛 피해 +10%. 휴식처에서 [단련]: 모든 유닛 피해 ×1.08 (따로 곱한다, 최대 3번)', { girya: 1, dmgPct: 0.1 }, { state: { lifts: 0 } }),
     R('matryoshka', '겹겹 인형', 2, 'doll', '다음 보물 상자 2번은 유물을 하나 더 준다', {}, { state: { count: 2 } }),
     R('membership', '단골 쿠폰', 2, 'card', '상점 가격 50% 할인', { shopDiscount: 0.5 }),
     R('courier', '보부상', 2, 'box', '상점 가격 20% 할인, 산 자리에 새 물건이 들어온다', { shopDiscount: 0.2, courier: 1 }),
     R('wingBoots', '축지 장화', 2, 'boots', '길을 무시하고 다음 층 아무 칸으로 이동 (3회)', {}, { state: { uses: 3 } }),
     R('pantograph', '결전 나침반', 2, 'compass', '보스전을 시작할 때 생명 +6', { pantograph: 6 }),
     R('bloodGrail', '피의 성배', 2, 'chalice', '흡혈: 엘리트·보스 체력을 1/8 깎을 때마다 생명 +1 (한 마리를 쓰러뜨리면 +8)', { leech: 8 }),
-    R('voodoo', '저주 인형', 2, 'voodoo', '저주 1개당 모든 유닛 피해 +10% (심연의 짐 포함)', { curseDmg: 0.1 }),
+    R('voodoo', '저주 인형', 2, 'voodoo', '저주 1개당 모든 유닛 피해 +8%, 공격 속도 +5% (심연의 짐 포함)', { curseDmg: 0.08, curseAspd: 0.05 }),
     R('helix', '철갑 소라', 2, 'shell', '전투마다 처음 두 번은 한 바퀴를 돈 일반 적에게 생명을 잃지 않는다 (엘리트·보스면 피해 절반, 한 번을 쓴다)', { helix: 1, leakShield: 1 }),
 
     // ── 보스 (강력하지만 대가가 따르는 것이 많다) ──
@@ -89,7 +89,7 @@
       cost: '처치 골드 -70%',
     }),
     R('stimulant', '각성제', 3, 'cup', '모든 유닛 공격 속도 +30%', { aspdPct: 0.3, noRestHeal: 1 }, {
-      cost: '휴식처에서 휴식할 수 없다',
+      cost: '휴식처에서 휴식할 수 없다 (상처도 전투로만 아문다)',
     }),
     R('fusionHammer', '벼락 망치', 3, 'hammer', '합성할 때 15% 확률로 2단계 상승 (전설까지)', { mergeDouble: 0.15, noSmith: 1 }, {
       cost: '휴식처에서 수련·연마를 할 수 없다',

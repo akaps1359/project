@@ -542,6 +542,7 @@
     const body = h('div', { class: 'reward' });
     const summary = r.gold ? [`골드 +${r.gold}`] : [];
     if (r.heal) summary.push(`생명 +${r.heal}`);
+    if (r.mend > 0) summary.push(`상처 -${r.mend}`);
     if (r.item) summary.push(`소모품 [${RS.ITEM[r.item].name}]`);
     if (r.lostItem && RS.ITEM[r.lostItem]) summary.push(`가방이 가득 차 [${RS.ITEM[r.lostItem].name}] 버림`);
     if (r.key) body.appendChild(h('div', { class: 'keygot' }, icon('key_emerald', '', 4), h('b', null, '초록 봉인석을 얻었다!')));
@@ -910,7 +911,7 @@
     if (!st.merges) return '같은 유닛 3기를 합성하면 훨씬 강한 다음 등급이 나와요.';
     let lv = 0;
     for (const c of RS.CLASSES) lv += run.classLv[c] || 0;
-    if (!lv) return '[강화]로 클래스 피해를 레벨당 15% 올릴 수 있어요.';
+    if (!lv) return `[강화]로 클래스 피해를 레벨당 ${Math.round(RS.BAL.upgradePct * 1000) / 10}% 올릴 수 있어요.`;
     return '엘리트는 위험하지만 유물을 줘요. 생명이 적을 땐 피하세요.';
   }
 

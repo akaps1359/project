@@ -16,7 +16,8 @@
     this.M = RS.collectMods(run);
     const M = this.M;
     this.kind = stage.type === 'eventFight' ? stage.spec.as || 'elite' : stage.type; // combat / elite / boss
-    this.dyn = { dmgPct: 0, aspdPct: 0 };
+    // 상처는 전투를 시작할 때의 값으로 고정한다 (이번 전투에 맞은 강타는 다음 전투부터)
+    this.dyn = { dmgPct: 0, aspdPct: 0, injMul: RS.injuryMul ? RS.injuryMul(run) : 1 };
     this.t = 0;
     this.status = 'running'; // running → ending → won / lost
     this.result = null;
@@ -936,6 +937,14 @@
     this.stats.struck += dmg;
     this.emit({ k: 'strike', x: e.x, y: e.y, v: dmg, name: s.name, boss: e.def.name });
     this.loseLife(dmg);
+    // 생명을 깎은 강타는 상처를 남긴다 (다음 전투부터 모든 유닛 피해 -5%씩)
+    if (dmg > 0) {
+      const run = this.run;
+      const before = run.injury || 0;
+      run.injury = Math.min(RS.BAL.injuryMax, before + 1);
+      this.stats.injuries = (this.stats.injuries || 0) + 1;
+      this.emit({ k: 'injury', v: run.injury, up: run.injury > before });
+    }
   };
   P.staggerStrike = function (e, why) {
     if (!e.cast || e.cast.s.k !== 'strike') return;
@@ -970,20 +979,23 @@
   P.updateDyn = function () {
     const M = this.M;
     const run = this.run;
-    let dmg = this.demon + (run.permDmg || 0);
+    let dmg = this.demon;
     let aspd = 0;
     if (M.diversity || M.purity || M.eliteSquad || M.legendAura) {
       const kinds = {};
+      const rareKinds = {};
       let cnt = 0;
       let legends = 0;
       for (const s of run.board) {
         if (!s) continue;
         kinds[s.cls] = 1;
+        if (s.tier >= 1) rareKinds[s.cls] = 1;
         cnt += s.n;
         if (s.tier >= 3) legends += s.n * (s.tier >= 4 ? 4 : 1);
       }
       const k = Object.keys(kinds).length;
-      if (M.diversity && k === 5) dmg += M.diversity;
+      // 다양성: 희귀 이상 유닛이 있는 클래스마다
+      if (M.diversity) dmg += M.diversity * Object.keys(rareKinds).length;
       if (M.purity && k > 0 && k <= 3) dmg += M.purity;
       if (M.eliteSquad && cnt > 0 && cnt <= 12) dmg += M.eliteSquad;
       if (M.legendAura) dmg += M.legendAura * legends;
@@ -997,6 +1009,7 @@
     }
     if (M.lowLifeDmg && run.life <= run.maxLife / 2) dmg += M.lowLifeDmg;
     if (M.curseDmg) dmg += M.curseDmg * run.curses.length;
+    if (M.curseAspd) aspd += M.curseAspd * run.curses.length;
     if (M.itemDmg) dmg += M.itemDmg * this.itemUses;
     const rst = run.relicState;
     if (rst.pumpkinCandle && rst.pumpkinCandle.charges > 0) dmg += 0.5;
@@ -1037,7 +1050,9 @@
     const pct = M.dmgPct + cm.dmg + (dyn ? dyn.dmgPct : 0) + M.tierDmg[tier] + (corner ? M.cornerDmg : 0) + (inner ? M.innerDmg : 0) + (rune && rune.dmg ? rune.dmg : 0);
     const lv = 1 + run.classLv[cls] * RS.BAL.upgradePct;
     const aspd = Math.max(0.2, 1 + M.aspdPct + cm.aspd + (dyn ? dyn.aspdPct : 0) + (rune && rune.aspd ? rune.aspd : 0));
-    st.dmg = C.dmg * T.dmg * lv * Math.max(0.1, 1 + pct);
+    // 단련(run.permDmg)과 상처(dyn.injMul)는 더하는 피해% 묶음과 따로 곱한다
+    const mul = (1 + (run.permDmg || 0)) * (dyn && dyn.injMul != null ? dyn.injMul : 1);
+    st.dmg = C.dmg * T.dmg * lv * mul * Math.max(0.1, 1 + pct);
     st.interval = (C.interval * T.spd) / aspd;
     st.range = C.range + 3 * tier + M.rangeAdd + cm.range + (inner ? M.innerRange : 0) + (rune && rune.range ? rune.range : 0);
     st.crit = (C.crit ? C.crit[tier] : 0) + M.critChance + cm.crit + (rune && rune.crit ? rune.crit : 0);
