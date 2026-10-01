@@ -23,6 +23,8 @@
 //          바탕을 그린 뒤 같은 변형으로 'lighter' 로 덧그리면 블룸이 된다. 없으면 건너뛴다.
 //   id+'_s0'..'_s5' (전설·신화 유닛만) 대각선 광택 띠 6프레임. 바탕 위에 source-over 로
 //          덧그린다 (알파가 구워져 있다). 3초마다 0.3초 동안 0→5 로 넘기면 된다.
+//   _w·_i·_e·_s* 는 처음 읽을 때 굽는 getter 다 (있는지 확인만 해도 구워진다). 바탕 스프라이트는 시작 때 굽는다.
+//   RS.SPR_STATS = { ms, bytes, count } : 시작 굽기 시간·바이트.
 // DOM: RS.iconURL(name, scale) / RS.unitURL(cls, tier, scale) 는 원본 px × scale 로 굽는다
 //      (HD 는 예전보다 2배 촘촘). CSS 가 너비를 정하므로 화면 크기는 그대로.
 // 맵 형식: def(name, rows, { pal, hd, k, layers, patch, emis, hard, noshade }) — 아래 굽기 참고.
@@ -633,8 +635,23 @@
     '...N..nN..nN.Nn.Nn..N...',
     '......N...N...N...N.....',
     '........................',
-  ], { emis: 'yre' });
+  ], { emis: 'yr' });
 
+  // 감긴 눈꺼풀 (확대 뒤 손질): 아래로 휜 굵은 선 + 늘어진 속눈썹
+  function closedLid(W, H) {
+    const g = [];
+    for (let y = 0; y < H; y++) g.push(new Array(W).fill('k'));
+    for (let x = 0; x < W; x++) {
+      const yy = 2 + Math.round(4 * Math.sin((Math.PI * x) / (W - 1)));
+      g[yy][x] = 'K';
+      g[Math.min(H - 1, yy + 1)][x] = 'K';
+      if (x % 7 === 3 && x > 4 && x < W - 4) {
+        const dx = x < W / 2 ? -1 : 1;
+        for (let j = 2; j < 5; j++) g[Math.min(H - 1, yy + j)][x + (j > 3 ? dx : 0)] = 'P';
+      }
+    }
+    return g.map((r) => r.join(''));
+  }
   // 잠든 고대신: 눈꺼풀이 내려와 감긴 눈
   def('riftHeart_z', [
     '........................',
@@ -657,7 +674,7 @@
     '...N..nN..nN.Nn.Nn..N...',
     '......N...N...N...N.....',
     '........................',
-  ], { hard: 'eK' });
+  ], { hard: 'eK', patch: [{ x: 15, y: 17, rows: closedLid(42, 12) }] });
 
   // 새 아이콘 (유물·증강·열쇠)
   I('anchor', ['...mm....', '..m..m...', '...mm....', 'mmmmmmmm.', '...mm....', 'm..mm..m.', 'mm.mm.mm.', '.mmmmmm..']);
@@ -940,27 +957,45 @@
     const { w, h, g } = img;
     const n = w * h;
     const A = new Float32Array(n);
-    const cnt = {};
+    const code = new Uint8Array(n);
+    const lists = {};
     for (let i = 0; i < n; i++) {
-      if (g[i] === '.') continue;
+      const ch = g[i];
+      if (ch === '.') continue;
       A[i] = 1;
-      cnt[g[i]] = (cnt[g[i]] || 0) + 1;
+      code[i] = ch.charCodeAt(0);
+      (lists[ch] || (lists[ch] = [])).push(i);
     }
     const form = lightGrad(boxBlur(A, w, h, 3), w, h);
+    // 같은 재질만 본 3×3 평균 (재질 경계의 국소 명암)
+    const box = (x, y, c) => {
+      let s = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx >= 0 && xx < w && code[yy * w + xx] === c) s++;
+        }
+      }
+      return s / 9;
+    };
     const col = new Array(n).fill(null);
-    for (const ch in cnt) {
+    for (const ch in lists) {
+      const L = lists[ch];
       const base = pal[ch] || PAL[ch] || '#ff00ff';
-      if (noshade.has(ch) || cnt[ch] < 10) {
-        for (let i = 0; i < n; i++) if (g[i] === ch) col[i] = base;
+      if (noshade.has(ch) || L.length < 10) {
+        for (const i of L) col[i] = base;
         continue;
       }
-      const M = new Float32Array(n);
-      for (let i = 0; i < n; i++) if (g[i] === ch) M[i] = 1;
-      const loc = lightGrad(boxBlur(M, w, h, 1), w, h);
+      const c = ch.charCodeAt(0);
       const R = ramp(base);
-      for (let i = 0; i < n; i++) {
-        if (g[i] !== ch) continue;
-        const v = 0.9 * form[i] + 0.9 * loc[i] - 0.1 * (((i / w) | 0) / h);
+      for (const i of L) {
+        const y = (i / w) | 0;
+        const x = i - y * w;
+        const gx = x === 0 ? box(1, y, c) - box(0, y, c) : x === w - 1 ? box(x, y, c) - box(x - 1, y, c) : (box(x + 1, y, c) - box(x - 1, y, c)) / 2;
+        const gy = y === 0 ? box(x, 1, c) - box(x, 0, c) : y === h - 1 ? box(x, y, c) - box(x, y - 1, c) : (box(x, y + 1, c) - box(x, y - 1, c)) / 2;
+        const v = 0.9 * form[i] + 0.9 * (0.55 * gx + 0.83 * gy) - (0.1 * y) / h;
         col[i] = R[v > 0.1 ? 0 : v < -0.17 ? 3 : v < -0.06 ? 2 : 1];
       }
     }
@@ -1061,7 +1096,7 @@
     const b = name.replace(/_z$/, '');
     return !!(RS.ENEMY && RS.ENEMY[b] && RS.ENEMY[b].boss);
   };
-  const NOSHADE = 'eysSl';
+  const NOSHADE = 'eysSlE';
   // 자동 HD: Scale2x(보스 3x) → 손질 → 4단 명암 → 눈 반짝임 → 여백·외곽선
   function bakeAuto(name, src, pal) {
     const k = src.k || (isBoss(name) ? 3 : 2);
@@ -1079,6 +1114,8 @@
           if (x < g0.w - 1 && g0.g[y * g0.w + x + 1] === 'e') continue;
           const i = y * k * up.w + x * k + k - 1;
           if (up.g[i] === 'e') col[i] = '#ffffff';
+          // 보스의 큰 눈(가로 2칸 이상)은 반짝임도 2×2
+          if (k === 3 && x > 0 && g0.g[y * g0.w + x - 1] === 'e') for (const j of [i - 1, i + up.w, i + up.w - 1]) if (up.g[j] === 'e') col[j] = '#ffffff';
         }
       }
     }
@@ -1142,6 +1179,18 @@
       .map((ch) => pal[ch] || PAL[ch] || '#ffffff');
     return list.length ? [list[0], list[1] || list[0]] : ['#ffffff', '#ffffff'];
   }
+  // 변형(_w·_i·_e·_s*)은 처음 쓸 때 굽는다 (시작 시간 절약). 열거하면 그때 구워진다
+  function lazy(id, make) {
+    Object.defineProperty(SPR, id, {
+      configurable: true,
+      enumerable: true,
+      get() {
+        const c = make();
+        Object.defineProperty(SPR, id, { value: c, writable: true, configurable: true, enumerable: true });
+        return c;
+      },
+    });
+  }
   RS.SPR_STATS = { ms: 0, bytes: 0, count: 0 };
   RS.bakeSprites = function () {
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -1154,12 +1203,13 @@
         const id = cls + tier;
         const img = src.hd ? bakeHD(cls, src, tier, T) : bakeAuto(cls, src, { c: T.color, C: T.dark, l: T.light }).img;
         SPR[id] = toCanvas(img, ART);
-        SPR[id + '_w'] = toCanvas(img, ART, '#ffffff'); // 소환·합성 순간 번쩍임
+        lazy(id + '_w', () => toCanvas(img, ART, '#ffffff')); // 소환·합성 순간 번쩍임
         const em = emisSet(src, tier);
-        if (em) SPR[id + '_e'] = toCanvas(img, ART, null, (i) => em.has(img.ch[i]));
+        if (em) lazy(id + '_e', () => toCanvas(img, ART, null, (i) => em.has(img.ch[i])));
         if (tier >= 3) {
-          const fr = shineFrames(img, tier >= 4 ? '#fff0f6' : '#fff8dc');
-          for (let f = 0; f < fr.length; f++) SPR[id + '_s' + f] = toCanvas(fr[f], ART);
+          let fr = null;
+          const col = tier >= 4 ? '#fff0f6' : '#fff8dc';
+          for (let f = 0; f < 6; f++) lazy(id + '_s' + f, () => toCanvas((fr || (fr = shineFrames(img, col)))[f], ART));
         }
       }
     }
@@ -1173,14 +1223,14 @@
       }
       const { img, g0 } = bakeAuto(name, src, pal);
       SPR[name] = toCanvas(img, ART);
-      SPR[name + '_w'] = toCanvas(img, ART, '#ffffff');
-      SPR[name + '_i'] = toCanvas(img, ART, '#8fe3ff');
+      lazy(name + '_w', () => toCanvas(img, ART, '#ffffff'));
+      lazy(name + '_i', () => toCanvas(img, ART, '#8fe3ff'));
       const em = emisSet(src, 0);
-      if (em) SPR[name + '_e'] = toCanvas(img, ART, null, (i) => em.has(img.ch[i]));
+      if (em) lazy(name + '_e', () => toCanvas(img, ART, null, (i) => em.has(img.ch[i])));
       SPR_COL[name] = mainColors(g0, pal);
     }
     const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    RS.SPR_STATS = { ms: t1 - t0, bytes, count: Object.keys(SPR).length };
+    RS.SPR_STATS = { ms: t1 - t0, bytes, count: Object.keys(SPR).length }; // bytes: 시작 때 구운 것만
   };
 
   // DOM 용 아이콘 (data URL, 확대해서 굽는다)
