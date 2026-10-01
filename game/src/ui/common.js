@@ -130,13 +130,19 @@
   };
   // 설정 토글 버튼 (타이틀·메뉴 공용)
   UI.fxBtn = function (cls) {
-    const label = () => (RS.settings.reduceFx ? '효과 줄이기 켬' : '효과 줄이기 끔');
-    const el = UI.btn(label(), () => {
+    // 누르면 일어날 일을 쓴다 (켜져 있으면 금색 테두리로 표시)
+    const sync = () => {
+      const on = RS.settings.reduceFx;
+      el.textContent = on ? '효과 되돌리기' : '효과 줄이기';
+      el.classList.toggle('fxon', on);
+      el.setAttribute('aria-pressed', String(on));
+    };
+    const el = UI.btn('효과 줄이기', () => {
       UI.setReduceFx(!RS.settings.reduceFx);
-      el.textContent = label();
-      el.setAttribute('aria-pressed', String(RS.settings.reduceFx));
+      sync();
     }, cls || '');
-    el.setAttribute('aria-pressed', String(RS.settings.reduceFx));
+    el.setAttribute('aria-label', '효과 줄이기');
+    sync();
     return el;
   };
 
@@ -183,7 +189,10 @@
       }
     }
     // 전투 중 긴 안내는 한 번에 하나만 (겹쳐 쌓이면 읽을 수 없다)
-    const max = inBattle ? (long || box.querySelector('.toast.long') ? 1 : 2) : 3;
+    // 강타 띠가 아래 띠를 차지하고 있으면 토스트는 그 위에 하나만
+    const sbEl = inBattle && $('#strikebar');
+    const crowded = !!(sbEl && !sbEl.hidden && sbEl.parentElement === $('#lane'));
+    const max = inBattle ? (crowded || long || box.querySelector('.toast.long') ? 1 : 2) : 3;
     while (box.children.length >= max) box.firstChild.remove();
     const t = h('div', { class: 'toast ' + (kind || '') + (long ? ' long' : '') }, text);
     let dur = 1700;
@@ -286,6 +295,7 @@
     const lm = desc && /^생명 -(\d+)(?![%\d])/.exec(desc);
     if (lm && run && run.life <= +lm[1]) return `생명 부족 (${Math.ceil(run.life)}/${lm[1]})`;
     if (desc && /회복|생명 \+/.test(desc) && run && RS.canHeal && !RS.canHeal(run)) return '시든 꽃의 낙인: 회복할 수 없어요';
+    if (desc && /금 간 칸 하나를 되돌린다/.test(desc) && run && run.runes && run.runes.indexOf('crack') < 0) return '금 간 칸이 없어요';
     return '지금은 고를 수 없어요';
   };
 
