@@ -91,12 +91,15 @@
       const b = UI.G.battle;
       if (!b || !b.ab) return;
       const el = e.currentTarget;
+      const now = performance.now();
       if (!b.useAbility()) {
+        if (now - (UI.abOkAt || 0) < 400) return; // 방금 쓴 능력의 두 번째 탭은 조용히 무시
         RS.sfx('error');
         const def = b.ab.def;
         UI.tip(el, def.name, UI.abDesc(b, def.desc), b.abilityBlock() || UI.abDesc(b, def.gain));
         return;
       }
+      UI.abOkAt = now;
       UI.hideTip(true);
       RS.sfx(b.ab.id === 'star' ? 'bomb' : b.ab.id === 'charge' ? 'big' : b.ab.stance === 'ice' ? 'freeze' : 'bomb');
       UI.dismissTip('ab_' + b.ab.id);
@@ -677,6 +680,7 @@
     const next = res.results.length ? res.results[0].slot : -1;
     UI.select(G.run.board[i] && G.run.board[i].tier === tierFrom ? i : next);
     UI.updateHud(true);
+    UI.lockInput(250); // 같은 자리에 다시 그린 합성 버튼이 두 번 탭으로 또 눌리지 않게
   };
 
   UI.doMergeAll = function () {
@@ -731,6 +735,16 @@
     UI.panelMode = mode;
     UI.panelData = data || null;
     UI.panelSig = null;
+    // 작은 화면에서 강타 띠가 패널을 덮고 있으면 바로 접는다 (다음 HUD 갱신을 기다리지 않고)
+    const sb = $('#strikebar');
+    if (mode !== 'idle' && sb && sb.parentElement === $('#pwrap')) {
+      sb.hidden = true;
+      $('#pwrap').classList.remove('striking');
+      if (UI.hudCache) {
+        UI.hudCache.sbh = true;
+        UI.hudCache.sbp = false;
+      }
+    }
     const p = $('#panel');
     p.innerHTML = '';
     p.className = 'panel-' + mode;
@@ -1141,9 +1155,12 @@
   function updateStrikeBar(b, c) {
     const el = $('#strikebar');
     const f = b.strikeFocus ? b.strikeFocus() : null;
-    setAttrHidden(el, 'sbh', !f);
+    // 작은 화면(빈 띠 없음)에서 소모품·강화·유닛 패널을 연 동안에는 강타 띠를 접는다 (얼음 주문서로 강타를 끊을 수 있게)
+    const covering = el.parentElement === $('#pwrap');
+    const busy = covering && UI.panelMode && UI.panelMode !== 'idle';
+    setAttrHidden(el, 'sbh', !f || busy);
     // 패널 위를 덮을 때는 패널을 숨겨 아래 버튼(합성·판매·강화)이 눌리지 않고 비쳐 보이지도 않게
-    setCls($('#pwrap'), 'sbp', 'striking', !!f && el.parentElement === $('#pwrap'));
+    setCls($('#pwrap'), 'sbp', 'striking', !!f && covering && !busy);
     if (!f) return;
     const pre = f.cast.pre;
     setText(el.querySelector('.sb-name'), 'sbn', `${f.def.name} · ${f.cast.s.name} ${Math.max(0, f.cast.t).toFixed(1)}`);

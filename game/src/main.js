@@ -373,9 +373,9 @@
     UI.initBattle();
     // 두 번 탭 방지: 화면이 막 바뀐 직후의 클릭은 버린다 (전투 조작 버튼·전장은 제외)
     document.addEventListener('click', (e) => {
-      if (!UI.inputLocked()) return;
+      if (!UI.inputLocked() && !UI.screenLocked()) return;
       const t = e.target;
-      if (t && t.closest && t.closest('#controls,#itembar,#cv')) return;
+      if (!UI.screenLocked() && t && t.closest && t.closest('#controls,#itembar,#cv')) return;
       e.preventDefault();
       e.stopImmediatePropagation();
     }, true);

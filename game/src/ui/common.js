@@ -50,6 +50,12 @@
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     return now < UI.lockUntil;
   };
+  // 화면이 바뀐 직후에는 전투 조작 버튼까지 모두 막는다 (전투로 들어가는 버튼을 두 번 누르면 소환·강화가 눌리던 문제)
+  UI.screenUntil = 0;
+  UI.screenLocked = function () {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    return now < UI.screenUntil;
+  };
 
   UI.btn = function (label, onclick, cls, disabled) {
     return h('button', {
@@ -156,7 +162,10 @@
 
   UI.show = function (id) {
     UI.hideTip(true);
-    if (UI.current !== id) UI.lockInput();
+    if (UI.current !== id) {
+      UI.lockInput();
+      UI.screenUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 300;
+    }
     for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
     UI.current = id;
     const pt = $('#ptoasts');
