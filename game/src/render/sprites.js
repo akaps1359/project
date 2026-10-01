@@ -27,7 +27,8 @@
 //   RS.SPR_STATS = { ms, bytes, count } : 시작 굽기 시간·바이트.
 // DOM: RS.iconURL(name, scale) / RS.unitURL(cls, tier, scale) 는 원본 px × scale 로 굽는다
 //      (HD 는 예전보다 2배 촘촘). CSS 가 너비를 정하므로 화면 크기는 그대로.
-// 맵 형식: def(name, rows, { pal, hd, k, layers, patch, emis, hard, noshade }) — 아래 굽기 참고.
+// 맵 형식: def(name, rows, { pal, hd, hand, k, layers, patch, emis, hard, noshade }) — 아래 굽기 참고.
+//   hand: 손그림 보스 맵 (예전 맵의 정확히 3배 크기, 키우기·자동 음영 없이 그대로 굽는다). sprites_boss_*.js 가 덮어쓴다.
 // ────────────────────────────────────────────────────────────────────────────
 (function (RS) {
   'use strict';
@@ -1099,6 +1100,14 @@
   const NOSHADE = 'eysSlE';
   // 자동 HD: Scale2x(보스 3x) → 손질 → 4단 명암 → 눈 반짝임 → 여백·외곽선
   function bakeAuto(name, src, pal) {
+    // 손그림 보스 (sprites_boss_*.js): 맵이 이미 최종 해상도(예전 맵의 3배)라 키우지도 자동 음영도 하지 않는다
+    if (src.hand) {
+      const g = grid(src.rows, name, null, pal);
+      const col = g.g.map((c) => (c === '.' ? null : pal[c] || PAL[c] || '#ff00ff'));
+      const img = frame(col, g.g, g.w, g.h, 3);
+      outline(img);
+      return { img, g0: g, k: 1 };
+    }
     const k = src.k || (isBoss(name) ? 3 : 2);
     const g0 = grid(src.rows, name, null, pal);
     const hard = new Set((src.hard != null ? src.hard : 'e').split(''));
