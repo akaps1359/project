@@ -356,11 +356,20 @@
     return { w: W / dpr, h: H / dpr };
   };
 
+  // 바닥은 처음 그릴 때 굽고 테마마다 한 번만 (타이틀에서는 전장을 보이지 않으므로 시작이 느려지지 않게)
+  const BG_CACHE = {};
   P.setTheme = function (name) {
-    if (this.theme === name && this.bg) return;
+    if (this.theme === name) return;
     this.theme = name;
-    this.bg = RS.World.buildBackground(W0()[name] ? name : 'forest');
+    this.bg = null;
     this.amb.length = 0;
+  };
+  P.background = function () {
+    if (!this.bg) {
+      const k = W0()[this.theme] ? this.theme : 'forest';
+      this.bg = BG_CACHE[k] || (BG_CACHE[k] = RS.World.buildBackground(k));
+    }
+    return this.bg;
   };
 
   // 예전 코드 호환 (비네트는 바닥에 구워져 있다)
@@ -959,7 +968,7 @@
     ctx.setTransform(1, 0, 0, 1, sx, sy);
     this.raw.fillStyle = '#15111d';
     this.raw.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.drawImage(this.bg, 0, 0);
+    ctx.drawImage(this.background(), 0, 0);
     ctx.layer = 0;
     this.drawPortal(ctx, dt);
     if (b) {
@@ -1241,7 +1250,8 @@
     if (em && !low && !pose.rot) {
       const a = s.tier >= 4 ? 0.75 + 0.25 * Math.sin(t * 4 + i) : 0.6;
       ctx.glowImg(em, ax - lw / 2, ay - lh, lw, lh, a, flip);
-      ctx.glowImg(em, ax - lw * 0.8, ay - lh * 1.3, lw * 1.6, lh * 1.6, a * 0.35, flip);
+      // 후광은 늘린 마스크 대신 모아 그리는 1:1 빛으로 (늘려 그리기는 비싸다)
+      if (s.tier >= 4) ctx.glow(ax, ay - lh * 0.55, 9, '#ffe3f2', a * 0.3);
     }
     const ph = (t + i * 0.37) % 3;
     if (ph < 0.36) {
