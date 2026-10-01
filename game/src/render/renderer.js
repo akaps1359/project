@@ -927,7 +927,7 @@
 
   // ── 그리기 ──
   // 순서: 바닥(빛 구워짐) → 문·게이지·경고 빗금 → 바닥 빛 웅덩이(더하기 한 번) → 칸·유닛 → 적 → 빛(더하기 한 번)
-  //      → 강타 집중 어둠·예고 → 투사체·효과·입자 → 빛(더하기 한 번) → 보스 등장 띠 → 숫자
+  //      → 강타 집중 어둠 → 투사체·효과·입자 → 빛(더하기 한 번) → 보스 등장 띠 → 숫자 → 기술 예고
   P.draw = function (b, dt) {
     const ctx = this.ctx;
     texReset(ctx.S);
@@ -974,7 +974,6 @@
       this.drawEnemies(ctx, b, dt);
       ctx.flushGlows(1);
       this.drawFocus(ctx, b, dt);
-      this.drawCasts(ctx, b, dt);
     }
     this.drawShots(ctx, dt);
     this.drawFx(ctx, dt);
@@ -984,7 +983,12 @@
     ctx.flushGlows(1);
     if (this.intro > 0) this.drawIntro(ctx, dt);
     this.drawNums(ctx, dt);
-    if (b) this.drawDrag(ctx, b);
+    // 보스 기술 예고(! · 붉은 숫자 · 경직 막대)는 피해 숫자에 가리지 않게 맨 위에
+    if (b) {
+      this.drawCasts(ctx, b, dt);
+      ctx.flushGlows(1);
+      this.drawDrag(ctx, b);
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
