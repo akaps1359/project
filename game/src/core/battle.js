@@ -726,6 +726,11 @@
   };
   // 가로지르기: 경고 → 돌진(지나가는 칸의 유닛 기절) → 도착해서 스스로 기절
   P.updateCross = function (e, dt) {
+    // 기절·빙결은 돌진을 막는다: 예고 중이면 취소, 달리는 중이면 그 자리에 멈춘다 (다른 기술처럼)
+    if (e.stunT > 0) {
+      if (e.crossWarn) e.crossWarn = null;
+      return;
+    }
     if (e.crossWarn) {
       const w = e.crossWarn;
       w.t -= dt;

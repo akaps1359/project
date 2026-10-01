@@ -322,7 +322,8 @@
     RS.registerCustomAugs(run);
     run.injury = run.injury || 0;
     // 빠진 지휘관(레온·벨·카이·미라)으로 저장된 모험은 가까운 지휘관으로 이어 간다
-    if (!RS.COMMANDER[run.commander]) run.commander = (RS.COMMANDER_ALIAS && RS.COMMANDER_ALIAS[run.commander]) || RS.COMMANDERS[0].id;
+    const migrated = !RS.COMMANDER[run.commander];
+    if (migrated) run.commander = (RS.COMMANDER_ALIAS && RS.COMMANDER_ALIAS[run.commander]) || RS.COMMANDERS[0].id;
     // 고유 능력 자원 (예전 저장본: 별의 왕홀이 모아 둔 별을 옮긴다)
     if (!run.abil) run.abil = { n: 0 };
     if (run.relicState && run.relicState.starScepter) {
@@ -335,6 +336,16 @@
     if (Array.isArray(run.curses)) run.curses = run.curses.filter((id) => RS.CURSE[id]);
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
     if (Array.isArray(run.items)) run.items = run.items.filter((id) => RS.ITEM[id]);
+    // 바뀐 지휘관은 그 지휘관의 시작 유물을 받는다 (빠진 시작 유물 대신)
+    if (migrated && Array.isArray(run.relics)) {
+      const st = RS.COMMANDER[run.commander].relic;
+      if (st && RS.REL[st] && run.relics.indexOf(st) < 0) run.relics.unshift(st);
+    }
+    // 칸이 줄어 넘친 소모품(예: 연금 솥이 빠짐)은 골드로 바꾼다
+    if (Array.isArray(run.items) && run.items.length > RS.itemSlots(run)) {
+      const extra = run.items.splice(RS.itemSlots(run));
+      run.gold = (run.gold || 0) + 25 * extra.length;
+    }
     // 보물·상점·보상 화면이나 대기열에 남은 빠진 id 도 뺀다 (그대로 두면 화면을 그리다 멈춘다)
     purgeMissing(run);
     // 예전 저장본: 마지막 보스를 이기고 보상 화면에 멈춰 있었다면 그대로 끝낸다
