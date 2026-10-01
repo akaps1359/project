@@ -9,6 +9,7 @@
   UI.showTitle = function () {
     const G = UI.G;
     RS.bgm('title');
+    UI.applySettings();
     const scr = $('#scr-title');
     scr.innerHTML = '';
     const meta = G.meta;
@@ -39,7 +40,9 @@
             RS.setBgmOff(!RS.isBgmOff());
             e.currentTarget.textContent = RS.isBgmOff() ? '음악 꺼짐' : '음악 켜짐';
           }, 'sm'),
+          UI.fxBtn('sm'),
         ),
+        !meta.runs ? h('p', { class: 'record first' }, '처음이라면 [게임 방법]을 먼저 보세요') : null,
         h('p', { class: 'record' }, meta.runs ? `모험 ${meta.runs}회 · 클리어 ${meta.wins}회 · 최고 ${meta.bestAct}막 ${meta.bestFloor}층 · 심연 ${meta.maxAsc || 0}` : '3막 꼭대기의 균열의 군주를 쓰러뜨리세요'),
       ),
     ]);
@@ -69,11 +72,14 @@
     if (!UI.pickCmd || !unlocked.some((c) => c.id === UI.pickCmd)) UI.pickCmd = unlocked[0].id;
     const maxAsc = meta.maxAsc || 0;
     UI.pickAsc = Math.min(UI.pickAsc || 0, maxAsc);
-    const list = h('div', { class: 'cards' }, RS.COMMANDERS.map((c) => {
+    const list = h('div', { class: 'cards cmds' }, RS.COMMANDERS.map((c) => {
       const ok = RS.commanderUnlocked(c, meta);
       const rel = RS.REL[c.relic];
+      const on = UI.pickCmd === c.id;
+      const A = RS.ABILITY[c.ability];
       return h('button', {
-        class: `card cmd${UI.pickCmd === c.id ? ' sel' : ''}${ok ? '' : ' locked'}`,
+        class: `card cmd${on ? ' sel' : ''}${ok ? '' : ' locked'}`,
+        'aria-pressed': on ? 'true' : 'false',
         disabled: !ok,
         onclick() {
           RS.sfx('click');
@@ -83,10 +89,12 @@
         },
       }, h('div', { class: 'cic uwrap' }, unitImg(c.portrait[0], c.portrait[1])),
       h('div', { class: 'cbody' },
-        h('div', { class: 'ctop' }, h('span', { class: 'rar' }, c.title), h('b', null, c.name)),
-        h('p', null, ok ? c.desc : c.unlock.text),
-        ok ? h('p', { class: 'good small' }, `고유 능력 [${RS.ABILITY[c.ability].name}] ${RS.ABILITY[c.ability].desc}. ${RS.ABILITY[c.ability].gain}`) : null,
-        ok ? h('p', { class: 'dim small' }, `시작 유물 · ${rel.name}: ${rel.desc} · 전용 증강 ${RS.AUGMENTS.filter((a) => a.cmd === c.id).length}개`) : null,
+        h('div', { class: 'ctop' }, h('span', { class: 'rar' }, c.title), h('b', null, c.name),
+          ok ? h('span', { class: 'abchip' }, icon(A.icon === 'orb' ? 'flame' : A.icon, '', 2), A.name) : null),
+        h('p', { class: on ? 'cdesc' : 'cdesc one' }, ok ? c.desc : c.unlock.text),
+        // 고른 지휘관만 펼쳐서 능력·유물을 자세히
+        ok && on ? h('p', { class: 'good small' }, `고유 능력 [${A.name}] ${A.desc}. ${A.gain}`) : null,
+        ok && on ? h('p', { class: 'dim small' }, `시작 유물 · ${rel.name}: ${rel.desc} · 전용 증강 ${RS.AUGMENTS.filter((a) => a.cmd === c.id).length}개`) : null,
       ));
     }));
     const setAsc = (v) => {
@@ -105,8 +113,8 @@
     );
     append(scr, [
       h('div', { class: 'topbar' }, h('div', { class: 'tb-title' }, '지휘관 선택'), btn('뒤로', () => UI.showTitle(), 'sm')),
-      h('div', { class: 'page scroll' }, h('p', { class: 'page-sub' }, '지휘관마다 고유 능력(전투 중 버튼)과 전용 증강이 다릅니다. 클래스는 모두 고르게 나와요'), list, ascBox),
-      h('div', { class: 'page-foot' }, ascCtl, btn('출발', (e) => {
+      h('div', { class: 'page scroll' }, h('p', { class: 'page-sub' }, '지휘관마다 고유 능력(전투 중 버튼)과 전용 증강이 달라요'), list, ascBox),
+      h('div', { class: 'page-foot' }, ascCtl, btn(`${UI.josaRo(RS.COMMANDER[UI.pickCmd].name)} 출발`, (e) => {
         e.currentTarget.disabled = true;
         if (G.abandonSaved) G.abandonSaved(); // 저장본이 없으면 아무 일도 없다
         G.newRun(null, { commander: UI.pickCmd, asc: UI.pickAsc });
@@ -116,6 +124,10 @@
     UI.lockInput(selOnly ? 120 : 300);
     const pg = scr.querySelector('.page');
     pg.scrollTop = keep;
+    if (keep) {
+      const s = pg.querySelector('.card.sel');
+      if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest' });
+    }
   };
 
   // ── 메뉴: 전투 중이면 일시정지, 밖이면 일반 메뉴 ──
@@ -140,6 +152,7 @@
           e.currentTarget.textContent = RS.isBgmOff() ? '음악 켜기' : '음악 끄기';
         }),
       ),
+      h('div', { class: 'row2 setrow' }, h('span', { class: 'dim small' }, '흔들림·번쩍임 줄이기'), UI.fxBtn()),
       G.run ? btn(inBattle ? '타이틀로 (이 전투는 처음부터)' : '타이틀로 (진행은 자동 저장돼요)', () => {
         UI.onModalClose = null;
         UI.closeModal();
@@ -216,7 +229,7 @@
         h('div', null, h('b', null, e.name + (e.boss ? ' · 보스' : e.elite ? ' · 엘리트' : '')), h('p', null, `체력 ×${e.hp} · 속도 ${e.speed} · 한 바퀴당 생명 -${e.leak}`), e.trait ? h('p', { class: 'cost' }, e.trait) : null));
     };
     UI.modal('도감', UI.tabs([
-      { name: '유닛', sub: '같은 유닛 3기 → 다음 등급 무작위 유닛', render: () => RS.CLASSES.map((c) => h('div', { class: 'lrow' }, unitImg(c, 3), h('div', null, h('b', null, `${RS.CLASS[c].name} · ${RS.CLASS[c].role}`), h('p', null, RS.CLASS[c].desc)))) },
+      { name: '유닛', sub: '같은 유닛 3기 → 다음 등급 무작위 유닛', render: () => RS.CLASSES.map((c) => h('div', { class: 'lrow' }, unitImg(c, 0), h('div', null, h('b', null, `${RS.CLASS[c].name} · ${RS.CLASS[c].role}`), h('p', null, RS.CLASS[c].desc)))) },
       { name: '증강', sub: '전투 보상으로 고르는 영구 효과 · 지휘관 전용 증강은 그 지휘관으로 할 때만 나온다', render: () => [
         [1, 2, 3].map((r) => RS.AUGMENTS.filter((a) => a.rarity === r && !a.cmd).map((a) => UI.augRow(a.id, 1))),
         RS.COMMANDERS.map((c) => [h('h3', null, `${c.name} 전용 · ${RS.ABILITY[c.ability].name}`), RS.AUGMENTS.filter((a) => a.cmd === c.id).map((a) => UI.augRow(a.id, 1))]),
@@ -230,7 +243,7 @@
         sub: '2·3막을 시작할 때 차원 틈새에서 나타나는 방랑자. 셋 중 하나를 준다',
         render: () => RS.ANCIENTS.map((a) => h('div', { class: 'lrow' }, icon(a.icon, '', 3), h('div', null, h('b', null, `${a.name} · ${a.acts.join('·')}막`), h('p', null, a.text), h('p', { class: 'dim small' }, a.pools.map((p) => p.map((b) => RS.ancientBoon(b).name).join(' / ')).join(' | '))))),
       },
-    ]), typeof onClose === 'function' ? onClose : null);
+    ], 'scrollrow'), typeof onClose === 'function' ? onClose : null);
   };
 
   // ── 연대기 (슬레이 더 스파이어 2의 타임라인처럼 이정표와 해금) ──
@@ -280,34 +293,43 @@
     const eliteLk = Math.min(...E.filter((d) => d.elite).map((d) => d.leak));
     const bossLk = Math.max(...E.filter((d) => d.boss && d !== god).map((d) => d.leak));
     const lapText = `엘리트 ${lapSeq(eliteLk)}, 보스 ${lapSeq(bossLk)}` + (god ? `, 고대신 ${lapSeq(god.leak)}` : '');
-    UI.modal('게임 방법', h('div', { class: 'help' },
-      h('ol', null,
-        li('소환', '골드로 무작위 유닛을 부릅니다. 같은 유닛은 한 칸에 3기까지 쌓입니다. 소환할수록 비용이 1씩 오릅니다.'),
-        li('합성', '같은 칸의 같은 유닛 3기(전설은 4기) → 다음 등급 무작위 유닛 1기. 일반 → 희귀 → 영웅 → 전설 → 신화. 소환으로는 영웅까지 나와요.'),
-        li('신화 스킬', RS.CLASSES.map((c) => `${RS.CLASS[c].name} [${RS.MYTHIC[c].name}] ${RS.MYTHIC[c].desc}`).join(' / ')),
-        li('배치', '유닛을 끌어서 옮깁니다. 전사·도적은 바깥 칸, 궁수·마법사·서리술사는 점선 안쪽 칸에. 사거리가 길에 닿지 않는 칸에는 빨간 x가 뜹니다. 새로 소환한 유닛은 알맞은 빈칸에 놓이지만, 보스가 뒤섞은 자리는 직접 옮겨야 해요.'),
-        li('강화', `전투 중 [강화]: 골드로 한 클래스의 레벨을 올려 피해 +${Math.round(RS.BAL.upgradePct * 1000) / 10}%/Lv. 모험 내내 유지됩니다.`),
-        li('판매', '유닛을 누르고 [판매]로 골드를 돌려받습니다. 영웅 이상은 두 번 눌러야 팔립니다.'),
-        li('적', `적은 길을 따라 돕니다. 한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 갑니다(놓친 만큼만 아파요). 엘리트·보스는 균열에서 다시 나와 계속 돌며, 처음엔 조금이지만 다시 돌 때마다 두 배로 앗아 갑니다(${lapText}). 필드에 적이 ${RS.BAL.fieldCap}마리(일부 유물·증강은 더 적게)가 되면 패배합니다. 전장의 적을 누르면 정보가 나옵니다.`),
-        li('강타', '엘리트·보스 머리 위에 ! 와 붉은 숫자가 뜨면 곧 그만큼 생명을 칩니다. 준비하는 동안 몰아쳐서 노란 경직 막대를 채우거나, 기절·빙결(전사 기절·서리술사 빙결·서리 주문서)시키면 끊깁니다. 엘리트의 강타는 막이 오를수록 세집니다.'),
-        li('상처', `강타에 맞아 생명을 잃으면 상처가 1 생깁니다(최대 ${RS.BAL.injuryMax}). 상처 하나당 다음 전투부터 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 휴식처에서 [휴식]하면 모두 낫고, 일반 전투를 이길 때마다 ${RS.BAL.injuryDecay}씩 아물며, 새 막에서는 사라집니다.`),
-        li('생명 관리', '생명은 전투가 끝나도 이어집니다. 휴식처에서 회복할지 강해질지 고르세요. 생명이 줄수록 강해지는 광전사·붉은 해골 같은 선택도 있습니다.'),
-        li('골드', '처치·웨이브 시작 때 들어옵니다. 보유 골드 10당 이자 1(최대 5).'),
-        li('엘리트', '마지막 웨이브에 강적. 위험하지만 유물을 줍니다.'),
-        li('보스', `각 막의 끝. ${RS.BAL.bossTime}초 안에 못 쓰러뜨리면 폭주: 속도 ×1.8, 잃는 생명 ×2.`),
-        li('맵', '막마다 17층 + 보스. 막마다 지형(장터 길·격전지 등)이 달라 방 비율이 바뀌어요. 칸을 한 번 누르면 설명, 한 번 더 누르면 이동합니다. ? 칸은 들어가 봐야 압니다.'),
-        li('증강', '전투 보상으로 고르는 영구 효과(모험 내내 유지). 휴식처 [연마]로 효과 ×1.5. 상점·이벤트에서 없애거나 바꿀 수 있습니다.'),
-        li('유물', '모험 내내 유지되는 지속 효과. 엘리트·보스·보물·상점·이벤트에서 얻습니다. 빨간 글씨는 대가입니다.'),
-        li('소모품', '전투 화면 아래 칸(기본 3개). 눌러서 [사용]. 상점·보상에서 얻습니다.'),
-        li('저주', '해로운 지속 효과. 상점 [제거]나 일부 이벤트로 없앱니다.'),
-        li('룬', '보드 칸에 새기는 인챈트. 그 칸에 선 유닛에게 효과가 붙습니다.'),
-        li('봉인석', '붉은(휴식처 회수)·초록(성난 엘리트)·푸른(보물 대신) 봉인석을 모두 모으면 3막 뒤 4막이 열립니다.'),
-        li('차원 방랑자', '2·3막을 시작할 때 강력한 선택 3개 중 하나를 골라야 합니다.'),
-        li('상성', '돌골렘·철갑 게·흑기사는 궁수·도적 피해 절반. 유령·리치는 물리 피해에 강합니다.'),
-        li('심연', '클리어하면 열리는 추가 난이도. 단계마다 불리한 규칙이 더해집니다.'),
-        li('저장', '칸을 옮길 때마다 자동 저장. 전투 도중 나가면 그 전투를 처음부터 다시 합니다.'),
-        li('음악·효과음', 'Juhani Junkala · HydroGene · SketchyLogic · spring-spring · qubodup · haeldb 의 CC0(퍼블릭 도메인) 음원을 씁니다 (OpenGameArt.org).'),
-      ),
-    ), typeof onClose === 'function' ? onClose : null);
+    UI.modal('게임 방법', h('div', { class: 'help' }, UI.tabs([
+      { name: '기본', sub: '소환하고, 합치고, 옮기고, 강화하세요', render: () => h('ol', null,
+          li('소환', '골드로 무작위 유닛을 부릅니다. 같은 유닛은 한 칸에 3기까지 쌓입니다. 소환할수록 비용이 1씩 오릅니다.'),
+          li('합성', '같은 칸의 같은 유닛 3기(전설은 4기) → 다음 등급 무작위 유닛 1기. 일반 → 희귀 → 영웅 → 전설 → 신화. 소환으로는 영웅까지 나와요.'),
+          li('배치', '유닛을 끌어서 옮깁니다. 전사·도적은 바깥 칸, 궁수·마법사·서리술사는 점선 안쪽 칸에. 사거리가 길에 닿지 않는 칸에는 빨간 x가 뜹니다. 새로 소환한 유닛은 알맞은 빈칸에 놓이지만, 보스가 뒤섞은 자리는 직접 옮겨야 해요.'),
+          li('강화', `전투 중 [강화]: 골드로 한 클래스의 레벨을 올려 피해 +${Math.round(RS.BAL.upgradePct * 1000) / 10}%/Lv. 모험 내내 유지됩니다.`),
+          li('고유 능력', '지휘관마다 다른 능력. 전투 화면 아래 가운데 버튼으로 씁니다. 금빛으로 반짝이면 지금 쓰면 강타가 끊겨요. 쓸 수 없을 때 누르면 무엇이 필요한지 알려 줘요.'),
+          li('판매', '유닛을 누르고 [판매]로 골드를 돌려받습니다. 영웅 이상은 두 번 눌러야 팔립니다.'),
+      ) },
+      { name: '적과 생명', sub: '적이 길을 한 바퀴 돌면 생명을 잃어요', render: () => h('ol', null,
+          li('적', `적은 길을 따라 돕니다. 한 바퀴를 돈 일반 적은 균열로 빠져나가며 생명을 1씩 앗아 갑니다(놓친 만큼만 아파요). 엘리트·보스는 균열에서 다시 나와 계속 돌며, 처음엔 조금이지만 다시 돌 때마다 두 배로 앗아 갑니다(${lapText}). 필드에 적이 ${RS.BAL.fieldCap}마리(일부 유물·증강은 더 적게)가 되면 패배합니다. 전장의 적을 누르면 정보가 나옵니다.`),
+          li('강타', '엘리트·보스 머리 위에 ! 와 붉은 숫자가 뜨면 곧 그만큼 생명을 칩니다. 준비하는 동안 몰아쳐서 노란 경직 막대를 채우거나, 기절·빙결(전사 기절·서리술사 빙결·서리 주문서)시키면 끊깁니다. 엘리트의 강타는 막이 오를수록 세집니다.'),
+          li('상처', `강타에 맞아 생명을 잃으면 상처가 1 생깁니다(최대 ${RS.BAL.injuryMax}). 상처 하나당 다음 전투부터 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 휴식처에서 [휴식]하면 모두 낫고, 일반 전투를 이길 때마다 ${RS.BAL.injuryDecay}씩 아물며, 새 막에서는 사라집니다.`),
+          li('생명 관리', '생명은 전투가 끝나도 이어집니다. 휴식처에서 회복할지 강해질지 고르세요. 생명이 줄수록 강해지는 광전사·붉은 해골 같은 선택도 있습니다.'),
+          li('엘리트', '마지막 웨이브에 강적. 위험하지만 유물을 줍니다.'),
+          li('보스', `각 막의 끝. ${RS.BAL.bossTime}초 안에 못 쓰러뜨리면 폭주: 속도 ×1.8, 잃는 생명 ×2.`),
+          li('상성', '돌골렘·철갑 게·흑기사는 궁수·도적 피해 절반. 유령·리치는 물리 피해에 강합니다.'),
+      ) },
+      { name: '모험', sub: '맵을 오르며 빌드를 키워요', render: () => h('ol', null,
+          li('맵', '막마다 17층 + 보스. 막마다 지형(장터 길·격전지 등)이 달라 방 비율이 바뀌어요. 칸을 한 번 누르면 설명, 한 번 더 누르면 이동합니다. ? 칸은 들어가 봐야 압니다.'),
+          li('골드', '처치·웨이브 시작 때 들어옵니다. 보유 골드 10당 이자 1(최대 5).'),
+          li('증강', '전투 보상으로 고르는 영구 효과(모험 내내 유지). 휴식처 [연마]로 효과 ×1.5. 상점·이벤트에서 없애거나 바꿀 수 있습니다.'),
+          li('신화 스킬', RS.CLASSES.map((c) => `${RS.CLASS[c].name} [${RS.MYTHIC[c].name}] ${RS.MYTHIC[c].desc}`).join(' / ')),
+          li('유물', '모험 내내 유지되는 지속 효과. 엘리트·보스·보물·상점·이벤트에서 얻습니다. 빨간 글씨는 대가입니다.'),
+          li('소모품', '전투 화면 아래 칸(기본 3개). 눌러서 [사용]. 상점·보상에서 얻습니다.'),
+          li('저주', '해로운 지속 효과. 상점 [제거]나 일부 이벤트로 없앱니다.'),
+          li('룬', '보드 칸에 새기는 인챈트. 그 칸에 선 유닛에게 효과가 붙습니다.'),
+          li('봉인석', '붉은(휴식처 회수)·초록(성난 엘리트)·푸른(보물 대신) 봉인석을 모두 모으면 3막 뒤 4막이 열립니다.'),
+          li('차원 방랑자', '2·3막을 시작할 때 강력한 선택 3개 중 하나를 골라야 합니다.'),
+          li('심연', '클리어하면 열리는 추가 난이도. 단계마다 불리한 규칙이 더해집니다.'),
+          li('저장', '칸을 옮길 때마다 자동 저장. 전투 도중 나가면 그 전투를 처음부터 다시 합니다.'),
+      ) },
+      { name: '정보', render: () => h('ol', null,
+          li('음악·효과음', 'Juhani Junkala · HydroGene · SketchyLogic · spring-spring · qubodup · haeldb 의 CC0(퍼블릭 도메인) 음원을 씁니다 (OpenGameArt.org).'),
+        h('li', null, h('b', null, '설정'), ' 타이틀·메뉴의 [효과 줄이기]를 켜면 화면 흔들림·번쩍임이 줄어요.'),
+      ) },
+    ])),
+    typeof onClose === 'function' ? onClose : null);
   };
 })((globalThis.RS = globalThis.RS || {}));
