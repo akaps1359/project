@@ -1838,7 +1838,13 @@
     if (!ab) return '고유 능력이 없다';
     if (this.canUseAbility()) return null;
     if (ab.id === 'stance') return `${Math.ceil(ab.cd)}초 뒤에 다시 바꿀 수 있어요`;
-    if (ab.n < ab.cost) return `${ab.def.res}이(가) ${ab.cost}개 모여야 해요 (${ab.def.gain})`;
+    if (ab.n < ab.cost) {
+      // 받침에 맞춘 조사 (별이 · 결의가). 설명은 괄호 대신 가운뎃점으로 이어 괄호가 겹치지 않게
+      const res = ab.def.res;
+      const c = res.charCodeAt(res.length - 1);
+      const josa = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 ? '이' : '가';
+      return `${res}${josa} ${ab.cost}개 모여야 해요 · ${ab.def.gain}`;
+    }
     return '적이 있을 때 쓸 수 있어요';
   };
   // 방패 돌진 대상: 강타 준비 중 → 엘리트·보스 → 한 바퀴를 가장 많이 돈 적

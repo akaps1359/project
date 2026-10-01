@@ -194,7 +194,7 @@
     const cmd = RS.COMMANDER[run.commander];
     const list = run.pending.blessings;
     const sel = typeof UI.optSel === 'number' && list[UI.optSel] ? UI.optSel : null;
-    const body = h('div', { class: 'event' },
+    const body = h('div', { class: 'event neow' },
       h('div', { class: 'event-art big' }, icon('shard', '', 6)),
       h('p', { class: 'event-text' }, `균열 앞에 선 ${cmd.title} ${cmd.name}에게 별점술사가 별자리 카드를 펼친다. "오호, 오늘 밤 네 별이 유난히 반짝이는구나. 점괘 하나를 골라 보렴."`),
       h('h2', null, '하나를 고르세요'),

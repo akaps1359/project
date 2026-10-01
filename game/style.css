@@ -299,11 +299,21 @@ img { max-width: 100%; }
 #boss-name { color: var(--pink); white-space: nowrap; }
 #boss-t { font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; white-space: nowrap; }
 #dock { position: relative; margin: 6px 8px 0; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
-#lane { position: relative; flex: 1 1 0; min-height: 0; }
+#lane { position: relative; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 #pwrap { position: relative; flex: 0 0 auto; }
 #toasts { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; z-index: 4; }
 /* 키 큰 폰: 토스트는 패널 위 빈 띠에 (패널·강타 띠를 가리지 않는다) */
-#lane #toasts { justify-content: flex-end; padding-bottom: 6px; overflow: hidden; }
+#lane #toasts { position: relative; inset: auto; flex: 1 1 0; min-height: 0; justify-content: flex-end; padding-bottom: 6px; overflow: hidden; }
+/* 띠 아래쪽 한 자리: 강타 띠 > 안내 카드 > 다음 웨이브 (패널은 그대로 쓸 수 있다) */
+/* 띠가 붐비면(강타 띠·카드) 토스트는 잘리지 않고 전장 아래 가장자리 위로 떠오른다 */
+#lane.on #toasts { overflow: visible; }
+#lane #strikebar { position: relative; inset: auto; flex: 0 0 auto; margin-bottom: 6px; }
+.lanecard, .lanewave { flex: 0 1 auto; min-height: 0; margin: 0 0 6px; font-size: 11px; line-height: 1.35; }
+.lanecard[hidden], .lanewave[hidden] { display: none; }
+.lanecard { padding: 5px 8px; background: var(--panel); box-shadow: var(--px); overflow: hidden; color: var(--gold); text-align: center; }
+.lanecard.tipcard { color: var(--text); text-align: left; background: #33284d; box-shadow: var(--px), inset 3px 0 0 var(--gold); cursor: pointer; }
+.lanecard.tipcard::after { content: ' · 탭하여 닫기'; color: var(--gold); white-space: nowrap; }
+.lanewave { color: var(--dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; padding: 0 4px; }
 #scr-battle.roomy #panel { height: auto; min-height: 90px; }
 #scr-battle.roomy .pdesc { -webkit-line-clamp: 3; }
 .toast {
@@ -324,7 +334,11 @@ img { max-width: 100%; }
 .page-toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 5; }
 
 /* 강타 집중: 패널 위를 잠시 덮는 붉은 띠 */
-#strikebar { position: absolute; inset: 0; z-index: 5; background: #280810; box-shadow: var(--px), inset 0 0 0 2px #ff4d5a; padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; gap: 5px; pointer-events: none; animation: sbIn 0.2s steps(3); }
+#strikebar { position: absolute; inset: 0; z-index: 5; background: #280810; box-shadow: var(--px), inset 0 0 0 2px #ff4d5a; padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; gap: 5px; cursor: pointer; touch-action: manipulation; animation: sbIn 0.2s steps(3); }
+/* 강타 띠가 패널을 덮는 동안: 패널은 숨겨 비치지도, 눌리지도 않게 (띠가 탭을 받는다) */
+#pwrap.striking #panel { visibility: hidden; }
+#strikebar.tight { padding: 4px 8px; gap: 3px; }
+#strikebar.tight .sb-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #strikebar[hidden] { display: none; }
 #strikebar .sb-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 #strikebar .sb-name { color: #ffb0b5; font-weight: normal; font-size: 14px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -334,7 +348,7 @@ img { max-width: 100%; }
 #strikebar .sb-bar.hot i { background: #ffffff; }
 #strikebar .sb-hint { margin: 0; font-size: 11px; color: #f0dcc4; line-height: 1.35; }
 #strikebar .sb-hint.brk { color: var(--gold); font-size: 12px; }
-@keyframes sbIn { from { opacity: 0; transform: translateY(4px); } }
+@keyframes sbIn { from { transform: translateY(4px); } }
 #panel { height: 90px; background: var(--panel); box-shadow: var(--px); display: flex; overflow: hidden; }
 #panel > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
 .pidle { flex-wrap: wrap; justify-content: space-around; align-content: center; }
@@ -552,6 +566,25 @@ img { max-width: 100%; }
 .help ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
 .help li { line-height: 1.6; font-size: 12px; }
 .help b { color: var(--gold); font-weight: normal; }
+.help ol, .help ul { margin: 0; }
+.help ul { padding-left: 18px; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.helpmore { margin-top: 10px; background: var(--panel); box-shadow: var(--px); padding: 0 10px; }
+.helpmore summary { min-height: 44px; display: flex; align-items: center; color: var(--gold); font-size: 12px; cursor: pointer; list-style: none; }
+.helpmore summary::-webkit-details-marker { display: none; }
+.helpmore summary::before { content: '▸ '; white-space: pre; }
+.helpmore[open] summary::before { content: '▾ '; }
+.helpmore[open] { padding-bottom: 10px; }
+/* 시작의 축복: 짧은 화면에서는 그림을 줄이고 선택지를 촘촘히 (4개가 한 화면에) */
+@media (max-height: 640px) {
+  .event.neow .event-art.big { padding: 0; }
+  .event.neow .event-art.big .ic { width: 32px; height: 32px; }
+  .event.neow .event-text { font-size: 12px; line-height: 1.5; margin: 2px auto 4px; }
+  .event.neow h2 { margin: 4px 0 6px; }
+  .event.neow .options { gap: 6px; }
+  .event.neow .btn.option { padding: 7px 12px; min-height: 0; }
+  .event.neow .btn.option b { font-size: 13px; }
+  .event.neow .btn.option small { font-size: 11px; }
+}
 
 /* ── 2.0: 축복·고대 존재·룬·열쇠·지휘관·연대기 ── */
 .ptoasts { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; z-index: 25; }
@@ -616,9 +649,10 @@ img { max-width: 100%; }
 .btn.star.ab-stance.ice { background: #2a7aa0; color: #e4f9ff; box-shadow: var(--px), inset 0 -3px 0 #164a66, inset 0 2px 0 rgba(255, 255, 255, 0.25); }
 .btn.star.ab-star { background: #4b3a9a; color: #ffe48a; box-shadow: var(--px), inset 0 -3px 0 #2a1f60, inset 0 2px 0 rgba(255, 255, 255, 0.2); }
 .btn.star.off { opacity: 0.6; }
-/* 지금 쓰면 준비 중인 강타를 끊을 수 있다: 금빛 + 반짝 */
-.btn.star.brk { background: var(--gold); color: #2b1c07; opacity: 1; animation: brk 0.5s steps(2) infinite; }
-@keyframes brk { 50% { box-shadow: var(--px), 0 0 0 4px var(--gold); } }
+/* 지금 쓰면 준비 중인 강타를 끊을 수 있다: 강타 띠와 같은 붉은색 + 흰 테두리 + 반짝 (금색 소환·합성과 구별) */
+.btn.star.brk, .btn.star.brk.ab-charge, .btn.star.brk.ab-star { background: #b8202f; color: #ffffff; opacity: 1; box-shadow: var(--px), inset 0 0 0 2px #ffffff, inset 0 -4px 0 #5e0b14; animation: brk 0.5s steps(2) infinite; }
+.btn.star.brk .ab-sub { color: #ffe46b; }
+@keyframes brk { 50% { box-shadow: var(--px), inset 0 0 0 2px #ffffff, inset 0 -4px 0 #5e0b14, 0 0 0 4px #ff4d5a; } }
 /* 보드 칸 고르기 (룬·복제·제물) */
 .bpick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 280px; margin: 12px auto; }
 .bcell { position: relative; aspect-ratio: 1; border: 0; padding: 0; background: var(--panel2); box-shadow: var(--px), inset 0 0 0 2px var(--rune, transparent); display: grid; place-items: center; touch-action: manipulation; font: inherit; color: var(--text); }
@@ -705,7 +739,7 @@ img { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .maplines .ln.open { animation: none; }
-  .bob, .node.avail, .hud .stat.danger, .btn.star.brk, #bossbar.enraged, #controls .btn.pulse, #h-life.hit, #boss-cast.now, .hud .stat.plunder { animation: none; }
+  .bob, .node.avail, .hud .stat.danger, .btn.star.brk, #bossbar.enraged, #controls .btn.pulse, #h-life.hit, #boss-cast.now, .hud .stat.plunder, #strikebar { animation: none; }
 }
 
 /* 강화된 칸(룬) 표시 */
@@ -771,7 +805,13 @@ img { max-width: 100%; }
 .record.first { color: var(--gold); }
 .chip.curse { background: #3f1d33; }
 /* 효과 줄이기: 장식용 깜빡임·흔들림을 끈다 (렌더러는 RS.settings.reduceFx 를 읽는다) */
-body.rfx .bob, body.rfx .maplines .ln.open, body.rfx #h-life.hit, body.rfx .hud .stat.danger, body.rfx #bossbar.enraged, body.rfx #boss-cast.now, body.rfx .hud .stat.plunder { animation: none; }
+body.rfx .bob, body.rfx .maplines .ln.open, body.rfx #h-life.hit, body.rfx .hud .stat.danger, body.rfx #bossbar.enraged, body.rfx #boss-cast.now, body.rfx .hud .stat.plunder,
+body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body.rfx .node.avail { animation: none; }
+/* 효과 줄이기 버튼: 켜져 있으면 금색 테두리 */
+.btn.fxon { color: var(--gold); box-shadow: var(--px), inset 0 0 0 3px var(--gold), inset 0 -3px 0 rgba(0, 0, 0, 0.35); }
+/* 40px 짜리 작은 버튼·탭·칩: 보이는 크기는 그대로, 누르는 자리는 44px 넘게 */
+.btn.sm, .tab, .chip, .menu-btn { position: relative; }
+.btn.sm::after, .tab::after, .chip::after { content: ''; position: absolute; inset: -4px -2px; }
 .card.cmd p.small { font-size: 11px; line-height: 1.45; }
 @media (max-height: 640px) {
   .event-art { padding: 4px 0 2px; }
