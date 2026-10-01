@@ -24,13 +24,17 @@ const title = between('<!-- TITLE START -->', '<!-- TITLE END -->');
 const body = between('<!-- BODY START -->', '<!-- BODY END -->');
 const scripts = [...between('<!-- SCRIPTS START -->', '<!-- SCRIPTS END -->').matchAll(/src="([^"]+)"/g)].map((m) => m[1]);
 const jsSources = scripts.map((s) => ({ name: s, code: read(path.join(GAME, s)) }));
+// 실험 페이지(docs/lab.html): 같은 게임 + PixiJS + GPU 효과 층. 본 게임 파일에는 들어가지 않는다
+const LAB_JS = 'src/render/gpufx.js';
+const labExtra = read(path.join(GAME, LAB_JS));
+const pixiLab = read(path.join(GAME, 'vendor/pixi-lab.min.js'));
 let css = read(path.join(GAME, 'style.css'));
 
 // ── 폰트 서브셋 ──
 const fontPath = path.join(GAME, 'assets/fonts/Galmuri11.woff2');
 const chars = new Set();
 for (let c = 0x20; c < 0x7f; c++) chars.add(String.fromCharCode(c));
-for (const src of [html, css, ...jsSources.map((s) => s.code)]) for (const ch of src) if (ch.charCodeAt(0) >= 0x80) chars.add(ch);
+for (const src of [html, css, labExtra, ...jsSources.map((s) => s.code)]) for (const ch of src) if (ch.charCodeAt(0) >= 0x80) chars.add(ch);
 const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'rs-build-'));
 const textFile = path.join(tmp, 'chars.txt');
 fs.writeFileSync(textFile, [...chars].join(''));
@@ -87,9 +91,20 @@ ${safeJs}
 </script>
 `;
 
+const labJs = jsSources
+  .flatMap((s) => (s.name === 'src/main.js' ? [{ name: LAB_JS, code: labExtra }, s] : [s]))
+  .map((s) => `// ── ${s.name} ──\n${s.code}`)
+  .join('\n')
+  .replace(/<\/script/gi, '<\\/script');
+const lab = standalone
+  .replace(title, '<title>랜덤 스파이어 · 실험실</title>')
+  .replace(`<script>\n${safeJs}\n</script>`, () => `<script>\n${pixiLab.replace(/<\/script/gi, '<\\/script')}\n</script>\n<script>\n${labJs}\n</script>`);
+if (lab === standalone || !lab.includes('PIXI_LAB')) throw new Error('lab build failed');
+
 fs.mkdirSync(path.join(ROOT, 'docs'), { recursive: true });
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'docs/index.html'), standalone);
 fs.writeFileSync(path.join(ROOT, 'build/artifact.html'), artifact);
+fs.writeFileSync(path.join(ROOT, 'docs/lab.html'), lab);
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log(`docs/index.html ${(standalone.length / 1024).toFixed(0)}KB · build/artifact.html ${(artifact.length / 1024).toFixed(0)}KB`);
+console.log(`docs/index.html ${(standalone.length / 1024).toFixed(0)}KB · build/artifact.html ${(artifact.length / 1024).toFixed(0)}KB · docs/lab.html ${(lab.length / 1024).toFixed(0)}KB`);

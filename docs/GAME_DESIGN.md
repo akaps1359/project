@@ -847,6 +847,25 @@ v2.1 (적대적 검증)
 - 픽셀 한글 폰트 **Galmuri11**(OFL)을 게임에 쓰는 글자만 남겨 서브셋. 전체 빌드는 한 파일
 - iOS 대응: 세이프 에어리어, 더블탭·핀치 확대 방지, 롱프레스 메뉴 방지, 터치 끝(touchend)에서 오디오 잠금 해제, 가로 화면 안내, 홈 화면에 추가하면 전체 화면
 
+### GPU 효과 층 실험 (lab.html)
+
+본 게임과 따로 **https://randomspire.pages.dev/lab.html** 에 실험 페이지를 둔다. 게임 코드는 같고(저장도 같이 쓴다), 전장 위에 PixiJS(WebGL) 캔버스를 한 장 겹쳐 빛을 GPU에서 그린다. 본 게임 파일(index.html)에는 PixiJS도 이 코드도 들어가지 않는다.
+
+- 구조: 겹친 캔버스는 불투명 검정 + CSS `mix-blend-mode: plus-lighter`(지원하지 않으면 `screen`)라 아래 장면에 빛을 더하기만 한다. 렌더러가 모아 두던 위층 빛 묶음(`PixelCtx.batch[1]`)을 `RS.GpuFx.take` 가 스프라이트로 옮기고, 프레임 끝에 `present` 가 한 번 그린다. 바닥 빛 웅덩이(유닛 아래)는 순서 때문에 캔버스에 남긴다
+- 실험 항목(전장 왼쪽 위 LAB 단추로 하나씩 켜고 끈다): **빛 번짐**(빛 층을 흐리게 한 사본을 더함) · **주변 조명**(큰 빛마다 넓고 옅은 빛을 깔아 바닥·유닛을 물들임) · **입자 늘리기**(빛나는 입자 1.8배, 상한 420→1400, 빛나는 입자 60개 제한 해제, 분위기 입자 3배) · **도트 빛**(빛을 320×372로 계산해 픽셀 그대로 확대). 패널에 fps·그리기 시간·GPU 빛 개수가 나온다
+- PixiJS는 쓰는 것만 골라 묶었다(`tools/pixi_lab_entry.mjs` → `game/vendor/pixi-lab.min.js`, 380KB · gzip 108KB). lab.html 은 약 1.2MB
+
+헤드리스 크롬, 393×852 @3배, 3막 보스 + 엘리트 + 적 50마리, 8초 (캔버스 쪽 = 그리기 + 1px 읽기로 래스터 강제):
+
+| | 캔버스 래스터 p50 / p95 (ms) | 캔버스 'lighter' 그리기 | GPU 빛 스프라이트 |
+|---|---|---|---|
+| 기존 (Canvas 2D) | 19.3 / 30.7 | 185 | 0 |
+| GPU 층, 효과 추가 없음 | 14.4 / 19.0 | 55 | 127 |
+| GPU 층, 전부 켬 (부드럽게) | 18.0 / 25.3 | 55 | 404 (최대 669) |
+| GPU 층, 전부 켬 (도트 빛) | 16.0 / 22.3 | 55 | 476 (최대 736) |
+
+빛을 GPU로 넘기기만 해도 캔버스 래스터가 약 25% 줄고(p95는 38%), 그 여유로 빛 3~5배·입자를 더 써도 기존보다 가볍다. 다만 헤드리스 크롬에는 실제 GPU가 없어 WebGL을 CPU로 흉내 내므로 GPU 쪽 비용과 전체 fps는 여기서 잴 수 없다(헤드리스에서는 오히려 느려진다). 아이폰에서 LAB 패널의 fps를 보고 판단한다.
+
 ## 7. 파일 구조
 
 ```
@@ -857,13 +876,16 @@ game/
   src/core/             rng, board(보드·판매 가치), stage(웨이브 생성), battle(전투), run(맵·보상·상점·휴식·선택 대기열·환불·저장), stats(효과 합산·룬)
   src/data/             units(밸런스 상수·유닛·적·지역), content(증강·소모품·저주), relics, ancients(차원 방랑자),
                         meta(지휘관·심연·별점술사), events, audiomap(음원 길이·루프 지점, audio_prep.py 가 만든다)
-  src/render/           sprites(도트 데이터·굽기, 2배 격자·자동 음영), sprites_hd(손으로 그린 32×32 유닛), world(막별 바닥·구운 조명), renderer(캔버스·모아 그리는 빛)
+  src/render/           sprites(도트 데이터·굽기, 2배 격자·자동 음영), sprites_hd(손으로 그린 32×32 유닛), world(막별 바닥·구운 조명), renderer(캔버스·모아 그리는 빛),
+                        gpufx(실험: PixiJS 빛 층, lab.html 에만)
+  vendor/pixi-lab.min.js PixiJS 일부 묶음 (MIT, lab.html 에만)
   src/ui/               common(공용 부품), battle(전투 화면), adventure(맵·보상·상점·이벤트·휴식·보물),
                         menus(타이틀·지휘관·빌드·도감·연대기)
   src/audio.js          배경 음악(장면·막별, 끊김 없는 루프)·효과음 재생. 음원이 없으면 합성음으로 대신
   src/main.js           루프·저장·화면 전환·메타 기록
 tools/
-  build.js              한 파일 빌드 → docs/index.html, build/artifact.html
+  build.js              한 파일 빌드 → docs/index.html, build/artifact.html, docs/lab.html(실험)
+  pixi_lab_entry.mjs    lab.html 용 PixiJS 묶음의 입구 (esbuild 로 vendor/ 에 만든다)
   sim.js                밸런스 시뮬레이터 (CLI·집계)
   simbot.js             시뮬레이터 봇 (smart·basic·random)
   tables.js             이 문서의 데이터 표 생성
@@ -882,6 +904,7 @@ tools/
   audio_prep.py         CC0 음원을 받아 다듬고 MP3·루프 지점 목록을 만든다 (ffmpeg·numpy·soundfile)
 docs/
   index.html            빌드 결과 (그대로 플레이 가능, GitHub Pages가 이 폴더를 올린다)
+  lab.html              실험 빌드 (같은 게임 + GPU 효과 층)
   GAME_DESIGN.md        이 문서
   assets/audio/         배경 음악 19곡·효과음 36개 (CC0, 출처는 CREDITS.md). 장면마다 필요한 곡만 받는다
   audit/                증강·유물·적 감사 보고서 (v2.11)
@@ -911,3 +934,4 @@ docs/
 - 사람 플레이 데이터로 밸런스 재조정 (현재 수치는 봇 기준. smart 봇은 꽤 잘 하는 사람 수준으로 본다)
 - 3막 대체 지역, 심연 11~20
 - 홈 화면 아이콘·오프라인 캐시(PWA)
+- GPU 효과 층(lab.html)을 아이폰에서 재 보고 괜찮으면 본 게임에 넣기 → 다음 단계로 충격파 왜곡·장면 전체 블룸(유닛·적까지 WebGL로 옮겨야 가능)

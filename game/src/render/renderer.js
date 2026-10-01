@@ -163,6 +163,7 @@
       this.bn = [0, 0];
       this.layer = 1;
       this.glowOff = false;
+      this.gpu = null; // 실험 페이지(lab.html)의 GPU 효과 층이 켜져 있으면 위층 빛을 거기로 넘긴다
     }
     set fillStyle(v) { this.raw.fillStyle = v; }
     get fillStyle() { return this.raw.fillStyle; }
@@ -223,7 +224,7 @@
     }
     // 부드러운 빛 (더하기 합성, 모아 두었다가 flushGlows 에서 한꺼번에)
     glow(x, y, rad, col, a) {
-      if (a <= 0.01 || this.glowOff || this.bn[1] > 320) return;
+      if (a <= 0.01 || this.glowOff || this.bn[1] > (this.gpu ? 2400 : 320)) return;
       const it = this.push(this.layer);
       it.k = 0;
       it.x = (x + this.ox) * this.S;
@@ -261,6 +262,11 @@
     flushGlows(L) {
       const n = this.bn[L];
       if (!n) return;
+      if (L === 1 && this.gpu) {
+        this.gpu.take(this.batch[1], n, this.S);
+        this.bn[1] = 0;
+        return;
+      }
       const r = this.raw;
       const arr = this.batch[L];
       r.globalCompositeOperation = 'lighter';
@@ -387,8 +393,10 @@
   P.emit = function (x, y, n, o) {
     const parts = this.parts;
     if (this.low && n > 1) n = Math.ceil(n / 2); // 효과 줄이기: 입자 절반
+    else if (this.gx && o.glow) n = Math.ceil(n * 1.8); // GPU 효과 층(실험): 빛나는 입자를 더
+    const cap = this.gx ? 1400 : 420;
     for (let k = 0; k < n; k++) {
-      if (parts.length >= 420) return;
+      if (parts.length >= cap) return;
       const a = (o.ang == null ? -Math.PI / 2 : o.ang) + (Math.random() - 0.5) * (o.spread == null ? Math.PI * 2 : o.spread);
       const sp = rnd(o.sp ? o.sp[0] : 10, o.sp ? o.sp[1] : 30);
       const life = rnd(o.life ? o.life[0] : 0.3, o.life ? o.life[1] : 0.6);
@@ -402,7 +410,8 @@
   P.drawParts = function (ctx, dt) {
     const parts = this.parts;
     let w = 0;
-    let glows = this.low ? 99 : 0; // 빛나는 입자는 한 프레임에 60개까지만 빛을 단다
+    let glows = this.low ? 99 : 0; // 빛나는 입자는 한 프레임에 60개까지만 빛을 단다 (GPU 효과 층은 제한 없음)
+    const gmax = this.gx ? 1400 : 60;
     for (let k = 0; k < parts.length; k++) {
       const p = parts[k];
       p.life -= dt;
@@ -420,7 +429,7 @@
       ctx.globalAlpha = a;
       ctx.fillStyle = p.col;
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-      if (p.glow && glows < 60) {
+      if (p.glow && glows < gmax) {
         glows++;
         ctx.glow(p.x, p.y, p.glow, p.col, a * 0.4);
       }
@@ -459,14 +468,15 @@
     const kind = th.amb;
     if (!kind) return;
     const A = AMB[kind];
-    while (this.amb.length < A.n) this.spawnAmb(kind, this.amb.length < A.n && this.t < 0.1);
+    const want = this.gx ? A.n * 3 : A.n;
+    while (this.amb.length < want) this.spawnAmb(kind, this.t < 0.1);
     const t = this.t;
     for (let k = 0; k < this.amb.length; k++) {
       const m = this.amb[k];
       m.life -= dt;
       if (m.life <= 0) {
         this.amb.splice(k--, 1);
-        this.spawnAmb(kind, false);
+        if (this.amb.length < want) this.spawnAmb(kind, false);
         continue;
       }
       const age = m.max - m.life;
@@ -950,6 +960,9 @@
     texReset(ctx.S);
     this.low = lowFx();
     ctx.glowOff = this.low; // 효과 줄이기: 빛·오라·추가 입자를 끈다 (흔들림은 절반)
+    const gpu = RS.GpuFx && RS.GpuFx.active() ? RS.GpuFx : null;
+    ctx.gpu = gpu;
+    this.gx = !!gpu && !this.low && gpu.opt.more;
     // 큰 타격 순간: 연출 시계를 아주 잠깐 거의 멈춘다
     if (this.hsCd > 0) this.hsCd -= dt;
     if (this.hitStop > 0) {
@@ -1007,6 +1020,7 @@
       this.drawDrag(ctx, b);
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (gpu) gpu.present();
   };
 
   // 보스 등장: 위아래로 검은 띠가 들어오고 문이 붉게 맥동한다
