@@ -660,6 +660,7 @@
     const G = UI.G;
     const b = G.battle;
     if (!b) return;
+    if (performance.now() - (UI.mergeAt || 0) < 250) return;
     const tierFrom = G.run.board[i] ? G.run.board[i].tier : 0;
     const res = b.merge(i);
     if (!res) {
@@ -680,7 +681,7 @@
     const next = res.results.length ? res.results[0].slot : -1;
     UI.select(G.run.board[i] && G.run.board[i].tier === tierFrom ? i : next);
     UI.updateHud(true);
-    UI.lockInput(250); // 같은 자리에 다시 그린 합성 버튼이 두 번 탭으로 또 눌리지 않게
+    UI.mergeAt = performance.now(); // 같은 자리에 다시 그린 합성 버튼이 두 번 탭으로 또 눌리지 않게 (전장 탭은 막지 않는다)
   };
 
   UI.doMergeAll = function () {
@@ -737,7 +738,7 @@
     UI.panelSig = null;
     // 작은 화면에서 강타 띠가 패널을 덮고 있으면 바로 접는다 (다음 HUD 갱신을 기다리지 않고)
     const sb = $('#strikebar');
-    if (mode !== 'idle' && sb && sb.parentElement === $('#pwrap')) {
+    if ((mode === 'item' || mode === 'upgrade') && sb && sb.parentElement === $('#pwrap')) {
       sb.hidden = true;
       $('#pwrap').classList.remove('striking');
       if (UI.hudCache) {
@@ -1155,9 +1156,9 @@
   function updateStrikeBar(b, c) {
     const el = $('#strikebar');
     const f = b.strikeFocus ? b.strikeFocus() : null;
-    // 작은 화면(빈 띠 없음)에서 소모품·강화·유닛 패널을 연 동안에는 강타 띠를 접는다 (얼음 주문서로 강타를 끊을 수 있게)
+    // 작은 화면(빈 띠 없음)에서 소모품·강화 패널을 연 동안에는 강타 띠를 접는다 (얼음 주문서로 강타를 끊을 수 있게)
     const covering = el.parentElement === $('#pwrap');
-    const busy = covering && UI.panelMode && UI.panelMode !== 'idle';
+    const busy = covering && (UI.panelMode === 'item' || UI.panelMode === 'upgrade');
     setAttrHidden(el, 'sbh', !f || busy);
     // 패널 위를 덮을 때는 패널을 숨겨 아래 버튼(합성·판매·강화)이 눌리지 않고 비쳐 보이지도 않게
     setCls($('#pwrap'), 'sbp', 'striking', !!f && covering && !busy);

@@ -1295,7 +1295,7 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
     A('steadfast', '굳건한 의지', 1, 'armor', '결의 최대 +2, 전투를 시작할 때 결의 +1', { abMax: 2, abStart: 1 }, { cmd: 'bron', unique: true }),
     A('riposte', '되받아치기', 1, 'shield2', '방패 돌진으로 강타를 끊으면 생명 +2', { chargeHeal: 2 }, { cmd: 'bron', unique: true }),
     A('chainCharge', '연속 돌격', 1, 'boots', '방패 돌진으로 강타를 끊으면 결의 1개를 돌려받는다', { chargeRefund: 1 }, { cmd: 'bron', unique: true }),
-    A('taunt', '도발', 2, 'mask', '방패 돌진에 맞거나 기절한 적은 8초 동안 받는 피해 +40%, 50% 둔화 (보스는 절반)', { chargeTaunt: 0.4 }, { cmd: 'bron', unique: true }),
+    A('taunt', '도발', 2, 'mask', '방패 돌진에 맞거나 기절한 적은 8초 동안 받는 피해 +40%, 50% 둔화(보스는 둔화 절반)', { chargeTaunt: 0.4 }, { cmd: 'bron', unique: true }),
     A('knightMarch', '기사단 행진', 2, 'c_knight', '전사·도적 피해 +40%, 전사 기절 확률 +5%p', { cls: { knight: { dmg: 0.4, stun: 0.05 }, rogue: { dmg: 0.4 } } }, { cmd: 'bron', unique: true }),
     A('ironFormation', '철벽 방진', 2, 'crest', '결의가 3개 이상이면 적의 강타로 잃는 생명 -1', { resolveGuard: 1 }, { cmd: 'bron', unique: true }),
     A('crusade', '성전', 3, 'sword', '방패 돌진 피해 ×2, 부딪힌 적 주변의 적에게도 같은 피해', { chargeAoe: 1 }, { cmd: 'bron', unique: true }),
@@ -4165,7 +4165,11 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
   P.updateCross = function (e, dt) {
     // 기절·빙결은 돌진을 막는다: 예고 중이면 취소, 달리는 중이면 그 자리에 멈춘다 (다른 기술처럼)
     if (e.stunT > 0) {
-      if (e.crossWarn) e.crossWarn = null;
+      if (e.crossWarn) {
+        const w = e.crossWarn;
+        e.crossWarn = null;
+        this.emit({ k: 'crossCancel', x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2 }); // 경고 화살표도 지운다
+      }
       return;
     }
     if (e.crossWarn) {
@@ -5789,6 +5793,9 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
     run.injury = run.injury || 0;
     // 빠진 지휘관(레온·벨·카이·미라)으로 저장된 모험은 가까운 지휘관으로 이어 간다
     const migrated = !RS.COMMANDER[run.commander];
+    // 빠진 지휘관의 시작 유물을 아직 들고 있었는지 (별점술사로 바꿨다면 새 시작 유물을 주지 않는다)
+    const OLD_STARTERS = ['mercContract', 'soulJar', 'hawkFeather', 'alchemyPot'];
+    const hadStarter = Array.isArray(run.relics) && run.relics.some((id) => OLD_STARTERS.indexOf(id) >= 0);
     if (migrated) run.commander = (RS.COMMANDER_ALIAS && RS.COMMANDER_ALIAS[run.commander]) || RS.COMMANDERS[0].id;
     // 고유 능력 자원 (예전 저장본: 별의 왕홀이 모아 둔 별을 옮긴다)
     if (!run.abil) run.abil = { n: 0 };
@@ -5803,7 +5810,7 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
     if (Array.isArray(run.items)) run.items = run.items.filter((id) => RS.ITEM[id]);
     // 바뀐 지휘관은 그 지휘관의 시작 유물을 받는다 (빠진 시작 유물 대신)
-    if (migrated && Array.isArray(run.relics)) {
+    if (migrated && hadStarter && Array.isArray(run.relics)) {
       const st = RS.COMMANDER[run.commander].relic;
       if (st && RS.REL[st] && run.relics.indexOf(st) < 0) run.relics.unshift(st);
     }
@@ -10490,6 +10497,9 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
           // 돌진 경고: 가로지를 길에 붉은 화살표
           this.fxs.push({ k: 'crossLine', x1: ev.x1, y1: ev.y1, x2: ev.x2, y2: ev.y2, t: ev.t + 0.2, max: ev.t + 0.2 });
           break;
+        case 'crossCancel':
+          for (const f of this.fxs) if (f.k === 'crossLine' && f.x1 === ev.x1 && f.y1 === ev.y1 && f.x2 === ev.x2 && f.y2 === ev.y2) f.t = 0;
+          break;
         case 'crossGo':
           this.shake = Math.max(this.shake, 0.15);
           break;
@@ -14430,6 +14440,7 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
     const G = UI.G;
     const b = G.battle;
     if (!b) return;
+    if (performance.now() - (UI.mergeAt || 0) < 250) return;
     const tierFrom = G.run.board[i] ? G.run.board[i].tier : 0;
     const res = b.merge(i);
     if (!res) {
@@ -14450,7 +14461,7 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
     const next = res.results.length ? res.results[0].slot : -1;
     UI.select(G.run.board[i] && G.run.board[i].tier === tierFrom ? i : next);
     UI.updateHud(true);
-    UI.lockInput(250); // 같은 자리에 다시 그린 합성 버튼이 두 번 탭으로 또 눌리지 않게
+    UI.mergeAt = performance.now(); // 같은 자리에 다시 그린 합성 버튼이 두 번 탭으로 또 눌리지 않게 (전장 탭은 막지 않는다)
   };
 
   UI.doMergeAll = function () {
@@ -14507,7 +14518,7 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
     UI.panelSig = null;
     // 작은 화면에서 강타 띠가 패널을 덮고 있으면 바로 접는다 (다음 HUD 갱신을 기다리지 않고)
     const sb = $('#strikebar');
-    if (mode !== 'idle' && sb && sb.parentElement === $('#pwrap')) {
+    if ((mode === 'item' || mode === 'upgrade') && sb && sb.parentElement === $('#pwrap')) {
       sb.hidden = true;
       $('#pwrap').classList.remove('striking');
       if (UI.hudCache) {
@@ -14925,9 +14936,9 @@ body.rfx .btn.star.brk, body.rfx #controls .btn.pulse, body.rfx #strikebar, body
   function updateStrikeBar(b, c) {
     const el = $('#strikebar');
     const f = b.strikeFocus ? b.strikeFocus() : null;
-    // 작은 화면(빈 띠 없음)에서 소모품·강화·유닛 패널을 연 동안에는 강타 띠를 접는다 (얼음 주문서로 강타를 끊을 수 있게)
+    // 작은 화면(빈 띠 없음)에서 소모품·강화 패널을 연 동안에는 강타 띠를 접는다 (얼음 주문서로 강타를 끊을 수 있게)
     const covering = el.parentElement === $('#pwrap');
-    const busy = covering && UI.panelMode && UI.panelMode !== 'idle';
+    const busy = covering && (UI.panelMode === 'item' || UI.panelMode === 'upgrade');
     setAttrHidden(el, 'sbh', !f || busy);
     // 패널 위를 덮을 때는 패널을 숨겨 아래 버튼(합성·판매·강화)이 눌리지 않고 비쳐 보이지도 않게
     setCls($('#pwrap'), 'sbp', 'striking', !!f && covering && !busy);

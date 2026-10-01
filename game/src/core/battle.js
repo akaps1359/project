@@ -728,7 +728,11 @@
   P.updateCross = function (e, dt) {
     // 기절·빙결은 돌진을 막는다: 예고 중이면 취소, 달리는 중이면 그 자리에 멈춘다 (다른 기술처럼)
     if (e.stunT > 0) {
-      if (e.crossWarn) e.crossWarn = null;
+      if (e.crossWarn) {
+        const w = e.crossWarn;
+        e.crossWarn = null;
+        this.emit({ k: 'crossCancel', x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2 }); // 경고 화살표도 지운다
+      }
       return;
     }
     if (e.crossWarn) {

@@ -755,6 +755,9 @@
           // 돌진 경고: 가로지를 길에 붉은 화살표
           this.fxs.push({ k: 'crossLine', x1: ev.x1, y1: ev.y1, x2: ev.x2, y2: ev.y2, t: ev.t + 0.2, max: ev.t + 0.2 });
           break;
+        case 'crossCancel':
+          for (const f of this.fxs) if (f.k === 'crossLine' && f.x1 === ev.x1 && f.y1 === ev.y1 && f.x2 === ev.x2 && f.y2 === ev.y2) f.t = 0;
+          break;
         case 'crossGo':
           this.shake = Math.max(this.shake, 0.15);
           break;

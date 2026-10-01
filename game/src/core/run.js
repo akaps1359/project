@@ -323,6 +323,9 @@
     run.injury = run.injury || 0;
     // 빠진 지휘관(레온·벨·카이·미라)으로 저장된 모험은 가까운 지휘관으로 이어 간다
     const migrated = !RS.COMMANDER[run.commander];
+    // 빠진 지휘관의 시작 유물을 아직 들고 있었는지 (별점술사로 바꿨다면 새 시작 유물을 주지 않는다)
+    const OLD_STARTERS = ['mercContract', 'soulJar', 'hawkFeather', 'alchemyPot'];
+    const hadStarter = Array.isArray(run.relics) && run.relics.some((id) => OLD_STARTERS.indexOf(id) >= 0);
     if (migrated) run.commander = (RS.COMMANDER_ALIAS && RS.COMMANDER_ALIAS[run.commander]) || RS.COMMANDERS[0].id;
     // 고유 능력 자원 (예전 저장본: 별의 왕홀이 모아 둔 별을 옮긴다)
     if (!run.abil) run.abil = { n: 0 };
@@ -337,7 +340,7 @@
     if (Array.isArray(run.curses) && run.stats) syncCurseTimers(run);
     if (Array.isArray(run.items)) run.items = run.items.filter((id) => RS.ITEM[id]);
     // 바뀐 지휘관은 그 지휘관의 시작 유물을 받는다 (빠진 시작 유물 대신)
-    if (migrated && Array.isArray(run.relics)) {
+    if (migrated && hadStarter && Array.isArray(run.relics)) {
       const st = RS.COMMANDER[run.commander].relic;
       if (st && RS.REL[st] && run.relics.indexOf(st) < 0) run.relics.unshift(st);
     }
