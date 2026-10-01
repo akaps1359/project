@@ -29,9 +29,9 @@
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   }
   const TEX = { S: 0, map: new Map(), bytes: 0 };
-  const TEX_MAX = 4 * 1048576; // 빛 텍스처 메모리 상한 (넘으면 64px 기본 텍스처를 늘려 그린다)
+  const TEX_MAX = 6 * 1048576; // 빛 텍스처 메모리 상한 (넘으면 64px 기본 텍스처를 늘려 그린다)
   const RSTEP = Math.log(1.22);
-  const RMAX = 96; // 1:1 로 구울 최대 반지름 (기기 픽셀)
+  const RMAX = 136; // 1:1 로 구울 최대 반지름 (기기 픽셀)
   RS._TEX = TEX; // 진단용 (벤치에서 구운 텍스처 수·메모리 확인)
   function texReset(S) {
     if (TEX.S === S) return;
