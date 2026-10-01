@@ -1053,6 +1053,14 @@
         const p = Math.max(0, Math.min(1, 1 - c.t / c.T));
         const beat = 0.5 + 0.5 * Math.sin(t * (8 + p * 10));
         ctx.pool(e.x, e.y + 5, 15, '#ff2a3a', 0.3 + 0.35 * beat * (0.5 + p));
+        if (this.low) {
+          // 효과 줄이기: 빛 웅덩이 대신 납작한 붉은 타원
+          ctx.globalAlpha = 0.22 + 0.25 * beat * (0.5 + p);
+          ctx.fillStyle = '#ff2a3a';
+          ctx.fillRect(e.x - 11, e.y + 4, 22, 3);
+          ctx.fillRect(e.x - 7, e.y + 3, 14, 5);
+          ctx.globalAlpha = 1;
+        }
         const n = 28;
         ctx.fillStyle = '#ff4d5a';
         ctx.globalAlpha = 0.6 + 0.4 * p;
@@ -1229,7 +1237,8 @@
     const lw = LW(spr) * pose.sx;
     const lh = LH(spr) * pose.sy;
     const em = RS.SPR[id + '_e'];
-    if (em && !low) {
+    // 공격하며 기울어진 동안에는 빛 무늬가 몸에서 어긋나므로 그리지 않는다
+    if (em && !low && !pose.rot) {
       const a = s.tier >= 4 ? 0.75 + 0.25 * Math.sin(t * 4 + i) : 0.6;
       ctx.glowImg(em, ax - lw / 2, ay - lh, lw, lh, a, flip);
       ctx.glowImg(em, ax - lw * 0.8, ay - lh * 1.3, lw * 1.6, lh * 1.6, a * 0.35, flip);
@@ -1651,7 +1660,8 @@
     else if (e.dir === 2) e._f = -1;
     // 엘리트·보스는 크게 (보스전 하는 맛)
     const S = bigScale(e, RS.SPR[e.type]);
-    if (S !== 1) {
+    // 보스는 배율이 스프라이트에 구워져 있어도(S=1) big 으로 표시한다: 위쪽 길에서 화면 밖으로 잘리지 않게 내려 그린다
+    if (S !== 1 || e.boss) {
       pose.sx *= S;
       pose.sy *= S;
       pose.big = S;
@@ -1825,7 +1835,7 @@
         case 'strike': {
           // 의도: 잃을 생명 숫자와 경직 막대 (채우면 끊긴다), 균열로 이어지는 붉은 점선
           if (!pre) break;
-          RS.drawNum(ctx, '-' + Math.round(RS.strikeLoss(b, e) * 10) / 10, gx + 10, gy + 2, 'r', 1);
+          RS.drawNum(ctx, '-' + Math.round(RS.strikeLoss(b, e) * 10) / 10, Math.min(gx + 10, 160 - 16), gy + 2, 'r', 1);
           const k = Math.min(1, pre.taken / Math.max(1, pre.need));
           ctx.fillStyle = '#15111d';
           ctx.fillRect(gx - 7, gy + 14, 15, 3);
@@ -2036,15 +2046,20 @@
         ctx.glow(ax, ay - h / 2, 8, '#a061e8', 0.5 * pose.appear);
       }
       // 맞음: 0.05초 하얗게 → 0.08초 붉게 (새로 맞을 때마다 다시)
-      if (e.flash > (e._pf || 0)) e._ht = 0.13;
+      // 다시 번쩍이는 데 간격을 둔다 (계속 맞는 보스가 늘 하얗고 붉은 덩어리로 보이지 않게)
+      if (e.flash > (e._pf || 0) && !(e._hc > 0)) {
+        e._ht = 0.13;
+        e._hc = e.boss ? 0.32 : e.elite ? 0.22 : 0.16;
+      }
       e._pf = e.flash;
       if (e._ht > 0) e._ht -= dt;
+      if (e._hc > 0) e._hc -= dt;
       if (e._ht > 0.08) {
         ctx.globalAlpha = 0.9;
         ctx.sprite(RS.SPR[e.type + '_w'], ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       } else if (e._ht > 0) {
-        ctx.globalAlpha = 0.25 + 0.45 * (e._ht / 0.08);
+        ctx.globalAlpha = (0.25 + 0.45 * (e._ht / 0.08)) * (e.boss ? 0.6 : 1);
         ctx.sprite(tinted(RS.SPR[e.type + '_w'], '#ff3048'), ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       } else if (e.slow > 0 || e.stunT > 0) {
