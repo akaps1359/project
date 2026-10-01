@@ -683,7 +683,7 @@
     for (const c of RS.CLASSES) run.stats.clsDmg[c] += st.clsDmg[c];
     // 졸음의 별은 허수아비 시험에는 걸리지 않으니 횟수도 쓰지 않는다
     if (run.lament > 0 && !trial) run.lament--;
-    if (run.tax > 0) run.tax--;
+    if (run.tax > 0 && !trial) run.tax--; // 세금도 허수아비 시험에는 걸리지 않는다
     RS.battleUpkeep(run);
     if (trial) {
       // 허수아비 시험: 실패해도 모험은 계속된다
@@ -1187,7 +1187,7 @@
     const up = run.augments.some((id) => RS.canUpgradeAug(id));
     opts.push({ id: 'smith', label: '연마', desc: '증강 하나를 연마 (효과 ×1.5)', off: M.noSmith ? '벼락 망치 때문에 할 수 없다' : !up ? '연마할 수 있는 증강이 없다' : null });
     if (M.peacePipe) opts.push({ id: 'toke', label: '명상', desc: '증강이나 저주 하나를 없앤다', off: RS.removableCount(run) ? null : '없앨 것이 없다' });
-    if (M.shovel) opts.push({ id: 'dig', label: '발굴', desc: '유물 하나를 얻는다' });
+    if (M.shovel) opts.push({ id: 'dig', label: '발굴', desc: '유물 하나를 얻는다', off: RS.relicsLeft(run, [1, 2]) ? null : '남은 유물이 없다' });
     if (M.girya) {
       const lifts = run.relicState.girya.lifts;
       opts.push({ id: 'lift', label: '단련', desc: `모든 유닛 피해 ×1.08 (${lifts}/3)`, off: lifts >= 3 ? '더 단련할 수 없다' : null });

@@ -74,7 +74,12 @@
     let c = TEX.map.get(key);
     if (c) return c;
     const R = Math.exp(b * RSTEP);
-    if (R > RMAX || TEX.bytes > TEX_MAX) return null;
+    if (R > RMAX) return null;
+    // 상한을 넘으면 비우고 다시 굽는다 (가득 찬 채 64px 기본 텍스처로만 그리지 않게)
+    if (TEX.bytes > TEX_MAX) {
+      TEX.map.clear();
+      TEX.bytes = 0;
+    }
     c = bakeGlow(col, R, squash);
     TEX.bytes += c.width * c.height * 4;
     TEX.map.set(key, c);
@@ -906,7 +911,7 @@
         m.v = Math.round((m.v + v) * 10) / 10;
         m.s = '-' + m.v;
         m.t = m.max = Math.max(m.max, n.max);
-        m.big = Math.max(m.big || 1.4, n.big || 1.4) + 0.2;
+        m.big = Math.min(2.2, Math.max(m.big || 1.4, n.big || 1.4) + 0.2); // 계속 합쳐져도 화면 밖으로 커지지 않게
         return;
       }
       n.key = key;
@@ -916,13 +921,13 @@
       let hit = false;
       for (let k = 0; k < nums.length; k++) {
         const m = nums[k];
-        if (Math.abs(m.y - n.y) < 6 && Math.abs(m.x - n.x) < (m.s.length + n.s.length) * 2 + 1) {
+        if (Math.abs(m.y - n.y) < 8 && Math.abs(m.x - n.x) < (m.s.length + n.s.length) * 2 + 3) {
           hit = true;
           break;
         }
       }
       if (!hit) break;
-      n.y -= 6;
+      n.y -= 8;
     }
     if (nums.length >= 16) {
       if (!n.imp) return;
@@ -1053,21 +1058,21 @@
       if (e.boss) {
         const spr = RS.SPR[e.type];
         const w = LW(spr) * bigScale(e, spr);
-        ctx.shadow(e.x, e.y + 5, w * 1.25, 0.55);
-        if (!this.low) ctx.pool(e.x, e.y + 5, w * 0.62, BOSS_COL[e.type] || '#e04a52', (b.enraged ? 0.55 : 0.35) + 0.1 * Math.sin(t * 2.2), 0.36);
+        ctx.shadow(e.x, e._gy || e.y + 5, w * 1.25, 0.55);
+        if (!this.low) ctx.pool(e.x, e._gy || e.y + 5, w * 0.62, BOSS_COL[e.type] || '#e04a52', (b.enraged ? 0.55 : 0.35) + 0.1 * Math.sin(t * 2.2), 0.36);
       }
       const c = RS.castOf(e);
       if (c && c.k === 'strike' && c.T > 0) {
         // 강타 표식: 발밑에 붉게 맥동하는 웅덩이 + 도는 점선 고리
         const p = Math.max(0, Math.min(1, 1 - c.t / c.T));
         const beat = 0.5 + 0.5 * Math.sin(t * (8 + p * 10));
-        ctx.pool(e.x, e.y + 5, 15, '#ff2a3a', 0.3 + 0.35 * beat * (0.5 + p));
+        ctx.pool(e.x, e._gy || e.y + 5, 15, '#ff2a3a', 0.3 + 0.35 * beat * (0.5 + p));
         if (this.low) {
           // 효과 줄이기: 빛 웅덩이 대신 납작한 붉은 타원
           ctx.globalAlpha = 0.22 + 0.25 * beat * (0.5 + p);
           ctx.fillStyle = '#ff2a3a';
-          ctx.fillRect(e.x - 11, e.y + 4, 22, 3);
-          ctx.fillRect(e.x - 7, e.y + 3, 14, 5);
+          ctx.fillRect(e.x - 11, (e._gy || e.y + 5) - 1, 22, 3);
+          ctx.fillRect(e.x - 7, (e._gy || e.y + 5) - 2, 14, 5);
           ctx.globalAlpha = 1;
         }
         const n = 28;
@@ -1076,7 +1081,7 @@
         for (let j = 0; j < n; j++) {
           if ((j + Math.floor(t * 10)) % 4 < 2) continue;
           const a = (j / n) * Math.PI * 2;
-          ctx.fillRect(e.x + Math.cos(a) * 15 - 0.5, e.y + 5 + Math.sin(a) * 5.5 - 0.5, 1, 1);
+          ctx.fillRect(e.x + Math.cos(a) * 15 - 0.5, (e._gy || e.y + 5) + Math.sin(a) * 5.5 - 0.5, 1, 1);
         }
         ctx.globalAlpha = 1;
       }
@@ -1845,7 +1850,10 @@
         case 'strike': {
           // 의도: 잃을 생명 숫자와 경직 막대 (채우면 끊긴다), 균열로 이어지는 붉은 점선
           if (!pre) break;
-          RS.drawNum(ctx, '-' + Math.round(RS.strikeLoss(b, e) * 10) / 10, Math.min(gx + 10, 160 - 16), gy + 2, 'r', 1);
+          const ls = '-' + Math.round(RS.strikeLoss(b, e) * 10) / 10;
+          const lw2 = (ls.length * 4 + 1) / 2;
+          // 오른쪽 끝이면 '!' 왼쪽에 (겹쳐서 한 글자처럼 보이지 않게)
+          RS.drawNum(ctx, ls, gx + 10 + lw2 > F.W - 1 ? gx - 10 : gx + 10, gy + 2, 'r', 1);
           const k = Math.min(1, pre.taken / Math.max(1, pre.need));
           ctx.fillStyle = '#15111d';
           ctx.fillRect(gx - 7, gy + 14, 15, 3);
@@ -1998,7 +2006,7 @@
       const spr = RS.SPR[e.type];
       const w = Math.max(7, LW(spr) * 0.8 * bigScale(e, spr));
       const fl = GAIT[e.type] === 'fly' || GAIT[e.type] === 'float';
-      ctx.shadow(e.x, e.y + 5, fl ? w * 0.7 : w, fl ? 0.38 : 0.62);
+      ctx.shadow(e.x, e._gy || e.y + 5, fl ? w * 0.7 : w, fl ? 0.38 : 0.62);
     }
     const low = this.low;
     for (const e of list) {
@@ -2017,6 +2025,7 @@
       const ax = e.x + pose.ox;
       // 큰 엘리트·보스가 위쪽 길에서 화면 밖으로 잘리지 않게 살짝 내린다
       const ay = Math.max(e.y + 5 + pose.oy - pose.fly, pose.big ? h + 1 : -99);
+      e._gy = Math.max(e.y + 5, pose.big ? h + 1 : -99); // 땅 위 발 위치 (그림자·바닥 표식이 다음 프레임에 쓴다)
       const flip = e._f === -1;
       // 물속에 잠긴 늪의 여왕: 흐릿한 모습과 물결만
       if (e.subT > 0) {
@@ -2037,13 +2046,13 @@
           e._pr = 1;
           if (this.fxs.length < 60) this.fxs.push({ k: 'ring', x: ax, y: ay - h / 2, r: h * 0.9, t: 0.5, max: 0.5, col: '#ff4d5a', glow: !low });
         }
-        ctx.sprite(RS.SPR[e.type + '_w'], ax - 1, ay, pose.sx, pose.sy, pose.rot, flip);
-        ctx.sprite(RS.SPR[e.type + '_w'], ax + 1, ay, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite((RS.SPR[name + '_w'] || RS.SPR[e.type + '_w']), ax - 1, ay, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite((RS.SPR[name + '_w'] || RS.SPR[e.type + '_w']), ax + 1, ay, pose.sx, pose.sy, pose.rot, flip);
       }
       if (e.elite) {
         ctx.glow(ax, ay - h / 2, h * 0.7, '#f5c44a', 0.18 + 0.08 * Math.sin(t * 6));
         ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 6);
-        ctx.sprite(RS.SPR[e.type + '_w'], ax, ay - 1, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite((RS.SPR[name + '_w'] || RS.SPR[e.type + '_w']), ax, ay - 1, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       }
       if (GAIT[e.type] === 'float' && e.type === 'ghost') ctx.globalAlpha = 0.82 + 0.18 * Math.sin(e._g * 3);
@@ -2051,7 +2060,7 @@
       ctx.globalAlpha = 1;
       if (pose.appear > 0) {
         ctx.globalAlpha = pose.appear;
-        ctx.sprite(RS.SPR[e.type + '_w'], ax, ay, pose.sx, pose.sy, 0, flip);
+        ctx.sprite((RS.SPR[name + '_w'] || RS.SPR[e.type + '_w']), ax, ay, pose.sx, pose.sy, 0, flip);
         ctx.globalAlpha = 1;
         ctx.glow(ax, ay - h / 2, 8, '#a061e8', 0.5 * pose.appear);
       }
@@ -2066,15 +2075,15 @@
       if (e._hc > 0) e._hc -= dt;
       if (e._ht > 0.08) {
         ctx.globalAlpha = 0.9;
-        ctx.sprite(RS.SPR[e.type + '_w'], ax, ay, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite((RS.SPR[name + '_w'] || RS.SPR[e.type + '_w']), ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       } else if (e._ht > 0) {
         ctx.globalAlpha = (0.25 + 0.45 * (e._ht / 0.08)) * (e.boss ? 0.6 : 1);
-        ctx.sprite(tinted(RS.SPR[e.type + '_w'], '#ff3048'), ax, ay, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite(tinted((RS.SPR[name + '_w'] || RS.SPR[e.type + '_w']), '#ff3048'), ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       } else if (e.slow > 0 || e.stunT > 0) {
         ctx.globalAlpha = e.stunT > 0 ? 0.6 : 0.35;
-        ctx.sprite(RS.SPR[e.type + '_i'], ax, ay, pose.sx, pose.sy, pose.rot, flip);
+        ctx.sprite((RS.SPR[name + '_i'] || RS.SPR[e.type + '_i']), ax, ay, pose.sx, pose.sy, pose.rot, flip);
         ctx.globalAlpha = 1;
       }
       const top = ay - h;
@@ -2583,15 +2592,15 @@
       n.vy = (n.vy || -14) * Math.max(0, 1 - dt * 3);
       n.vx = (n.vx || 0) * Math.max(0, 1 - dt * 4);
       n.x += n.vx * dt;
-      n.y = Math.max(6, n.y + n.vy * dt);
-      // 먼저 뜬 숫자와 겹치면 비켜 선다 (위쪽 끝에 몰리면 아래로)
-      const hw = n.s.length * 2 + 1;
+      const sc = age < 0.1 ? (n.big || 1.4) - ((n.big || 1.4) - 1) * ease.out(age / 0.1) : 1;
+      n.y = Math.max(4 + 4 * sc, n.y + n.vy * dt);
+      // 먼저 뜬 숫자와 겹치면 비켜 선다 (위쪽 끝에 몰리면 아래로). 화면 안에 들게 커진 크기까지 따진다
+      const hw = (n.s.length * 2 + 1) * sc;
       n.x = Math.max(hw, Math.min(F.W - hw, n.x));
       for (let j = 0; j < w - 1; j++) {
         const m = this.nums[j];
-        if (Math.abs(m.y - n.y) < 6 && Math.abs(m.x - n.x) < (m.s.length + n.s.length) * 2 + 1) n.y = m.y < 20 ? m.y + 6 : m.y - 6;
+        if (Math.abs(m.y - n.y) < 8 && Math.abs(m.x - n.x) < (m.s.length + n.s.length) * 2 + 3) n.y = m.y < 20 ? m.y + 8 : m.y - 8;
       }
-      const sc = age < 0.1 ? (n.big || 1.4) - ((n.big || 1.4) - 1) * ease.out(age / 0.1) : 1;
       ctx.globalAlpha = Math.min(1, n.t / 0.18);
       RS.drawNum(ctx, n.s, n.x, n.y, n.c, sc);
       ctx.globalAlpha = 1;

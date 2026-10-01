@@ -364,13 +364,14 @@
     rich: '골드 100 이상일 때 피해', legendAura: '전설 1기당 피해', demonForm: '웨이브마다 쌓이는 피해', noxious: '초당 독안개 피해',
     poison: '독 피해', eliteKillHeal: ['엘리트 처치 시 회복', 'n'], karmaGold: ['저주당 골드(×막)', 'n'], sellPct: '판매 가격', summonCostPct: '소환 비용', upgradeCostPct: '강화 비용',
     // 지휘관 고유 능력 (abMax·abStart 는 지휘관마다 자원 이름이 달라 아래에서 붙인다)
+    burnArrow: '궁수 화상', shatter: '얼음 깨기 피해', critHaste: '치명타 뒤 공격 속도', dotAmp: '지속 피해',
     chargeHeal: ['강타를 끊으면 생명', 'n'], chargeTaunt: '도발한 적이 받는 피해', resolveDmg: '결의 1개당 피해',
     stanceBurn: '화염 태세 화상', stanceSlow: '냉기 태세 둔화', stanceFreeze: '빙결 확률', stanceCd: ['원소 전환 대기', 's'],
     stanceBoom: '원소 폭발 피해', stanceHaste: '전환 뒤 공격 속도', burnVuln: '화상 입은 적이 받는 피해',
     starKill: ['별 +1 에 필요한 처치', 'per'], starSlow: '별똥별 둔화', starHoard: '별 5개 이상일 때 피해', starTwice: '두 번째 별똥별 피해',
     starStack: '별똥별마다 쌓이는 피해',
   };
-  const CLS_LABEL = { dmg: '피해', aspd: '공격 속도', range: ['사거리', 'n'], crit: '치명타 확률', splash: ['폭발 범위', 'n'], slow: '둔화' };
+  const CLS_LABEL = { dmg: '피해', aspd: '공격 속도', range: ['사거리', 'n'], crit: '치명타 확률', splash: ['폭발 범위', 'n'], slow: '둔화', stun: '기절 확률' };
   function fmtMod(v, kind) {
     if (kind === 'n') return (v >= 0 ? '+' : '') + Math.round(v * 10) / 10;
     if (kind === 's') return '-' + Math.round(v * 10) / 10 + '초';

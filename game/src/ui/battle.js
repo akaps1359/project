@@ -37,6 +37,18 @@
   };
 
   // 지휘관 고유 능력 버튼: 첫 줄 이름, 둘째 줄 자원 (●●●○○ · 2 소모 · 적이 오면 사용 · 냉기로 전환 / 화염 · 7초). 좁은 화면은 ●●●○○·2소모
+  // 능력 설명을 지금 효과에 맞춘다 (은하의 축복: 별 비용, 원소 순환: 대기, 초신성: 보스 피해)
+  UI.abDesc = function (b, text) {
+    const ab = b.ab;
+    if (!ab || !text) return text;
+    let t = text;
+    if (ab.id === 'star') {
+      t = t.replace(/별 3개/g, `별 ${ab.cost}개`);
+      if (b.M.supernova) t = t.replace('(보스는 35%)', '(초신성: 보스에게도 온전한 피해)');
+    } else if (ab.id === 'charge') t = t.replace(/결의 2개/g, `결의 ${ab.cost}개`);
+    else if (ab.id === 'stance') t = t.replace(/12초/g, `${Math.max(3, RS.ABILITY.stance.cd - (b.M.stanceCd || 0))}초`);
+    return t;
+  };
   UI.abLabel = function (b) {
     const ab = b && b.ab;
     if (!ab) return { name: '', sub: '', icon: '' };
@@ -82,7 +94,7 @@
       if (!b.useAbility()) {
         RS.sfx('error');
         const def = b.ab.def;
-        UI.tip(el, def.name, def.desc, b.abilityBlock() || def.gain);
+        UI.tip(el, def.name, UI.abDesc(b, def.desc), b.abilityBlock() || UI.abDesc(b, def.gain));
         return;
       }
       UI.hideTip(true);

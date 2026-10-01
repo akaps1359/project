@@ -125,7 +125,7 @@
     A('steadfast', '굳건한 의지', 1, 'armor', '결의 최대 +2, 전투를 시작할 때 결의 +1', { abMax: 2, abStart: 1 }, { cmd: 'bron', unique: true }),
     A('riposte', '되받아치기', 1, 'shield2', '방패 돌진으로 강타를 끊으면 생명 +2', { chargeHeal: 2 }, { cmd: 'bron', unique: true }),
     A('chainCharge', '연속 돌격', 1, 'boots', '방패 돌진으로 강타를 끊으면 결의 1개를 돌려받는다', { chargeRefund: 1 }, { cmd: 'bron', unique: true }),
-    A('taunt', '도발', 2, 'mask', '방패 돌진에 맞거나 기절한 적은 8초 동안 받는 피해 +40%, 50% 둔화', { chargeTaunt: 0.4 }, { cmd: 'bron', unique: true }),
+    A('taunt', '도발', 2, 'mask', '방패 돌진에 맞거나 기절한 적은 8초 동안 받는 피해 +40%, 50% 둔화 (보스는 절반)', { chargeTaunt: 0.4 }, { cmd: 'bron', unique: true }),
     A('knightMarch', '기사단 행진', 2, 'c_knight', '전사·도적 피해 +40%, 전사 기절 확률 +5%p', { cls: { knight: { dmg: 0.4, stun: 0.05 }, rogue: { dmg: 0.4 } } }, { cmd: 'bron', unique: true }),
     A('ironFormation', '철벽 방진', 2, 'crest', '결의가 3개 이상이면 적의 강타로 잃는 생명 -1', { resolveGuard: 1 }, { cmd: 'bron', unique: true }),
     A('crusade', '성전', 3, 'sword', '방패 돌진 피해 ×2, 부딪힌 적 주변의 적에게도 같은 피해', { chargeAoe: 1 }, { cmd: 'bron', unique: true }),
