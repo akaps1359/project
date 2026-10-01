@@ -1931,7 +1931,7 @@
     const to = ab.stance === 'fire' ? 'ice' : 'fire';
     ab.stance = to;
     ab.cd = Math.max(3, RS.ABILITY.stance.cd - M.stanceCd);
-    if (M.stanceHaste) this.buffs.surge = 5; // 마력 역류
+    if (M.stanceHaste) this.buffs.surge = 6; // 마력 역류
     const A = RS.ABILITY.stance;
     const amp = 1 + M.stanceBoom;
     let hit = 0;
@@ -1940,8 +1940,8 @@
         if (e.dead || e.subT > 0) continue;
         // 원소 폭발: 모든 적의 최대 체력 비율 (엘리트·보스는 조금만)
         let d = e.maxHp * (isBig(e) ? A.bigBoom : A.boom) * amp;
-        if (M.thermal && to === 'fire' && e.slow > 0) d *= 2; // 열충격: 냉기 → 화염
-        if (M.thermal && to === 'ice' && e.burnT > 0 && !e.boss) e.stunT = Math.max(e.stunT, 1.5); // 화염 → 냉기
+        if (M.thermal && to === 'fire' && e.slow > 0) d *= 3; // 열충격: 냉기 → 화염
+        if (M.thermal && to === 'ice' && e.burnT > 0 && !e.boss) e.stunT = Math.max(e.stunT, 2.5); // 화염 → 냉기
         this.damage(e, d, null, false, true);
         hit++;
       }
