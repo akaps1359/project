@@ -1,6 +1,36 @@
 // 도트 스프라이트. 채우기 색만 그리고 외곽선은 굽는 과정에서 자동으로 두른다.
+//
+// ── ART 계약 (gfx2) ──────────────────────────────────────────────────────────
+// 필드 스프라이트는 논리 1px 당 원본 2px(RS.ART = 2) 격자로 굽는다.
+// 구운 캔버스(RS.SPR[id], RS.GLYPH[c][ch])는 모두 아래 세 값을 가진다.
+//   c.lw, c.lh : 논리 크기 (게임 px). 배치·충돌·그림자·HP 막대는 이 값만 쓴다.
+//   c.u        : 논리 1px 당 원본 px. 필드 스프라이트 2, 8×8 아이콘(i_*)·숫자 1.
+//                c.width === c.lw * c.u, c.height === c.lh * c.u (lw 는 .5 일 수 있다)
+// 렌더러가 그리는 법 (S = 장치 px / 논리 px):
+//   평범하게   : ctx.drawImage(c, x, y, c.lw, c.lh)          ← PixelCtx 의 기본 w/h 를 lw/lh 로
+//   변형 그리기: raw.scale(flip * sx * S / c.u, sy * S / c.u); raw.drawImage(c, -c.width / 2, -c.height)
+//                (= scale(sx*S) 뒤 drawImage(c, -c.lw/2, -c.lh, c.lw, c.lh) 와 같다)
+//   u 를 모르는 렌더러도 lw/lh 로 그리면 크기가 예전과 같다. width/height 는 쓰지 않는다.
+// 크기 (예전과 같은 화면 크기):
+//   유닛  knight0..4 등: 32×32 손그림 + 여백 → 36×36 원본, lw = lh = 18 (예전 18×18).
+//   적·엘리트: 맵을 Scale2x → lw = 맵 폭 + 2 (예전과 같다). 엘리트는 렌더러가 계속 1.3배.
+//   보스 (RS.ENEMY[*].boss): 맵을 Scale3x → lw = (맵 폭 + 2) × 1.5. 예전 bigScale 1.5 를
+//        캔버스에 이미 담았다 → 렌더러는 보스에게 bigScale 1 을 써야 한다 (엘리트는 1.3 유지).
+//   발 위치: 모든 스프라이트는 예전처럼 캔버스 바닥(ay - lh)에 맞춰 그리면 된다.
+// 변형 id (모두 바탕 스프라이트와 크기·기준점이 같다):
+//   id+'_w' 하얀 실루엣, id+'_i' 얼음빛 실루엣 (적만), riftHeart_z 잠든 모습 (+ _w/_i).
+//   id+'_e' (선택) 빛나는 픽셀만 남긴 마스크: 전설·신화 유닛(보석·눈·후광), 일부 보스의 눈.
+//          바탕을 그린 뒤 같은 변형으로 'lighter' 로 덧그리면 블룸이 된다. 없으면 건너뛴다.
+//   id+'_s0'..'_s5' (전설·신화 유닛만) 대각선 광택 띠 6프레임. 바탕 위에 source-over 로
+//          덧그린다 (알파가 구워져 있다). 3초마다 0.3초 동안 0→5 로 넘기면 된다.
+// DOM: RS.iconURL(name, scale) / RS.unitURL(cls, tier, scale) 는 원본 px × scale 로 굽는다
+//      (HD 는 예전보다 2배 촘촘). CSS 가 너비를 정하므로 화면 크기는 그대로.
+// 맵 형식: def(name, rows, { pal, hd, k, layers, patch, emis, hard, noshade }) — 아래 굽기 참고.
+// ────────────────────────────────────────────────────────────────────────────
 (function (RS) {
   'use strict';
+
+  RS.ART = 2;
 
   const PAL = {
     o: '#1d1428', s: '#f6caa5', S: '#d99b7e', e: '#22192e',
@@ -17,6 +47,9 @@
 
   const SRC = {};
   const def = (name, rows, opts) => (SRC[name] = Object.assign({ rows }, opts || {}));
+  // sprites_hd.js 가 손그림 마스터(hd: true)로 덮어쓴다
+  RS.defSprite = def;
+  RS.SPRITE_SRC = SRC;
 
   // ── 유닛 (c/C/l = 등급 색) ──
   def('knight', [
@@ -204,7 +237,7 @@
     '....w..w....',
     '....W..W....',
     '............',
-  ]);
+  ], { hard: 'ek' });
   def('imp', [
     '............',
     '..r......r..',
@@ -334,7 +367,7 @@
     '........wwwwwwwww.......',
     '.......wwwwwwwwwww......',
     '.......wwkkwwwkkww...p..',
-    '.......wwkpwwwkpww..ppp.',
+    '.......wwkEwwwkEww..ppp.',
     '.......wwwwwkwwwww...p..',
     '........wwkwkwkww....b..',
     '.........wwwwwww.....b..',
@@ -350,7 +383,7 @@
     '.....PPPPPPPPPPPPPPP....',
     '....PPPPPPPPPPPPPPPPP...',
     '........................',
-  ]);
+  ], { hard: 'ekE', pal: { E: '#c890ff' }, emis: 'E' });
   def('riftLord', [
     '........................',
     '......v.........v.......',
@@ -358,7 +391,7 @@
     '.......kkkkkkkkk........',
     '......kkkkkkkkkkk.......',
     '......kKKKKKKKKKk.......',
-    '......kKvvKKKvvKk.......',
+    '......kKEEKKKEEKk.......',
     '......kkkkkkkkkkk.......',
     '.......kKkkkkkKk........',
     '...kkkkkkkkkkkkkkkkk....',
@@ -372,7 +405,7 @@
     '.....kkkk.....kkkk......',
     '.....KKKK.....KKKK......',
     '........................',
-  ]);
+  ], { hard: 'eE', pal: { E: '#ff8fc8' }, emis: 'E' });
 
   // ── 아이콘 (UI) ──
   // ── 2.0 지역 적: 안개 늪 · 가라앉은 항구 · 시험 ──
@@ -460,7 +493,7 @@
     '......MM....MM......',
     '......MM....MM......',
     '.....MMM....MMM.....',
-  ]);
+  ], { hard: 'ek' });
   def('dummy', [
     '............',
     '....gggg....',
@@ -600,7 +633,7 @@
     '...N..nN..nN.Nn.Nn..N...',
     '......N...N...N...N.....',
     '........................',
-  ]);
+  ], { emis: 'yre' });
 
   // 잠든 고대신: 눈꺼풀이 내려와 감긴 눈
   def('riftHeart_z', [
@@ -624,7 +657,7 @@
     '...N..nN..nN.Nn.Nn..N...',
     '......N...N...N...N.....',
     '........................',
-  ]);
+  ], { hard: 'eK' });
 
   // 새 아이콘 (유물·증강·열쇠)
   I('anchor', ['...mm....', '..m..m...', '...mm....', 'mmmmmmmm.', '...mm....', 'm..mm..m.', 'mm.mm.mm.', '.mmmmmm..']);
@@ -639,7 +672,7 @@
   I('mask', ['.wwwwww.', 'wwwwwwww', 'wkwwwwkw', 'wwwwwwww', 'wwkwwkww', 'wwwkkwww', '.wwwwww.', '..wwww..']);
   I('beads', ['..bbb...', '.b...b..', 'b.....b.', 'b.....b.', '.b...b..', '..bbb...', '...g....', '..ggg...']);
   I('chest', ['.bbbbbbb.', 'bbbbbbbbb', 'bgggggggb', 'BBBByBBBB', 'bbbbybbbb', 'bbbbbbbbb', 'BBBBBBBBB']);
-  I('fish', ['........', '...uuu..u', '..uuuuuuu', '.uuwuuuu.', 'uuuuuuuuu', '..uuuuu.u', '...uuu...', '.........']);
+  I('fish', ['.........', '...uuu..u', '..uuuuuuu', '.uuwuuuu.', 'uuuuuuuuu', '..uuuuu.u', '...uuu...', '.........']);
   I('rod', ['......M', '.....MM', '....MM.', '...MM..', '..MM...', '.MM....', 'MM.....']);
   I('mango', ['...n....', '..aaaa..', '.aayaaa.', 'aayaaaaa', 'aaaaaaaa', 'aaaaaaAa', '.aaaaAa.', '..aaaa..']);
   I('sling', ['b.....b.', '.b...b..', '..b.b...', '...b....', '...b....', '...b....', '..bbb...', '........']);
@@ -700,93 +733,454 @@
   I('egg', ['...ww...', '..wwWw..', '.wwwwtw.', '.wtwwww.', '.wwwwtW.', '.wwtwwW.', '..wWWW..']);
 
   // ── 굽기 ──
-  function parse(rows, pal) {
-    const h = rows.length;
-    let w = 0;
-    for (const r of rows) w = Math.max(w, r.length);
-    const px = new Array(w * h).fill(null);
-    for (let y = 0; y < h; y++) {
+  // 맵 옵션 (def 의 세 번째 인자)
+  //   pal     : 이 맵에서만 쓰는 글자 → 색 (전역 PAL 보다 먼저). 함수면 pal(tier, TIER[tier]).
+  //   hd      : true 면 rows 가 이미 2× 격자(원본 px)인 손그림 (명암도 손으로). 자동 확대·명암 없음.
+  //   size    : hd 맵의 [폭, 높이] (짧은 줄은 '.' 로 채운다)
+  //   k       : 자동 확대 배율 (기본 2, 보스 3)
+  //   layers  : [{ min, x, y, rows, under }] 등급 min 이상에서 덧그리는 장비 층 (원본 px 좌표).
+  //             under 면 빈 칸에만 그린다 (망토·날개). '.' 는 그대로, '_' 는 지운다.
+  //   patch   : [{ x, y, rows }] 확대 뒤(원본 px 좌표)에 덧그리는 손질 (얼굴·눈)
+  //   emis    : '_e' 마스크로 갈 빛나는 글자. 문자열, 또는 { 등급: 글자 } (유닛)
+  //   hard    : 확대할 때 모서리를 깎지 않을 글자 (기본 'e' — 마름모 눈 방지)
+  //   noshade : 자동 명암에서 뺄 글자 (기본 'eysSl' 에 더한다 — 피부·눈·보석)
+  const warned = {};
+  function warn(msg) {
+    if (warned[msg]) return;
+    warned[msg] = 1;
+    if (typeof console !== 'undefined') console.warn('[sprites] ' + msg);
+  }
+
+  // 글자 격자. '.' 는 빈 칸
+  function grid(rows, name, size, pal) {
+    const h = size ? size[1] : rows.length;
+    let w = size ? size[0] : 0;
+    if (!size) for (const r of rows) w = Math.max(w, r.length);
+    const g = new Array(w * h).fill('.');
+    for (let y = 0; y < rows.length && y < h; y++) {
       const r = rows[y];
+      if (!size && r.length !== w) warn(name + ': ' + y + '번 줄 길이 ' + r.length + ' ≠ ' + w);
+      if (r.length > w) warn(name + ': ' + y + '번 줄이 ' + w + '칸을 넘는다');
+      for (let x = 0; x < r.length && x < w; x++) {
+        const ch = r[x];
+        if (ch === '.') continue;
+        if (pal && !pal[ch] && !PAL[ch]) warn(name + ': 모르는 글자 ' + ch);
+        g[y * w + x] = ch;
+      }
+    }
+    if (rows.length > h) warn(name + ': 줄 수 ' + rows.length + ' > ' + h);
+    return { w, h, g };
+  }
+
+  // 덧그리기 (layers·patch). '.' 는 그대로, '_' 는 지운다
+  function stamp(img, L, name, pal) {
+    const ox = L.x || 0;
+    const oy = L.y || 0;
+    for (let y = 0; y < L.rows.length; y++) {
+      const r = L.rows[y];
       for (let x = 0; x < r.length; x++) {
         const ch = r[x];
         if (ch === '.') continue;
-        px[y * w + x] = pal[ch] || PAL[ch] || '#ff00ff';
+        const X = ox + x;
+        const Y = oy + y;
+        if (X < 0 || Y < 0 || X >= img.w || Y >= img.h) {
+          warn(name + ': 덧그림이 격자 밖 (' + X + ',' + Y + ')');
+          continue;
+        }
+        const i = Y * img.w + X;
+        if (L.under && img.g[i] !== '.') continue;
+        if (ch !== '_' && pal && !pal[ch] && !PAL[ch]) warn(name + ': 모르는 글자 ' + ch);
+        img.g[i] = ch === '_' ? '.' : ch;
       }
     }
-    return { w, h, px };
   }
 
-  // 1px 여백을 두고 외곽선을 두른다
-  function withOutline(img) {
-    const W = img.w + 2;
-    const H = img.h + 2;
-    const out = new Array(W * H).fill(null);
-    for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) out[(y + 1) * W + x + 1] = img.px[y * img.w + x];
-    const filled = out.map((c) => c !== null);
+  // Scale2x / Scale3x (EPX). hard 글자는 모서리를 깎지도, 남에게 번지지도 않는다
+  function scaleK(img, k, hard) {
+    const { w, h, g } = img;
+    const W = w * k;
+    const out = new Array(W * h * k).fill('.');
+    const at = (x, y) => (x >= 0 && y >= 0 && x < w && y < h ? g[y * w + x] : '.');
+    const pick = (E, c) => (c !== E && (hard.has(E) || hard.has(c)) ? E : c);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const E = g[y * w + x];
+        const B = at(x, y - 1), D = at(x - 1, y), F = at(x + 1, y), H = at(x, y + 1);
+        let e;
+        if (k === 2) {
+          e = [
+            D === B && B !== H && D !== F ? D : E,
+            B === F && B !== H && D !== F ? F : E,
+            D === H && D !== B && H !== F ? D : E,
+            H === F && D !== H && B !== F ? F : E,
+          ];
+        } else {
+          const A = at(x - 1, y - 1), C = at(x + 1, y - 1), G = at(x - 1, y + 1), I = at(x + 1, y + 1);
+          if (B !== H && D !== F) {
+            e = [
+              D === B ? D : E,
+              (D === B && E !== C) || (B === F && E !== A) ? B : E,
+              B === F ? F : E,
+              (D === B && E !== G) || (D === H && E !== A) ? D : E,
+              E,
+              (B === F && E !== I) || (H === F && E !== C) ? F : E,
+              D === H ? D : E,
+              (D === H && E !== I) || (H === F && E !== G) ? H : E,
+              H === F ? F : E,
+            ];
+          } else e = [E, E, E, E, E, E, E, E, E];
+        }
+        for (let j = 0; j < k * k; j++) out[(y * k + ((j / k) | 0)) * W + x * k + (j % k)] = pick(E, e[j]);
+      }
+    }
+    return { w: W, h: h * k, g: out };
+  }
+
+  // ── 색 ──
+  const clamp8 = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  const RGB = {};
+  function hexRgb(hex) {
+    let c = RGB[hex];
+    if (!c) {
+      const n = parseInt(hex.slice(1), 16);
+      c = RGB[hex] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    return c;
+  }
+  const rgbHex = (r, g, b) => '#' + ((1 << 24) | (clamp8(r) << 16) | (clamp8(g) << 8) | clamp8(b)).toString(16).slice(1);
+  function mix(a, b, t) {
+    const A = hexRgb(a);
+    const B = hexRgb(b);
+    return rgbHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t);
+  }
+  function toHls(r, g, b) {
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    const l = (mx + mn) / 2;
+    if (mx === mn) return [0, l, 0];
+    const d = mx - mn;
+    const s = l <= 0.5 ? d / (mx + mn) : d / (2 - mx - mn);
+    const rc = (mx - r) / d, gc = (mx - g) / d, bc = (mx - b) / d;
+    let h = r === mx ? bc - gc : g === mx ? 2 + rc - bc : 4 + gc - rc;
+    h = (((h / 6) % 1) + 1) % 1;
+    return [h, l, s];
+  }
+  function fromHls(h, l, s) {
+    if (!s) return [l, l, l];
+    const m2 = l <= 0.5 ? l * (1 + s) : l + s - l * s;
+    const m1 = 2 * l - m2;
+    const v = (hh) => {
+      hh = ((hh % 1) + 1) % 1;
+      if (hh < 1 / 6) return m1 + (m2 - m1) * hh * 6;
+      if (hh < 0.5) return m2;
+      if (hh < 2 / 3) return m1 + (m2 - m1) * (2 / 3 - hh) * 6;
+      return m1;
+    };
+    return [v(h + 1 / 3), v(h), v(h - 1 / 3)];
+  }
+  // 밝기 dl, 색상 dh (+ 는 노랑 쪽, - 는 보라 쪽으로), 채도 ds 만큼 옮긴 색
+  function shift(hex, dl, dh, ds) {
+    const c = hexRgb(hex);
+    let [H, L, S] = toHls(c[0] / 255, c[1] / 255, c[2] / 255);
+    const tgt = dh > 0 ? 1 / 6 : 0.72;
+    const d = ((((tgt - H + 0.5) % 1) + 1) % 1) - 0.5;
+    H = (((H + Math.sign(d) * Math.min(Math.abs(d), Math.abs(dh))) % 1) + 1) % 1;
+    L = Math.max(0, Math.min(1, L + dl));
+    S = Math.max(0, Math.min(1, S + ds));
+    const o = fromHls(H, L, S);
+    return rgbHex(o[0] * 255, o[1] * 255, o[2] * 255);
+  }
+  RS.shiftColor = shift;
+  // 4단 램프: [밝은 면, 바탕, 그늘, 깊은 그늘]. 빛은 왼쪽 위에서
+  const RAMP = {};
+  const ramp = (hex) => RAMP[hex] || (RAMP[hex] = [shift(hex, 0.1, 0.03, -0.02), hex, shift(hex, -0.1, -0.025, 0.02), shift(hex, -0.2, -0.045, 0.03)]);
+
+  // ── 자동 명암 (적·엘리트·보스) ──
+  function boxBlur(src, w, h, r) {
+    const tmp = new Float32Array(w * h);
+    const out = new Float32Array(w * h);
+    const n = 2 * r + 1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let s = 0;
+        for (let d = -r; d <= r; d++) {
+          const xx = x + d;
+          if (xx >= 0 && xx < w) s += src[y * w + xx];
+        }
+        tmp[y * w + x] = s / n;
+      }
+    }
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let s = 0;
+        for (let d = -r; d <= r; d++) {
+          const yy = y + d;
+          if (yy >= 0 && yy < h) s += tmp[yy * w + x];
+        }
+        out[y * w + x] = s / n;
+      }
+    }
+    return out;
+  }
+  // 빛 쪽(왼쪽 위)을 향한 기울기. 바깥 → 안쪽으로 차오르는 왼쪽 위 가장자리가 + 가 된다
+  function lightGrad(f, w, h) {
+    const o = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const gx = w < 2 ? 0 : x === 0 ? f[i + 1] - f[i] : x === w - 1 ? f[i] - f[i - 1] : (f[i + 1] - f[i - 1]) / 2;
+        const gy = h < 2 ? 0 : y === 0 ? f[i + w] - f[i] : y === h - 1 ? f[i] - f[i - w] : (f[i + w] - f[i - w]) / 2;
+        o[i] = 0.55 * gx + 0.83 * gy;
+      }
+    }
+    return o;
+  }
+  // 글자 격자 → 색 격자 (4단 명암). 피부·눈·보석·작은 부분은 그대로 둔다
+  function autoShade(img, pal, noshade) {
+    const { w, h, g } = img;
+    const n = w * h;
+    const A = new Float32Array(n);
+    const cnt = {};
+    for (let i = 0; i < n; i++) {
+      if (g[i] === '.') continue;
+      A[i] = 1;
+      cnt[g[i]] = (cnt[g[i]] || 0) + 1;
+    }
+    const form = lightGrad(boxBlur(A, w, h, 3), w, h);
+    const col = new Array(n).fill(null);
+    for (const ch in cnt) {
+      const base = pal[ch] || PAL[ch] || '#ff00ff';
+      if (noshade.has(ch) || cnt[ch] < 10) {
+        for (let i = 0; i < n; i++) if (g[i] === ch) col[i] = base;
+        continue;
+      }
+      const M = new Float32Array(n);
+      for (let i = 0; i < n; i++) if (g[i] === ch) M[i] = 1;
+      const loc = lightGrad(boxBlur(M, w, h, 1), w, h);
+      const R = ramp(base);
+      for (let i = 0; i < n; i++) {
+        if (g[i] !== ch) continue;
+        const v = 0.9 * form[i] + 0.9 * loc[i] - 0.1 * (((i / w) | 0) / h);
+        col[i] = R[v > 0.1 ? 0 : v < -0.17 ? 3 : v < -0.06 ? 2 : 1];
+      }
+    }
+    return col;
+  }
+
+  // ── 테두리 ──
+  // 여백 m 을 두고 옮긴다. ch(글자)도 같이 옮겨 '_e' 마스크에 쓴다
+  function frame(col, ch, w, h, m) {
+    const W = w + 2 * m;
+    const H = h + 2 * m;
+    const c2 = new Array(W * H).fill(null);
+    const g2 = new Array(W * H).fill('.');
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!col[i]) continue;
+        c2[(y + m) * W + x + m] = col[i];
+        g2[(y + m) * W + x + m] = ch[i];
+      }
+    }
+    return { W, H, col: c2, ch: g2 };
+  }
+  // 오른쪽(과 오른쪽 위) 가장자리에 등급 역광
+  function rimLight(img, rim) {
+    const { W, H, col } = img;
+    const out = col.slice();
+    for (let y = 1; y < H - 1; y++) {
+      for (let x = 1; x < W - 1; x++) {
+        const i = y * W + x;
+        if (!col[i]) continue;
+        if (!col[i + 1] && y < H * 0.85) out[i] = mix(col[i], rim, 0.7);
+        else if (!col[i - W] && x > W * 0.45) out[i] = mix(col[i], rim, 0.55);
+      }
+    }
+    img.col = out;
+  }
+  // 원본 1px 외곽선. 위로 열린 가장자리는 sel-out (외곽선 65% + 아래 색 35%), 아래는 진하게
+  function outline(img) {
+    const { W, H, col, ch } = img;
+    const out = col.slice();
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
-        if (filled[y * W + x]) continue;
-        if ((x > 0 && filled[y * W + x - 1]) || (x < W - 1 && filled[y * W + x + 1]) || (y > 0 && filled[(y - 1) * W + x]) || (y < H - 1 && filled[(y + 1) * W + x])) {
-          out[y * W + x] = OUTLINE;
+        const i = y * W + x;
+        if (col[i]) continue;
+        const dn = y < H - 1 && col[i + W];
+        const up = y > 0 && col[i - W];
+        const lf = x > 0 && col[i - 1];
+        const rt = x < W - 1 && col[i + 1];
+        if (!dn && !up && !lf && !rt) continue;
+        out[i] = dn && !up && !lf && !rt ? mix(OUTLINE, col[i + W], 0.35) : OUTLINE;
+        ch[i] = 'o';
+      }
+    }
+    img.col = out;
+  }
+
+  // ── 캔버스 ──
+  let bytes = 0;
+  function toCanvas(img, u, tint, keep) {
+    const c = document.createElement('canvas');
+    c.width = img.W;
+    c.height = img.H;
+    const ctx = c.getContext('2d');
+    const data = ctx.createImageData(img.W, img.H);
+    const d = data.data;
+    const tc = tint ? hexRgb(tint) : null;
+    for (let i = 0; i < img.col.length; i++) {
+      const col = img.col[i];
+      if (!col) continue;
+      if (keep && !keep(i)) continue;
+      const rgb = tc || hexRgb(col);
+      d[i * 4] = rgb[0];
+      d[i * 4 + 1] = rgb[1];
+      d[i * 4 + 2] = rgb[2];
+      d[i * 4 + 3] = img.alpha ? img.alpha[i] : 255;
+    }
+    ctx.putImageData(data, 0, 0);
+    c.u = u;
+    c.lw = img.W / u;
+    c.lh = img.H / u;
+    bytes += img.W * img.H * 4;
+    return c;
+  }
+
+  // 옛 방식 (u = 1): 8×8 아이콘·숫자
+  function bakeFlat(rows, pal, name) {
+    const im = grid(rows, name, null, pal);
+    const col = im.g.map((c) => (c === '.' ? null : pal[c] || PAL[c] || '#ff00ff'));
+    const img = frame(col, im.g, im.w, im.h, 1);
+    outline(img);
+    // 아이콘은 sel-out 없이 예전처럼 진한 외곽선만
+    for (let i = 0; i < img.col.length; i++) if (img.ch[i] === 'o') img.col[i] = OUTLINE;
+    return img;
+  }
+
+  const isBoss = (name) => {
+    const b = name.replace(/_z$/, '');
+    return !!(RS.ENEMY && RS.ENEMY[b] && RS.ENEMY[b].boss);
+  };
+  const NOSHADE = 'eysSl';
+  // 자동 HD: Scale2x(보스 3x) → 손질 → 4단 명암 → 눈 반짝임 → 여백·외곽선
+  function bakeAuto(name, src, pal) {
+    const k = src.k || (isBoss(name) ? 3 : 2);
+    const g0 = grid(src.rows, name, null, pal);
+    const hard = new Set((src.hard != null ? src.hard : 'e').split(''));
+    const up = scaleK(g0, k, hard);
+    for (const p of src.patch || []) stamp(up, p, name, pal);
+    const col = autoShade(up, pal, new Set((NOSHADE + (src.noshade || '')).split('')));
+    // 눈 반짝임: 눈 덩어리마다 오른쪽 위 한 점
+    if (src.glint !== false) {
+      for (let y = 0; y < g0.h; y++) {
+        for (let x = 0; x < g0.w; x++) {
+          if (g0.g[y * g0.w + x] !== 'e') continue;
+          if (y > 0 && g0.g[(y - 1) * g0.w + x] === 'e') continue;
+          if (x < g0.w - 1 && g0.g[y * g0.w + x + 1] === 'e') continue;
+          const i = y * k * up.w + x * k + k - 1;
+          if (up.g[i] === 'e') col[i] = '#ffffff';
         }
       }
     }
-    return { w: W, h: H, px: out };
+    // 여백: 예전 1px 외곽선 자리만큼 (논리 1px). 보스는 1.5배 크기라 원본 3px
+    const img = frame(col, up.g, up.w, up.h, k === 3 ? 3 : 2);
+    outline(img);
+    return { img, g0, k };
   }
 
-  function hexRgb(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  // 손그림 HD 유닛 (32×32): 등급 장비 층 → 팔레트 → 역광 → 외곽선
+  function bakeHD(name, src, tier, T) {
+    const pal = Object.assign({ c: T.color, C: T.dark, l: T.light }, typeof src.pal === 'function' ? src.pal(tier, T) : src.pal || {});
+    const im = grid(src.rows, name, src.size, pal);
+    for (const L of src.layers || []) if (tier >= (L.min || 0)) stamp(im, L, name, pal);
+    for (const p of src.patch || []) stamp(im, p, name, pal);
+    const col = im.g.map((c) => (c === '.' ? null : pal[c] || PAL[c] || '#ff00ff'));
+    const img = frame(col, im.g, im.w, im.h, 2);
+    if (tier >= 2) rimLight(img, T.light);
+    outline(img);
+    return img;
   }
 
-  function toCanvas(img, tint) {
-    const c = document.createElement('canvas');
-    c.width = img.w;
-    c.height = img.h;
-    const ctx = c.getContext('2d');
-    const data = ctx.createImageData(img.w, img.h);
-    const tc = tint ? hexRgb(tint) : null;
-    for (let i = 0; i < img.px.length; i++) {
-      const col = img.px[i];
-      if (!col) continue;
-      const rgb = tc || hexRgb(col);
-      data.data[i * 4] = rgb[0];
-      data.data[i * 4 + 1] = rgb[1];
-      data.data[i * 4 + 2] = rgb[2];
-      data.data[i * 4 + 3] = 255;
+  function emisSet(src, tier) {
+    const e = src.emis;
+    if (!e) return null;
+    const s = typeof e === 'string' ? e : e[tier] || '';
+    return s ? new Set(s.split('')) : null;
+  }
+
+  // 대각선 광택 띠 6프레임 (전설·신화 유닛)
+  function shineFrames(img, col) {
+    const out = [];
+    const { W, H } = img;
+    for (let f = 0; f < 6; f++) {
+      const c = 0.12 + f * 0.152;
+      const alpha = new Uint8ClampedArray(W * H);
+      const cols = new Array(W * H).fill(null);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const i = y * W + x;
+          if (!img.col[i] || img.ch[i] === 'o') continue;
+          const d = Math.abs((x + y) / (W + H) - c);
+          if (d > 0.07) continue;
+          cols[i] = col;
+          alpha[i] = d < 0.035 ? 150 : 70;
+        }
+      }
+      out.push({ W, H, col: cols, alpha });
     }
-    ctx.putImageData(data, 0, 0);
-    return c;
+    return out;
   }
 
   const SPR = (RS.SPR = {});
   // 스프라이트의 대표 색 두 가지 (외곽선 제외, 많이 쓰인 순). 쓰러질 때 파편 색으로 쓴다
   const SPR_COL = (RS.SPR_COL = {});
-  function mainColors(img) {
+  function mainColors(g0, pal) {
     const cnt = {};
-    for (const c of img.px) if (c && c !== OUTLINE) cnt[c] = (cnt[c] || 0) + 1;
-    const list = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+    for (const ch of g0.g) if (ch !== '.') cnt[ch] = (cnt[ch] || 0) + 1;
+    const list = Object.keys(cnt)
+      .sort((a, b) => cnt[b] - cnt[a])
+      .map((ch) => pal[ch] || PAL[ch] || '#ffffff');
     return list.length ? [list[0], list[1] || list[0]] : ['#ffffff', '#ffffff'];
   }
+  RS.SPR_STATS = { ms: 0, bytes: 0, count: 0 };
   RS.bakeSprites = function () {
-    const tierPal = (t) => ({ c: t.color, C: t.dark, l: t.light });
+    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    bytes = 0;
+    const ART = RS.ART;
     for (const cls of RS.CLASSES) {
+      const src = SRC[cls];
       for (let tier = 0; tier < RS.TIER.length; tier++) {
-        const img = withOutline(parse(SRC[cls].rows, tierPal(RS.TIER[tier])));
-        SPR[cls + tier] = toCanvas(img);
-        SPR[cls + tier + '_w'] = toCanvas(img, '#ffffff'); // 소환·합성 순간 번쩍임
+        const T = RS.TIER[tier];
+        const id = cls + tier;
+        const img = src.hd ? bakeHD(cls, src, tier, T) : bakeAuto(cls, src, { c: T.color, C: T.dark, l: T.light }).img;
+        SPR[id] = toCanvas(img, ART);
+        SPR[id + '_w'] = toCanvas(img, ART, '#ffffff'); // 소환·합성 순간 번쩍임
+        const em = emisSet(src, tier);
+        if (em) SPR[id + '_e'] = toCanvas(img, ART, null, (i) => em.has(img.ch[i]));
+        if (tier >= 3) {
+          const fr = shineFrames(img, tier >= 4 ? '#fff0f6' : '#fff8dc');
+          for (let f = 0; f < fr.length; f++) SPR[id + '_s' + f] = toCanvas(fr[f], ART);
+        }
       }
     }
     for (const name in SRC) {
       if (RS.CLASSES.indexOf(name) >= 0) continue;
-      const img = withOutline(parse(SRC[name].rows, {}));
-      SPR[name] = toCanvas(img);
-      if (!name.startsWith('i_')) {
-        SPR[name + '_w'] = toCanvas(img, '#ffffff');
-        SPR[name + '_i'] = toCanvas(img, '#8fe3ff');
-        SPR_COL[name] = mainColors(img);
+      const src = SRC[name];
+      const pal = src.pal || {};
+      if (name.startsWith('i_')) {
+        SPR[name] = toCanvas(bakeFlat(src.rows, pal, name), 1);
+        continue;
       }
+      const { img, g0 } = bakeAuto(name, src, pal);
+      SPR[name] = toCanvas(img, ART);
+      SPR[name + '_w'] = toCanvas(img, ART, '#ffffff');
+      SPR[name + '_i'] = toCanvas(img, ART, '#8fe3ff');
+      const em = emisSet(src, 0);
+      if (em) SPR[name + '_e'] = toCanvas(img, ART, null, (i) => em.has(img.ch[i]));
+      SPR_COL[name] = mainColors(g0, pal);
     }
+    const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    RS.SPR_STATS = { ms: t1 - t0, bytes, count: Object.keys(SPR).length };
   };
 
   // DOM 용 아이콘 (data URL, 확대해서 굽는다)
@@ -827,8 +1221,7 @@
       GLYPH[ck] = {};
       for (const ch in DIGITS) {
         const rows = DIGITS[ch].map((r) => r.replace(/1/g, ck).replace(/0/g, '.'));
-        const img = withOutline(parse(rows, { [ck]: colors[ck] }));
-        GLYPH[ck][ch] = toCanvas(img);
+        GLYPH[ck][ch] = toCanvas(bakeFlat(rows, { [ck]: colors[ck] }, 'glyph'), 1);
       }
     }
   };
