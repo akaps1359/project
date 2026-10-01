@@ -32,13 +32,17 @@
       <canvas id="cv" width="160" height="186" aria-label="전장"></canvas>
     </div>
     <div id="dock">
-      <div id="panel"></div>
-      <div id="strikebar" hidden><div class="sb-top"><b class="sb-name"></b><span class="sb-dmg"></span></div><div class="sb-bar"><i></i></div><p class="sb-hint">강타 준비! 노란 막대를 채우면 끊겨요 · 금색 칸 유닛이 때리는 중 · 강한 유닛을 가까이 옮기세요</p></div>
-      <div id="toasts"></div>
+      <div id="lane"></div>
+      <div id="pwrap">
+        <div id="panel"></div>
+        <div id="strikebar" hidden><div class="sb-top"><b class="sb-name"></b><span class="sb-dmg"></span></div><div class="sb-bar"><i></i></div><p class="sb-hint">강타 준비! 노란 막대를 채우면 끊겨요 · 금색 칸 유닛이 때리는 중 · 강한 유닛을 가까이 옮기세요</p></div>
+        <div id="toasts"></div>
+      </div>
     </div>
     <div id="itembar"></div>
     <div id="controls">
-      <button id="b-upg" class="btn">강화</button>
+      <button id="b-upg" class="btn"><span class="upg-l">강화</span></button>
+      <button id="b-ab" class="btn star" hidden><span class="ab-top"><img class="ic" alt=""><b class="ab-name"></b></span><small class="ab-sub"></small></button>
       <button id="b-summon" class="btn gold"><span>소환</span><b id="summon-cost">10G</b></button>
     </div>
   </section>

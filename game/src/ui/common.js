@@ -100,13 +100,56 @@
     for (const b of root.querySelectorAll('button')) b.disabled = true;
   };
 
-  UI.hideTip = function () {
+  // force 없이 부르면(스크롤 등) 방금 맵을 스스로 굴려 띄운 툴팁은 남긴다
+  UI.tipPinUntil = 0;
+  UI.hideTip = function (force) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (!force && now < UI.tipPinUntil) return;
     const tip = $('#tip');
     if (tip) tip.hidden = true;
   };
 
+  // ── 설정 (메타 기록에 저장). RS.settings.reduceFx 는 렌더러가 읽는다 ──
+  function settingsObj() {
+    const meta = UI.G && UI.G.meta;
+    if (!meta) return {};
+    if (!meta.settings || typeof meta.settings !== 'object') meta.settings = {};
+    return meta.settings;
+  }
+  RS.settings = {
+    get reduceFx() { return !!settingsObj().reduceFx; },
+    set reduceFx(v) { settingsObj().reduceFx = !!v; },
+  };
+  UI.setReduceFx = function (on) {
+    RS.settings.reduceFx = on;
+    UI.applySettings();
+    if (UI.G && UI.G.saveMeta) UI.G.saveMeta();
+  };
+  UI.applySettings = function () {
+    if (document.body) document.body.classList.toggle('rfx', RS.settings.reduceFx);
+  };
+  // 설정 토글 버튼 (타이틀·메뉴 공용)
+  UI.fxBtn = function (cls) {
+    const label = () => (RS.settings.reduceFx ? '효과 줄이기 켬' : '효과 줄이기 끔');
+    const el = UI.btn(label(), () => {
+      UI.setReduceFx(!RS.settings.reduceFx);
+      el.textContent = label();
+      el.setAttribute('aria-pressed', String(RS.settings.reduceFx));
+    }, cls || '');
+    el.setAttribute('aria-pressed', String(RS.settings.reduceFx));
+    return el;
+  };
+
+  // 받침 조사: 브론으로 · 엘라로 · 아스트라로
+  UI.josaRo = function (word) {
+    const c = word.charCodeAt(word.length - 1);
+    if (c < 0xac00 || c > 0xd7a3) return word + '로';
+    const jong = (c - 0xac00) % 28;
+    return word + (jong === 0 || jong === 8 ? '로' : '으로');
+  };
+
   UI.show = function (id) {
-    UI.hideTip();
+    UI.hideTip(true);
     if (UI.current !== id) UI.lockInput();
     for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
     UI.current = id;
@@ -119,13 +162,30 @@
   };
 
   // ── 토스트·툴팁 ──
+  // 전투 중 강타 띠가 떠 있으면(좁은 화면에서는 토스트가 그 위에 겹친다) 짧은 좋은 소식만 띄우고,
+  // 긴 안내는 패널의 안내 카드로 미룬다 (UI.tipQueue)
+  UI.tipQueue = UI.tipQueue || [];
+  UI.queueTip = function (k, text) {
+    if (UI.tipQueue.some((t) => t.k === k)) return;
+    UI.tipQueue.push({ k, text, shown: 0 });
+  };
   UI.toast = function (text, kind) {
     const inBattle = UI.current === 'scr-battle';
     const box = inBattle ? $('#toasts') : $('#ptoasts');
     if (!box || !text) return;
-    const max = inBattle ? 2 : 3;
+    const long = text.length > 28;
+    if (inBattle) {
+      const sb = $('#strikebar');
+      const strike = sb && !sb.hidden && !$('#scr-battle').classList.contains('roomy');
+      if (strike && !(kind === 'good' && !long)) {
+        if (long) UI.queueTip('t:' + text, text);
+        return;
+      }
+    }
+    // 전투 중 긴 안내는 한 번에 하나만 (겹쳐 쌓이면 읽을 수 없다)
+    const max = inBattle ? (long || box.querySelector('.toast.long') ? 1 : 2) : 3;
     while (box.children.length >= max) box.firstChild.remove();
-    const t = h('div', { class: 'toast ' + (kind || '') }, text);
+    const t = h('div', { class: 'toast ' + (kind || '') + (long ? ' long' : '') }, text);
     let dur = 1700;
     if (inBattle && UI.G && UI.G.speed >= 2) {
       dur = 1100;
@@ -151,7 +211,7 @@
     setTimeout(() => f.remove(), 700);
   };
 
-  UI.tip = function (anchor, title, desc, extra, action) {
+  UI.tip = function (anchor, title, desc, extra, action, opts) {
     const tip = $('#tip');
     tip.innerHTML = '';
     tip.dataset.owner = ''; // 누가 연 툴팁인지 (맵 칸 두 번 누르기 확인용, 연 쪽이 다시 적는다)
@@ -166,6 +226,17 @@
       }, 'gold sm')) : null,
     ]);
     tip.hidden = false;
+    tip.classList.toggle('sheet', !!(opts && opts.sheet));
+    if (opts && opts.sheet) {
+      // 아래쪽에 가로로 꽉 찬 시트 (맵: 고를 칸을 가리지 않게). bottom 은 기준 요소 위
+      tip.style.width = '';
+      tip.style.left = '';
+      tip.style.top = '';
+      const base = opts.above ? opts.above.getBoundingClientRect().top : window.innerHeight;
+      tip.style.bottom = Math.max(8, window.innerHeight - base + 6) + 'px';
+      return;
+    }
+    tip.style.bottom = '';
     const r = anchor.getBoundingClientRect();
     const tw = Math.min(260, window.innerWidth - 24);
     tip.style.width = tw + 'px';
@@ -177,8 +248,45 @@
   };
   // 화면 좌표에 툴팁 (전장의 적처럼 DOM 요소가 없는 대상)
   UI.tipAt = function (x, y, title, desc, extra, action) {
+    $('#tip').classList.remove('sheet');
     const rect = { left: x - 10, right: x + 10, top: y - 14, bottom: y + 14, width: 20, height: 28 };
     UI.tip({ getBoundingClientRect: () => rect }, title, desc, extra, action);
+  };
+
+  // ── 선택지 글의 대가(붉게)와 이득(금빛)을 표시: 문장 전체가 아니라 그 토막만 ──
+  const COST_RE = /(최대 생명|생명|골드) -\d+%?(\(최대 기준\))?|저주 \[[^\]]+\]|골드를 모두 잃는다|\[금 간 칸\]이 된다/g;
+  const GAIN_RE = /(최대 생명|생명|골드) \+\d+/g;
+  UI.markCosts = function (desc) {
+    if (!desc) return desc;
+    const marks = [];
+    const scan = (re, cls) => {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(desc))) marks.push({ a: m.index, b: m.index + m[0].length, cls });
+    };
+    scan(COST_RE, 'cost');
+    scan(GAIN_RE, 'gold-t');
+    if (!marks.length) return desc;
+    marks.sort((x, y) => x.a - y.a);
+    const out = [];
+    let at = 0;
+    for (const mk of marks) {
+      if (mk.a < at) continue;
+      if (mk.a > at) out.push(desc.slice(at, mk.a));
+      out.push(h('span', { class: mk.cls }, desc.slice(mk.a, mk.b)));
+      at = mk.b;
+    }
+    if (at < desc.length) out.push(desc.slice(at));
+    return out;
+  };
+  // 고를 수 없는 선택지의 이유 한 줄
+  UI.optionBlockReason = function (run, desc) {
+    const m = desc && /골드 -(\d+)(?!%)/.exec(desc);
+    if (m && run && run.gold < +m[1]) return `골드 부족 (${Math.floor(run.gold)}/${m[1]})`;
+    const lm = desc && /^생명 -(\d+)(?![%\d])/.exec(desc);
+    if (lm && run && run.life <= +lm[1]) return `생명 부족 (${Math.ceil(run.life)}/${lm[1]})`;
+    if (desc && /회복|생명 \+/.test(desc) && run && RS.canHeal && !RS.canHeal(run)) return '시든 꽃의 낙인: 회복할 수 없어요';
+    return '지금은 고를 수 없어요';
   };
 
   // ── 저주 설명: 글 속 '저주 [이름]' 과 '무작위 저주' 를 찾아 무엇인지 풀어 준다 ──
@@ -438,7 +546,7 @@
 
   // ── 모달 ──
   UI.modal = function (title, body, onClose) {
-    UI.hideTip();
+    UI.hideTip(true);
     const m = $('#modal');
     const box = m.querySelector('.modal-box');
     box.innerHTML = '';
@@ -452,7 +560,7 @@
     UI.G.setModal(true);
   };
   UI.closeModal = function () {
-    UI.hideTip();
+    UI.hideTip(true);
     const m = $('#modal');
     // 모달을 닫는 탭이 아래 화면을 누르지 않게
     if (!m.hidden) UI.lockInput(250);
@@ -484,8 +592,8 @@
   };
 
   // 탭 묶음
-  UI.tabs = function (tabs) {
-    const head = h('div', { class: 'tabs' });
+  UI.tabs = function (tabs, cls) {
+    const head = h('div', { class: 'tabs' + (cls ? ' ' + cls : '') });
     const body = h('div', { class: 'tabbody' });
     const sel = (k) => {
       for (const b of head.children) b.classList.toggle('on', b.dataset.k === String(k));

@@ -30,11 +30,12 @@
     const floors = run.map.floors;
     const nF = floors.length;
     const left = nF - run.floor;
+    let hintEl;
     append(scr, [
       UI.topbar(run, `${run.act}막 · ${act.name}`),
       UI.relicStrip(run),
       box,
-      h('p', { class: 'hint' },
+      hintEl = h('p', { class: 'hint' },
         left > 0 ? h('span', { class: 'mapchip' }, left === 1 ? '다음은 보스' : `보스까지 ${left}층`) : null,
         RS.mapTrait(run) ? h('span', { class: 'mapchip trait', onclick: (e) => UI.tip(e.currentTarget, `지형 · ${RS.mapTrait(run).name}`, RS.mapTrait(run).desc) }, RS.mapTrait(run).name) : null,
         '반짝이는 칸을 누르면 설명, 한 번 더 누르면 이동합니다.' + (wings.length ? ` · 점선 칸은 축지 장화로 (${run.relicState.wingBoots.uses}회)` : '')),
@@ -109,7 +110,7 @@
         const wing = !can && isWing(f, l);
         const far = !n.visited && !here && !wing && !reach.has(f + ':' + l);
         const isBoss = n.type === 'boss';
-        let label = n.type === 'unknown' ? (n.resolved ? `?·${RS.NODE_INFO[n.resolved].name}` : null) : info.name;
+        let label = n.type === 'unknown' ? (n.resolved ? `?·${RS.NODE_INFO[n.resolved].name}` : '미지') : info.name;
         if (isBoss && bossDef) label = bossDef.name;
         const title = n.type === 'unknown' ? '? (미지)' : isBoss && bossDef ? `보스 · ${bossDef.name}` : info.name;
         const key = f + ':' + l;
@@ -141,8 +142,15 @@
               for (const el of inner.querySelectorAll('.node.armed')) el.classList.remove('armed');
               e.currentTarget.classList.add('armed');
               RS.sfx('click');
-              UI.tip(e.currentTarget, title, nodeDesc(n, run), wing ? '축지 장화를 한 번 씁니다' : null, { label: '여기로 이동', onClick: enter });
+              const nodeEl = e.currentTarget;
+              UI.tip(nodeEl, title, nodeDesc(n, run), wing ? '축지 장화를 한 번 씁니다' : null, { label: '여기로 이동', onClick: enter }, { sheet: true, above: hintEl });
               tipEl.dataset.owner = key;
+              // 고른 칸이 시트에 가리면 시트 위로 굴린다 (스크롤해도 이 툴팁은 닫히지 않게 잠깐 고정)
+              const over = nodeEl.getBoundingClientRect().bottom + 22 - tipEl.getBoundingClientRect().top;
+              if (over > 0) {
+                UI.tipPinUntil = performance.now() + 400;
+                box.scrollTop += over;
+              }
             } else {
               UI.mapArmed = null;
               for (const el of inner.querySelectorAll('.node.armed')) el.classList.remove('armed');
@@ -155,6 +163,8 @@
       }
     }
     box.appendChild(inner);
+    // 아래쪽 시트(칸 설명)가 맨 아래 칸을 가리지 않게 굴릴 여유
+    box.appendChild(h('div', { class: 'mapspace' }));
     const targetY = rowY(Math.min(nF, run.floor + 1));
     box.scrollTop = Math.max(0, targetY - box.clientHeight * 0.55);
   };
@@ -200,7 +210,7 @@
           UI.keepScroll = true;
           UI.showNeow();
         },
-      }, h('b', null, t.text), t.cost ? h('small', { class: 'cost' }, '대가 · ' + t.cost) : h('small', null, { small: '작은 별점', mid: '별점', big: '큰 별점', swap: '시작 유물 교환' }[b.kind]),
+      }, h('b', null, UI.markCosts(t.text)), t.cost ? h('small', { class: 'cost' }, '대가 · ' + t.cost) : h('small', null, { small: '작은 별점', mid: '별점', big: '큰 별점', swap: '시작 유물 교환' }[b.kind]),
       // 고른 선택지에 저주가 있으면 무엇인지 바로 아래에 풀어 준다
       sel === k ? UI.curseNote(t.text + ' ' + (t.cost || '')) : null));
     });
@@ -749,7 +759,8 @@
             }
             choose();
           },
-        }, h('b', null, label), h('small', null, desc)));
+        }, h('b', null, label), h('small', null, UI.markCosts(desc)),
+        ok ? null : h('small', { class: 'why' }, UI.optionBlockReason(run, desc))));
         function choose() {
           {
             // 한 번 고르면 다시 그릴 때까지 모든 선택지를 잠근다
@@ -795,6 +806,9 @@
     );
     let footer = null;
     const DESC = { recall: '붉은 봉인석을 얻는다 (휴식·수련 대신) · 세 봉인석을 모으면 4막이 열린다' };
+    const ICON = { heal: 'heart', train: 'hammer', smith: 'whetstone', recall: 'key_ruby', dig: 'shovel', hatch: 'egg', clone: 'twin' };
+    // 생명이 가득하고 상처도 없으면 휴식은 효과가 없다 (고를 수는 있다)
+    const idle = run.life >= run.maxLife && !(run.injury > 0) && !RS.collectMods(run).dreamCatcher;
     const SHOW_GAINS = { dig: '발굴', hatch: '부화', clone: '복제' };
     if (!UI.restTrain) {
       const opts = RS.restOptions(run);
@@ -802,7 +816,7 @@
       if (!opts.some((o) => !o.off)) footer = [btn('그냥 지나간다', () => G.leaveNode(), 'gold grow')];
       const box = h('div', { class: 'options' });
       opts.forEach((o) => box.appendChild(h('button', {
-        class: 'btn option',
+        class: 'btn option withic' + (o.id === 'heal' && idle && !o.off ? ' noeffect' : ''),
         disabled: !!o.off,
         onclick() {
           if (o.id === 'train') {
@@ -822,7 +836,9 @@
           G.leaveNode();
           if (gains && gains.length) UI.showGains(SHOW_GAINS[o.id], gains);
         },
-      }, h('b', null, o.label), h('small', null, o.off || DESC[o.id] || o.desc))));
+      }, icon(ICON[o.id] || 'n_rest', 'oic', 4),
+      h('span', { class: 'otext' }, h('b', null, o.label),
+        h('small', { class: o.off ? 'why' : null }, o.off || (o.id === 'heal' && idle ? '생명 가득 · 상처 없음 (효과 없음)' : UI.markCosts(DESC[o.id] || o.desc)))))));
       body.appendChild(box);
     } else {
       const train = RS.restTrainAmount(run);

@@ -36,16 +36,21 @@
     return RS.sellValue(run, s.tier, b.M);
   };
 
-  // 지휘관 고유 능력 버튼 글자: 별똥별 ★ 2/3 · 방패 돌진 돌진 1/2 · 원소 전환 화염→냉기 / 화염 7초
+  // 지휘관 고유 능력 버튼: 첫 줄 이름, 둘째 줄 자원 (●●●○○ −2 · ★★★☆☆ −3 · 냉기로 전환 / 화염 · 7초)
   UI.abLabel = function (b) {
     const ab = b && b.ab;
-    if (!ab) return '';
+    if (!ab) return { name: '', sub: '', icon: '' };
+    const name = ab.def.name;
     if (ab.id === 'stance') {
-      const cur = ab.stance === 'fire' ? '화염' : '냉기';
-      return ab.cd > 0 ? `${cur} ${Math.ceil(ab.cd)}초` : `${cur}→${ab.stance === 'fire' ? '냉기' : '화염'}`;
+      const next = ab.stance === 'fire' ? '냉기' : '화염';
+      return { name, icon: ab.stance === 'fire' ? 'flame' : 'snow', sub: ab.cd > 0 ? `${ab.stance === 'fire' ? '화염' : '냉기'} · ${Math.ceil(ab.cd)}초` : `${next}로 전환` };
     }
-    const n = Math.floor(ab.n);
-    return ab.id === 'star' ? `★ ${n}/${ab.cost}` : `돌진 ${n}/${ab.cost}`;
+    const n = Math.max(0, Math.floor(ab.n));
+    const max = Math.max(ab.max || 0, n);
+    const on = ab.id === 'star' ? '★' : '●';
+    const off = ab.id === 'star' ? '☆' : '○';
+    const pips = max <= 6 ? on.repeat(n) + off.repeat(max - n) : `${on}${n}/${max}`;
+    return { name, icon: ab.id === 'star' ? 'star' : 'shield2', sub: `${pips} −${ab.cost}`, res: ab.def.res };
   };
 
 
@@ -67,6 +72,22 @@
   UI.initBattle = function () {
     for (const img of document.querySelectorAll('img[data-icon]')) img.src = RS.iconURL(img.dataset.icon, 3);
     $('#b-summon').addEventListener('click', () => UI.doSummon());
+    // 고유 능력: 쓸 수 없을 때 누르면 무엇이 필요한지 설명
+    $('#b-ab').addEventListener('click', (e) => {
+      const b = UI.G.battle;
+      if (!b || !b.ab) return;
+      const el = e.currentTarget;
+      if (!b.useAbility()) {
+        RS.sfx('error');
+        const def = b.ab.def;
+        UI.tip(el, def.name, def.desc, b.abilityBlock() || def.gain);
+        return;
+      }
+      UI.hideTip(true);
+      RS.sfx(b.ab.id === 'star' ? 'bomb' : b.ab.id === 'charge' ? 'big' : b.ab.stance === 'ice' ? 'freeze' : 'bomb');
+      UI.dismissTip('ab_' + b.ab.id);
+      UI.updateHud(true);
+    });
     $('#b-upg').addEventListener('click', () => {
       RS.sfx('click');
       if (UI.panelMode === 'upgrade') UI.closePanel();
@@ -162,6 +183,18 @@
     const hh = ch.toFixed(2) + 'px';
     if (cv.style.width !== w) cv.style.width = w;
     if (cv.style.height !== hh) cv.style.height = hh;
+    UI.fitDock();
+  };
+  // 키 큰 폰: 전장 아래 남는 띠(#lane)에 토스트를 띄우고 패널을 넉넉히 쓴다
+  UI.fitDock = function () {
+    const scr = $('#scr-battle');
+    const dock = $('#dock');
+    if (!scr || !dock || scr.hidden) return;
+    const roomy = dock.clientHeight - 90 >= 40;
+    if (scr.classList.contains('roomy') !== roomy) scr.classList.toggle('roomy', roomy);
+    const toasts = $('#toasts');
+    const home = roomy ? $('#lane') : $('#pwrap');
+    if (toasts.parentElement !== home) home.appendChild(toasts);
   };
 
   UI.showBattle = function () {
@@ -194,8 +227,12 @@
     } else {
       bb.hidden = true;
     }
+    // 안내 카드 대기열: 한 번만 보여 줄 안내(onceTip)는 닫을 때까지 남기고, 미뤄 둔 토스트는 버린다
+    UI.tipQueue = (UI.tipQueue || []).filter((t) => !t.k.startsWith('t:'));
+    for (const t of UI.tipQueue) t.shown = 0;
     UI.setPanel('idle');
     UI.renderItems();
+    UI.setupAbility();
     UI.hudCache = {};
     UI.fitCanvas();
     UI.updateHud(true);
@@ -332,7 +369,7 @@
         RS.sfx('click');
         UI.select(d.from);
         if (!reachAt(s, d.from)) warnDrop();
-        UI.onceTip('tapSwap', '자리를 바꿨어요! 유닛을 고른 채 다른 칸(빈칸·유닛)을 누르면 옮기거나 바꿔요. 다른 유닛을 보려면 고른 유닛을 한 번 더 눌러 선택을 푸세요');
+        UI.onceTip('tapSwap', '자리를 바꿨어요! 유닛을 고른 채 다른 칸을 누르면 옮기거나 바꿔요. 선택을 풀려면 고른 유닛을 한 번 더 누르세요');
       } else {
         // 선택된 칸을 다시 누르면 선택을 푼다. 단 합성할 수 있는 칸을 곧바로 두 번 누른 것(연타)은
         // [합성] 버튼이 뜨자마자 패널이 닫히지 않게 선택을 유지한다
@@ -385,13 +422,24 @@
     return meta.tut;
   }
   // 새 규칙 안내: 튜토리얼을 끈 사람에게도 한 번은 보여 준다
+  // 패널의 안내 카드로 띄우고, 눌러서 닫을 때(또는 강타가 없을 때 10초 뒤) 본 것으로 기록한다
   UI.onceTip = function (k, text) {
     const meta = UI.G.meta;
     const seen = meta.tips || (meta.tips = {});
     if (seen[k]) return;
-    seen[k] = true;
-    UI.toast(text, 'warn');
-    UI.G.saveMeta();
+    UI.queueTip(k, text);
+  };
+  UI.dismissTip = function (k) {
+    const q = UI.tipQueue || [];
+    const i = k == null ? 0 : q.findIndex((t) => t.k === k);
+    if (i < 0 || !q[i]) return;
+    const t = q.splice(i, 1)[0];
+    if (!t.k.startsWith('t:')) {
+      const meta = UI.G.meta;
+      (meta.tips || (meta.tips = {}))[t.k] = true;
+      UI.G.saveMeta();
+    }
+    if (UI.hudCache) UI.hudCache.tipK = null;
   };
   UI.tutDone = function (k) {
     const t = tut();
@@ -429,19 +477,42 @@
         UI.tutDone('cap');
       }
     }
+    // ①②③ 코치가 없으면 대기 중인 안내 카드 (한 번에 하나)
     const c = UI.hudCache;
+    const q = UI.tipQueue || [];
+    const strike = !$('#strikebar').hidden;
+    let card = null;
+    if (!text && q.length) {
+      card = q[0];
+      const now = performance.now();
+      const dt = Math.min(0.3, (now - (c.tipAt || now)) / 1000);
+      c.tipAt = now;
+      if (!strike && !G.modalOpen && !G.paused && UI.panelMode === 'idle') card.shown += dt;
+      if (card.shown >= 10) {
+        UI.dismissTip(card.k);
+        card = null;
+      }
+    } else c.tipAt = 0;
+    if (card && card.k.startsWith('ab_') && !pulse) pulse = 'ab';
     if (c.pulse !== pulse) {
       c.pulse = pulse;
       $('#b-summon').classList.toggle('pulse', pulse === 'summon');
       $('#b-upg').classList.toggle('pulse', pulse === 'upg');
+      $('#b-ab').classList.toggle('pulse', pulse === 'ab');
     }
     const refs = UI.panelRefs || {};
     if (UI.panelMode === 'idle' && refs.hint) {
-      setText(refs.hint, 'coach', text || '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기');
-      if (c.coachOn !== !!text) {
-        c.coachOn = !!text;
-        refs.hint.classList.toggle('coach', !!text);
-        if (refs.hint.parentElement) refs.hint.parentElement.classList.toggle('coaching', !!text);
+      const mode = text ? 'coach' : card ? 'card' : '';
+      setText(refs.hint, 'coach', text || (card ? card.text : '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기'));
+      if (c.coachOn !== mode) {
+        c.coachOn = mode;
+        refs.hint.classList.toggle('coach', !!mode);
+        refs.hint.classList.toggle('tipcard', mode === 'card');
+        refs.hint.setAttribute('role', mode === 'card' ? 'button' : 'note');
+        if (refs.hint.parentElement) {
+          refs.hint.parentElement.classList.toggle('coaching', !!mode);
+          refs.hint.parentElement.classList.toggle('tipping', mode === 'card');
+        }
       }
     }
   };
@@ -567,7 +638,10 @@
       UI.hudCache.coachOn = null;
       // 패널을 새로 그리면 칸도 새것이다: 예전 패널의 값을 기억한 캐시를 비워야 다음 갱신이 채운다
       for (const k of ['pdps', 'punits', 'pint']) delete UI.hudCache[k];
+      delete UI.hudCache.upgOn;
       for (const cl of RS.CLASSES) {
+        delete UI.hudCache['un' + cl];
+        delete UI.hudCache['un0' + cl];
         delete UI.hudCache['lv' + cl];
         delete UI.hudCache['uc' + cl];
         delete UI.hudCache['uo' + cl];
@@ -582,7 +656,15 @@
         h('div', { class: 'pstat' }, h('span', null, '전체 DPS'), (refs.dps = h('b', null, '0'))),
         h('div', { class: 'pstat' }, h('span', null, '유닛'), (refs.units = h('b', null, '0'))),
         h('div', { class: 'pstat' }, h('span', null, b.M.summonCap ? '남은 소환' : '다음 이자'), (refs.int = h('b', null, '0'))),
-        (refs.hint = h('p', { class: 'phint' }, '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기')),
+        (refs.hint = h('p', {
+          class: 'phint',
+          onclick() {
+            if (!refs.hint.classList.contains('tipcard')) return;
+            RS.sfx('click');
+            UI.dismissTip();
+            UI.updateHud(true);
+          },
+        }, '칸을 눌러 정보 보기 · 끌어서 자리 바꾸기')),
       ));
     } else if (mode === 'unit') {
       const i = UI.sel;
@@ -595,8 +677,13 @@
       UI.panelSig = unitSig(run, i);
       const sv = UI.sellValueAt(b, i);
       const sellBtn = s.tier >= 2
-        ? UI.btn2(`판매 +${sv}`, `한 번 더: 판매 +${sv}`, () => doSell(i))
+        ? UI.btn2(`판매 +${sv}`, '한 번 더!', () => doSell(i))
         : btn(`판매 +${sv}`, () => doSell(i));
+      // 합성 버튼: 다음 등급을 미리 보여 준다 (합성 → 희귀)
+      const nextT = RS.TIER[s.tier + 1];
+      const mergeLabel = s.tier >= RS.TOP_TIER ? '최고 등급'
+        : canMerge ? h('span', null, '합성 → ', h('span', { class: 'tier' + (s.tier + 1) + ' nt' }, nextT ? nextT.name : ''))
+        : `합성 ${s.n}/${RS.mergeNeed(s.tier)}`;
       append(p, h('div', { class: 'punit' },
         unitImg(s.cls, s.tier, 'big'),
         h('div', { class: 'pinfo' },
@@ -607,7 +694,7 @@
           (refs.desc = h('p', { class: 'pdesc' })),
         ),
         h('div', { class: 'pbtns' },
-          btn(s.tier >= RS.TOP_TIER ? '최고 등급' : canMerge ? '합성' : `합성 ${s.n}/${RS.mergeNeed(s.tier)}`, () => UI.doMerge(i), canMerge ? 'gold' : '', !canMerge),
+          btn(mergeLabel, () => UI.doMerge(i), 'merge' + (canMerge ? ' gold' : ''), !canMerge),
           (refs.sell = sellBtn),
         ),
       ));
@@ -635,7 +722,7 @@
             }
             UI.updateHud(true);
           },
-        }, unitImg(c, 0), h('b', { class: 'lv' }), h('span', { class: 'cost' }));
+        }, unitImg(c, 0), h('span', { class: 'un' }), h('b', { class: 'lv' }), h('span', { class: 'cost' }));
         refs.rows[c] = el;
         grid.appendChild(el);
       }
@@ -724,8 +811,8 @@
     const run = G.run;
     const b = G.battle;
     const slots = RS.itemSlots(run);
-    // 칸이 많으면(보급 허리띠·연금 솥·별) 칸과 버튼을 조금 줄인다
-    UI.itemTight = slots + (b && b.ab ? 2 : 0) >= 6;
+    // 칸이 많으면(보급 허리띠·연금 솥) 칸과 버튼을 조금 줄인다
+    UI.itemTight = slots >= 5;
     bar.classList.toggle('tight', UI.itemTight);
     for (let k = 0; k < slots; k++) {
       const id = run.items[k];
@@ -746,32 +833,33 @@
           onclick(e) {
             UI.tip(e.currentTarget, '소모품 칸', '상점·보상에서 얻은 소모품(폭탄·얼음 등)을 전투 중에 눌러 씁니다.');
           },
-        }));
+        }, icon('bag', '', 3)));
       }
     }
     bar.appendChild(h('div', { class: 'spacer' }));
-    UI.abBtn = null;
-    if (b && b.ab) {
-      // 지휘관 고유 능력 (별똥별 · 방패 돌진 · 원소 전환)
-      const def = b.ab.def;
-      UI.abBtn = btn(UI.abLabel(b), () => {
-        const bb = G.battle;
-        if (!bb || !bb.useAbility()) {
-          RS.sfx('error');
-          UI.toast((bb && bb.abilityBlock()) || '지금은 쓸 수 없어요', 'warn');
-          return;
-        }
-        RS.sfx(bb.ab.id === 'star' ? 'bomb' : bb.ab.id === 'charge' ? 'big' : bb.ab.stance === 'ice' ? 'freeze' : 'bomb');
-        UI.updateHud(true);
-      }, `sm star ab-${b.ab.id}`);
-      UI.abBtn.setAttribute('aria-label', def.name);
-      bar.appendChild(UI.abBtn);
-    }
     UI.mergeAllBtn = btn(UI.itemTight ? '합성' : '모두 합성', () => UI.doMergeAll(), 'sm mall off');
     UI.mergeAllBtn.setAttribute('aria-label', '모두 합성');
     bar.appendChild(UI.mergeAllBtn);
-    // 칸이 많으면 '빌드'는 뺀다 (일시정지 메뉴에 있다)
-    if (slots <= 3 && !(b && b.ab)) bar.appendChild(btn('빌드', () => UI.openBuild(), 'sm'));
+    // 칸이 많으면 '빌드'는 뺀다 (일시정지 메뉴에 있다. 좁은 화면에서는 CSS 가 숨긴다)
+    if (slots <= 3) bar.appendChild(btn('빌드', () => UI.openBuild(), 'sm bld'));
+  };
+
+  // 지휘관 고유 능력 버튼 (#controls 의 가운데): 아이콘·이름·자원 칸
+  UI.setupAbility = function () {
+    const b = UI.G.battle;
+    const el = $('#b-ab');
+    const ctl = $('#controls');
+    const ab = b && b.ab;
+    el.hidden = !ab;
+    ctl.classList.toggle('has-ab', !!ab);
+    UI.abBtn = ab ? el : null;
+    el.className = 'btn star' + (ab ? ' ab-' + ab.id : '');
+    if (!ab) return;
+    const L = UI.abLabel(b);
+    el.querySelector('.ab-name').textContent = L.name;
+    el.querySelector('.ab-sub').textContent = L.sub;
+    el.querySelector('img').src = RS.iconURL(L.icon, 3);
+    el.setAttribute('aria-label', `${L.name}${L.res ? ` · ${L.res} ${Math.floor(ab.n)}/${ab.max} · ${ab.cost}개 소모` : ''}`);
   };
 
   const setText = (el, key, v) => {
@@ -830,11 +918,24 @@
     setText($('#summon-cost'), 'cost', b.summonLimit() <= 0 ? '제한' : `${cost}G`);
     setCls($('#b-summon'), 'canS', 'off', !(run.gold >= cost && b.summonLimit() > 0));
     setText($('#b-speed'), 'spd', `x${G.speed}`);
+    // 강화 패널이 열려 있으면 [강화] 버튼이 '닫기'로
+    const upgOn = UI.panelMode === 'upgrade';
+    if (c.upgOn !== upgOn) {
+      c.upgOn = upgOn;
+      $('#b-upg').classList.toggle('on', upgOn);
+      $('#b-upg .upg-l').textContent = upgOn ? '강화 닫기' : '강화';
+    }
     if (UI.abBtn && b.ab) {
-      setText(UI.abBtn, 'ab', UI.abLabel(b));
+      const L = UI.abLabel(b);
+      const brk = b.abilityBreaksStrike();
+      setText(UI.abBtn.querySelector('.ab-sub'), 'absub', brk ? '강타 끊기!' : L.sub);
+      if (c.abIc !== L.icon) {
+        c.abIc = L.icon;
+        UI.abBtn.querySelector('img').src = RS.iconURL(L.icon, 3);
+      }
       setCls(UI.abBtn, 'abOn', 'off', !b.canUseAbility());
       // 지금 쓰면 준비 중인 강타를 끊을 수 있다: 금빛으로 반짝
-      setCls(UI.abBtn, 'abBrk', 'brk', b.abilityBreaksStrike());
+      setCls(UI.abBtn, 'abBrk', 'brk', brk);
       if (b.ab.id === 'stance') setCls(UI.abBtn, 'abIce', 'ice', b.ab.stance === 'ice');
     }
     // 합성 가능한 칸 수 + 길에 닿지 않는 칸 (0.1초마다 20칸)
@@ -871,8 +972,12 @@
       else UI.refreshUnitStats();
     } else if (UI.panelMode === 'upgrade' && refs.rows) {
       const step = b.M.upgradeDouble ? 2 : 1;
+      const onBoard = {};
+      for (const s of run.board) if (s) onBoard[s.cls] = (onBoard[s.cls] || 0) + s.n;
       for (const cl of RS.CLASSES) {
         const el = refs.rows[cl];
+        setText(el.querySelector('.un'), 'un' + cl, `${RS.CLASS[cl].name} ${onBoard[cl] || 0}기`);
+        setCls(el, 'un0' + cl, 'none', !onBoard[cl]);
         const lv = run.classLv[cl];
         const cst = b.upgradeCost(cl);
         setText(el.querySelector('.lv'), 'lv' + cl, `Lv ${lv}→${lv + step}`);
@@ -947,7 +1052,15 @@
       el.querySelector('.sb-bar i').style.width = w;
     }
     setCls(el.querySelector('.sb-bar'), 'sbhot', 'hot', k > 0.7);
+    // 안내: 지금 고유 능력으로 끊을 수 있으면 그것부터. 짧은 화면은 한 줄
+    const brk = !!(b.ab && b.abilityBreaksStrike());
+    const hint = brk ? `[${b.ab.def.name}]으로 바로 끊기!`
+      : SHORT_MQ && SHORT_MQ.matches ? '노란 막대를 채우면 끊겨요'
+      : '강타 준비! 노란 막대를 채우면 끊겨요 · 금색 칸 유닛이 때리는 중 · 강한 유닛을 가까이 옮기세요';
+    setText(el.querySelector('.sb-hint'), 'sbhint', hint);
+    setCls(el.querySelector('.sb-hint'), 'sbbrk', 'brk', brk);
   }
+  const SHORT_MQ = window.matchMedia ? window.matchMedia('(max-height: 640px)') : null;
   const setAttrHidden = (el, key, on) => {
     if (UI.hudCache[key] !== on) {
       UI.hudCache[key] = on;
@@ -1059,7 +1172,8 @@
         else if (ev.t > 0.6 && ev.id !== 'cross') RS.sfx('cast');
         const nm = ev.name || CAST_NAME[ev.id];
         const key = ev.seal ? 'seal' : ev.id;
-        if (b && nm && ev.id !== 'spawn') {
+        // 강타는 강타 띠가 설명하므로 첫 안내를 띄우지 않는다
+        if (b && nm && ev.id !== 'spawn' && ev.id !== 'strike') {
           b.skillSeen = b.skillSeen || {};
           if (!b.skillSeen[nm]) {
             b.skillSeen[nm] = true;
@@ -1093,7 +1207,7 @@
       case 'injury': {
         const el = $('#h-life');
         if (ev.up) setTimeout(() => UI.hudFloat(el, '상처!', 'bad'), 250);
-        UI.onceTip('injury', `강타에 맞아 상처가 났어요! 상처 하나당 다음 전투부터 모든 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 휴식처에서 쉬면 낫고, 일반 전투를 이길 때마다 1씩 아물어요`);
+        UI.onceTip('injury', `상처가 났어요! 하나당 다음 전투부터 유닛 피해 -${Math.round(RS.BAL.injuryPer * 100)}%. 휴식하면 낫고, 일반 전투를 이기면 1씩 아물어요`);
         break;
       }
       case 'pressure': {
@@ -1105,7 +1219,7 @@
         clearTimeout(UI.hitTimer);
         UI.hitTimer = setTimeout(() => el.classList.remove('hit'), 300);
         UI.hudFloat(el, '-' + (ev.v || 1), 'bad');
-        UI.onceTip('pressure', '균열 게이지가 찼어요! 적이 균열로 돌아오는 길(오른쪽·아래·왼쪽)에 오래 머물수록 문 둘레 고리가 차고, 가득 차면 생명 -1');
+        UI.onceTip('pressure', '균열 게이지가 찼어요! 적이 돌아오는 길(오른쪽·아래·왼쪽)에 오래 머물수록 문 둘레 고리가 차고, 가득 차면 생명 -1');
         break;
       }
       case 'leech':
@@ -1156,7 +1270,7 @@
         if (g > 0) UI.hudFloat($('#h-gold'), `+${g}G`, 'good');
         // 처음 싸울 때 지휘관 고유 능력을 한 번 알려 준다
         const bb = UI.G.battle;
-        if (ev.n === 1 && bb && bb.ab) UI.onceTip('ab_' + bb.ab.id, `고유 능력 [${bb.ab.def.name}] (아래 버튼) · ${bb.ab.def.tip}`);
+        if (ev.n === 1 && bb && bb.ab) UI.onceTip('ab_' + bb.ab.id, `고유 능력 [${bb.ab.def.name}] (아래 가운데 버튼) · ${bb.ab.def.tip}`);
         break;
       }
       case 'abil':
