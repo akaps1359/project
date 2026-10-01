@@ -163,7 +163,7 @@
       this.bn = [0, 0];
       this.layer = 1;
       this.glowOff = false;
-      this.gpu = null; // 실험 페이지(lab.html)의 GPU 효과 층이 켜져 있으면 위층 빛을 거기로 넘긴다
+      this.gpu = null; // GPU 빛 층(gpufx.js)이 켜져 있으면 위층 빛을 거기로 넘긴다
     }
     set fillStyle(v) { this.raw.fillStyle = v; }
     get fillStyle() { return this.raw.fillStyle; }
@@ -393,8 +393,8 @@
   P.emit = function (x, y, n, o) {
     const parts = this.parts;
     if (this.low && n > 1) n = Math.ceil(n / 2); // 효과 줄이기: 입자 절반
-    else if (this.gx && o.glow) n = Math.ceil(n * 1.8); // GPU 효과 층(실험): 빛나는 입자를 더
-    const cap = this.gx ? 1400 : 420;
+    else if (this.gx && o.glow) n = Math.ceil(n * 1.4); // GPU 빛 층: 빛나는 입자를 조금 더
+    const cap = this.gx ? 1000 : 420;
     for (let k = 0; k < n; k++) {
       if (parts.length >= cap) return;
       const a = (o.ang == null ? -Math.PI / 2 : o.ang) + (Math.random() - 0.5) * (o.spread == null ? Math.PI * 2 : o.spread);
@@ -410,8 +410,8 @@
   P.drawParts = function (ctx, dt) {
     const parts = this.parts;
     let w = 0;
-    let glows = this.low ? 99 : 0; // 빛나는 입자는 한 프레임에 60개까지만 빛을 단다 (GPU 효과 층은 제한 없음)
-    const gmax = this.gx ? 1400 : 60;
+    let glows = this.low ? 99 : 0; // 빛나는 입자는 한 프레임에 60개까지만 빛을 단다 (GPU 빛 층은 제한 없음)
+    const gmax = this.gx ? 1000 : 60;
     for (let k = 0; k < parts.length; k++) {
       const p = parts[k];
       p.life -= dt;
@@ -468,7 +468,7 @@
     const kind = th.amb;
     if (!kind) return;
     const A = AMB[kind];
-    const want = this.gx ? A.n * 3 : A.n;
+    const want = this.gx ? A.n * 2 : A.n;
     while (this.amb.length < want) this.spawnAmb(kind, this.t < 0.1);
     const t = this.t;
     for (let k = 0; k < this.amb.length; k++) {
@@ -955,6 +955,7 @@
   // ── 그리기 ──
   // 순서: 바닥(빛 구워짐) → 문·게이지·경고 빗금 → 바닥 빛 웅덩이(더하기 한 번) → 칸·유닛 → 적 → 빛(더하기 한 번)
   //      → 강타 집중 어둠 → 투사체·효과·입자 → 빛(더하기 한 번) → 보스 등장 띠 → 숫자 → 기술 예고
+  // GPU 빛 층(gpufx.js)이 켜져 있으면 위층 빛은 WebGL 캔버스로 가고, 보스 등장 띠부터는 그 위의 위층 캔버스에 그린다
   P.draw = function (b, dt) {
     const ctx = this.ctx;
     texReset(ctx.S);
@@ -1002,7 +1003,12 @@
     if (b) {
       this.drawSlots(ctx, b, dt);
       this.drawEnemies(ctx, b, dt);
-      ctx.flushGlows(1);
+      // 강타 집중 어둠이 깔리는 동안 유닛·적의 빛은 전장 캔버스에 (어둠 아래에 있어야 함께 어두워진다)
+      if (gpu && this.focusK > 0.02) {
+        ctx.gpu = null;
+        ctx.flushGlows(1);
+        ctx.gpu = gpu;
+      } else ctx.flushGlows(1);
       this.drawFocus(ctx, b, dt);
     }
     this.drawShots(ctx, dt);
@@ -1011,6 +1017,10 @@
     this.drawAmbient(ctx, dt);
     ctx.flushGlows(0);
     ctx.flushGlows(1);
+    // GPU 빛 층이 켜져 있으면 숫자·기술 예고·끌기는 빛 위의 위층 캔버스에 (빛에 씻기지 않게)
+    const topRaw = gpu && gpu.topRaw();
+    const raw0 = ctx.raw;
+    if (topRaw) ctx.raw = topRaw;
     if (this.intro > 0) this.drawIntro(ctx, dt);
     this.drawNums(ctx, dt);
     // 보스 기술 예고(! · 붉은 숫자 · 경직 막대)는 피해 숫자에 가리지 않게 맨 위에
@@ -1019,6 +1029,7 @@
       ctx.flushGlows(1);
       this.drawDrag(ctx, b);
     }
+    ctx.raw = raw0;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (gpu) gpu.present();
   };

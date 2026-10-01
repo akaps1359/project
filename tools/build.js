@@ -23,18 +23,16 @@ const between = (a, b) => {
 const title = between('<!-- TITLE START -->', '<!-- TITLE END -->');
 const body = between('<!-- BODY START -->', '<!-- BODY END -->');
 const scripts = [...between('<!-- SCRIPTS START -->', '<!-- SCRIPTS END -->').matchAll(/src="([^"]+)"/g)].map((m) => m[1]);
-const jsSources = scripts.map((s) => ({ name: s, code: read(path.join(GAME, s)) }));
-// 실험 페이지(docs/lab.html): 같은 게임 + PixiJS + GPU 효과 층. 본 게임 파일에는 들어가지 않는다
-const LAB_JS = 'src/render/gpufx.js';
-const labExtra = read(path.join(GAME, LAB_JS));
-const pixiLab = read(path.join(GAME, 'vendor/pixi-lab.min.js'));
+// vendor/ 는 남이 만든 묶음 (PixiJS): 글자 모으기·이어 붙이기에서 따로 다룬다
+const jsSources = scripts.filter((s) => !s.startsWith('vendor/')).map((s) => ({ name: s, code: read(path.join(GAME, s)) }));
+const vendor = scripts.filter((s) => s.startsWith('vendor/')).map((s) => read(path.join(GAME, s)));
 let css = read(path.join(GAME, 'style.css'));
 
 // ── 폰트 서브셋 ──
 const fontPath = path.join(GAME, 'assets/fonts/Galmuri11.woff2');
 const chars = new Set();
 for (let c = 0x20; c < 0x7f; c++) chars.add(String.fromCharCode(c));
-for (const src of [html, css, labExtra, ...jsSources.map((s) => s.code)]) for (const ch of src) if (ch.charCodeAt(0) >= 0x80) chars.add(ch);
+for (const src of [html, css, ...jsSources.map((s) => s.code)]) for (const ch of src) if (ch.charCodeAt(0) >= 0x80) chars.add(ch);
 const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'rs-build-'));
 const textFile = path.join(tmp, 'chars.txt');
 fs.writeFileSync(textFile, [...chars].join(''));
@@ -53,6 +51,7 @@ css = css.replace("url('assets/fonts/Galmuri11.woff2')", `url(data:font/woff2;ba
 // 같은 전역(RS)을 쓰는 스크립트들이라 순서대로 이어 붙인다
 const js = jsSources.map((s) => `// ── ${s.name} ──\n${s.code}`).join('\n');
 const safeJs = js.replace(/<\/script/gi, '<\\/script');
+const vendorTags = vendor.map((v) => `<script>\n${v.replace(/<\/script/gi, '<\\/script')}\n</script>\n`).join('');
 
 const head = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -73,7 +72,7 @@ ${css}
 </head>
 <body>
 ${body}
-<script>
+${vendorTags}<script>
 ${safeJs}
 </script>
 </body>
@@ -86,20 +85,13 @@ const artifact = `${title}
 ${css}
 </style>
 ${body}
-<script>
+${vendorTags}<script>
 ${safeJs}
 </script>
 `;
 
-const labJs = jsSources
-  .flatMap((s) => (s.name === 'src/main.js' ? [{ name: LAB_JS, code: labExtra }, s] : [s]))
-  .map((s) => `// ── ${s.name} ──\n${s.code}`)
-  .join('\n')
-  .replace(/<\/script/gi, '<\\/script');
-const lab = standalone
-  .replace(title, '<title>랜덤 스파이어 · 실험실</title>')
-  .replace(`<script>\n${safeJs}\n</script>`, () => `<script>\n${pixiLab.replace(/<\/script/gi, '<\\/script')}\n</script>\n<script>\n${labJs}\n</script>`);
-if (lab === standalone || !lab.includes('PIXI_LAB')) throw new Error('lab build failed');
+// 예전 실험 페이지 주소(lab.html)는 본 게임의 실험 패널(?lab)로 보낸다
+const lab = `<!doctype html><meta charset="utf-8"><title>랜덤 스파이어 · 실험실</title><meta http-equiv="refresh" content="0; url=./?lab"><script>location.replace('./?lab')</script><a href="./?lab">랜덤 스파이어 실험 패널로</a>\n`;
 
 fs.mkdirSync(path.join(ROOT, 'docs'), { recursive: true });
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
@@ -107,4 +99,5 @@ fs.writeFileSync(path.join(ROOT, 'docs/index.html'), standalone);
 fs.writeFileSync(path.join(ROOT, 'build/artifact.html'), artifact);
 fs.writeFileSync(path.join(ROOT, 'docs/lab.html'), lab);
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log(`docs/index.html ${(standalone.length / 1024).toFixed(0)}KB · build/artifact.html ${(artifact.length / 1024).toFixed(0)}KB · docs/lab.html ${(lab.length / 1024).toFixed(0)}KB`);
+const kb = (str) => (Buffer.byteLength(str) / 1024).toFixed(0) + 'KB';
+console.log(`docs/index.html ${kb(standalone)} · build/artifact.html ${kb(artifact)} (PixiJS ${kb(vendor.join(''))} 포함)`);

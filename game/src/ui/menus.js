@@ -153,6 +153,7 @@
         }),
       ),
       h('div', { class: 'row2 setrow' }, h('span', { class: 'dim small' }, '흔들림·번쩍임 줄이기'), UI.fxBtn()),
+      h('div', { class: 'row2 setrow' }, h('span', { class: 'dim small' }, 'GPU 빛 효과 (번짐·주변 조명)'), UI.gpuBtn()),
       G.run ? btn(inBattle ? '타이틀로 (이 전투는 처음부터)' : '타이틀로 (진행은 자동 저장돼요)', () => {
         UI.onModalClose = null;
         UI.closeModal();

@@ -125,6 +125,9 @@
   RS.settings = {
     get reduceFx() { return !!settingsObj().reduceFx; },
     set reduceFx(v) { settingsObj().reduceFx = !!v; },
+    // GPU 빛 층을 끈다 (기본은 켬, WebGL 을 못 쓰면 저절로 캔버스로)
+    get gpuOff() { return !!settingsObj().gpuOff; },
+    set gpuOff(v) { settingsObj().gpuOff = !!v; },
   };
   UI.setReduceFx = function (on) {
     RS.settings.reduceFx = on;
@@ -148,6 +151,28 @@
       sync();
     }, cls || '');
     el.setAttribute('aria-label', '효과 줄이기');
+    sync();
+    return el;
+  };
+
+  // GPU 빛 켜기·끄기 버튼 (메뉴). WebGL 을 못 쓰는 기기에서는 누를 수 없다
+  UI.gpuBtn = function () {
+    const fx = RS.GpuFx;
+    const sync = () => {
+      const can = !!(fx && fx.ok);
+      const on = can && !RS.settings.gpuOff;
+      el.textContent = !fx ? '없음' : !can ? (fx.failed ? '지원 안 됨' : '준비 중') : on ? '켜짐' : '꺼짐';
+      el.classList.toggle('fxon', on);
+      el.disabled = !can;
+      el.setAttribute('aria-pressed', String(on));
+    };
+    const el = UI.btn('켜짐', () => {
+      RS.settings.gpuOff = !RS.settings.gpuOff;
+      if (UI.G && UI.G.saveMeta) UI.G.saveMeta();
+      if (fx) fx.refresh();
+      sync();
+    }, 'sm');
+    el.setAttribute('aria-label', 'GPU 빛 효과');
     sync();
     return el;
   };
